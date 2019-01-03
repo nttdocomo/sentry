@@ -114,10 +114,6 @@ var appConfig = {
         },
       },
       {
-        test: /\.json$/,
-        loader: 'json-loader',
-      },
-      {
         test: /app\/icons\/.*\.svg$/,
         use: [
           {
@@ -125,24 +121,6 @@ var appConfig = {
           },
           {
             loader: 'svgo-loader',
-          },
-        ],
-      },
-      // loader for dynamic styles imported into components (embedded as js)
-      {
-        test: /\.less$/,
-        use: [
-          {
-            loader: 'style-loader',
-          },
-          {
-            loader: 'css-loader',
-            options: {
-              minimize: IS_PRODUCTION,
-            },
-          },
-          {
-            loader: 'less-loader',
           },
         ],
       },
@@ -212,14 +190,13 @@ var appConfig = {
     alias: {
       app: path.join(__dirname, 'src', 'sentry', 'static', 'sentry', 'app'),
       'app-test': path.join(__dirname, 'tests', 'js'),
-      'app-test-helpers': path.join(__dirname, 'tests', 'js', 'helpers'),
       'sentry-locale': path.join(__dirname, 'src', 'sentry', 'locale'),
       'integration-docs-platforms': IS_TEST
         ? path.join(__dirname, 'tests/fixtures/integration-docs/_platforms.json')
         : path.join(__dirname, 'src/sentry/integration-docs/_platforms.json'),
     },
     modules: [path.join(__dirname, staticPrefix), 'node_modules'],
-    extensions: ['.less', '.jsx', '.js', '.json'],
+    extensions: ['.jsx', '.js', '.json'],
   },
   output: {
     path: distPath,
