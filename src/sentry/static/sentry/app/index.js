@@ -1,4 +1,9 @@
 /* global module */
+import 'babel-polyfill';
+import 'bootstrap/js/alert';
+import 'bootstrap/js/tab';
+import 'bootstrap/js/dropdown';
+
 import 'app/utils/emotion-setup';
 
 import {renderToStaticMarkup} from 'react-dom/server';
@@ -7,18 +12,19 @@ import * as EmotionTheming from 'emotion-theming';
 import * as GridEmotion from 'grid-emotion';
 import JsCookie from 'js-cookie';
 import PropTypes from 'prop-types';
-import * as Sentry from '@sentry/browser';
 import React from 'react';
 import ReactBootstrapModal from 'react-bootstrap/lib/Modal';
 import ReactDOM from 'react-dom';
 import * as ReactEmotion from 'react-emotion';
 import Reflux from 'reflux';
 import * as Router from 'react-router';
+import * as Sentry from '@sentry/browser';
 import createReactClass from 'create-react-class';
 import jQuery from 'jquery';
 import moment from 'moment';
 
 import {metric} from 'app/utils/analytics';
+import ConfigStore from 'app/stores/configStore';
 import Main from 'app/main';
 import ajaxCsrfSetup from 'app/utils/ajaxCsrfSetup';
 import * as api from 'app/api';
@@ -54,7 +60,6 @@ const Raven = {
   setExtraContext: () => __raven_deprecated(),
   setUserContext: () => __raven_deprecated(),
 };
-window.Raven = Raven;
 // -----------------------------------------------------------------
 
 // Used for operational metrics to determine that the application js
@@ -67,6 +72,11 @@ jQuery.ajaxSetup({
   beforeSend: ajaxCsrfSetup,
 });
 
+// App setup
+if (window.__initialData) {
+  ConfigStore.loadInitialData(window.__initialData, window.__languageCode);
+}
+
 // these get exported to a global variable, which is important as its the only
 // way we can call into scoped objects
 
@@ -75,7 +85,8 @@ let render = Component => {
   ReactDOM.render(<Component />, rootEl);
 };
 
-export default {
+const globals = {
+  $: jQuery,
   jQuery,
   moment,
   Sentry,
@@ -139,7 +150,6 @@ export default {
     Button: require('app/components/button').default,
     mixins: {
       ApiMixin: require('app/mixins/apiMixin').default,
-      TooltipMixin: require('app/mixins/tooltip').default,
     },
     BarChart: require('app/components/barChart').default,
     i18n: il8n,
@@ -214,3 +224,8 @@ export default {
     },
   },
 };
+
+// Make globals available on the window object
+Object.keys(globals).forEach(name => (window[name] = globals[name]));
+
+export default globals;

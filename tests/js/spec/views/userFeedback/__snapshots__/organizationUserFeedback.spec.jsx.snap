@@ -166,9 +166,6 @@ exports[`OrganizationUserFeedback renders 1`] = `
                 "teams": Array [],
               }
             }
-            projects={Array []}
-            showAbsolute={true}
-            showRelative={true}
           >
             <withGlobalSelection(GlobalSelectionHeader)
               location={
@@ -205,7 +202,6 @@ exports[`OrganizationUserFeedback renders 1`] = `
                   "teams": Array [],
                 }
               }
-              projects={Array []}
               router={
                 Object {
                   "createHref": [MockFunction] {
@@ -297,8 +293,6 @@ exports[`OrganizationUserFeedback renders 1`] = `
                   "setRouteLeaveHook": [MockFunction],
                 }
               }
-              showAbsolute={true}
-              showRelative={true}
             >
               <GlobalSelectionHeader
                 hasCustomRouting={false}
@@ -336,7 +330,6 @@ exports[`OrganizationUserFeedback renders 1`] = `
                     "teams": Array [],
                   }
                 }
-                projects={Array []}
                 resetParamsOnChange={Array []}
                 router={
                   Object {
@@ -441,9 +434,7 @@ exports[`OrganizationUserFeedback renders 1`] = `
                     "projects": Array [],
                   }
                 }
-                showAbsolute={true}
                 showEnvironmentSelector={true}
-                showRelative={true}
               >
                 <Header>
                   <Base
@@ -1600,9 +1591,9 @@ exports[`OrganizationUserFeedback renders 1`] = `
               </GlobalSelectionHeader>
             </withGlobalSelection(GlobalSelectionHeader)>
           </withRouter(withGlobalSelection(GlobalSelectionHeader))>
-          <Content>
+          <PageContent>
             <div
-              className="css-1wsl7kd-Content euo9in30"
+              className="css-rejmra-PageContent e6lvex70"
             >
               <UserFeedbackContainer
                 location={
@@ -2273,7 +2264,7 @@ exports[`OrganizationUserFeedback renders 1`] = `
                 </div>
               </UserFeedbackContainer>
             </div>
-          </Content>
+          </PageContent>
         </Feature>
       </FeatureContainer>
     </DocumentTitle>

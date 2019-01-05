@@ -8,7 +8,7 @@ import Button from 'app/components/button';
 import withEnvironmentInQueryString from 'app/utils/withEnvironmentInQueryString';
 import LoadingIndicator from 'app/components/loadingIndicator';
 import LoadingError from 'app/components/loadingError';
-import IconOpen from 'app/icons/icon-open';
+import InlineSvg from 'app/components/inlineSvg';
 import HeroIcon from 'app/components/heroIcon';
 import LastCommit from 'app/components/lastCommit';
 import IssueList from 'app/components/issueList';
@@ -216,7 +216,6 @@ const ReleaseOverview = createReactClass({
                   </PanelBody>
                 </Panel>
               )}
-              ref="issueList"
               showActions={false}
               params={{orgId}}
               className="m-b-2"
@@ -238,7 +237,6 @@ const ReleaseOverview = createReactClass({
                   </PanelBody>
                 </Panel>
               )}
-              ref="issueList"
               showActions={false}
               params={{orgId}}
               className="m-b-2"
@@ -321,8 +319,8 @@ const ReleaseOverview = createReactClass({
                                 style={{verticalAlign: 'bottom'}}
                               >
                                 {deploy.environment}
-                                <IconOpen
-                                  className="icon-open"
+                                <InlineSvg
+                                  src="icon-open"
                                   size={11}
                                   style={{marginLeft: 6}}
                                 />
