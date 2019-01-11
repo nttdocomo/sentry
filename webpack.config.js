@@ -3,18 +3,11 @@
 const path = require('path');
 const fs = require('fs');
 const webpack = require('webpack');
+const babelConfig = require('./babel.config');
 const ExtractTextPlugin = require('mini-css-extract-plugin');
 const CompressionPlugin = require('compression-webpack-plugin');
 const OptimizeCssAssetsPlugin = require('optimize-css-assets-webpack-plugin');
 const LodashModuleReplacementPlugin = require('lodash-webpack-plugin');
-
-const staticPrefix = 'src/sentry/static/sentry';
-let distPath = path.join(__dirname, staticPrefix, 'dist');
-
-// this is set by setup.py sdist
-if (process.env.SENTRY_STATIC_DIST_PATH) {
-  distPath = process.env.SENTRY_STATIC_DIST_PATH;
-}
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const IS_TEST = process.env.NODE_ENV === 'test' || process.env.TEST_SUITE;
@@ -24,8 +17,10 @@ const SENTRY_DEVSERVER_PORT = process.env.SENTRY_DEVSERVER_PORT;
 const USE_HOT_MODULE_RELOAD = !IS_PRODUCTION && WEBPACK_DEV_PORT && SENTRY_DEVSERVER_PORT;
 const WEBPACK_MODE = IS_PRODUCTION ? 'production' : 'development';
 
-const babelConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '.babelrc')));
-babelConfig.cacheDirectory = true;
+// this is set by setup.py sdist
+const staticPrefix = 'src/sentry/static/sentry';
+const distPath =
+  process.env.SENTRY_STATIC_DIST_PATH || path.join(__dirname, staticPrefix, 'dist');
 
 /**
  * Locale file extraction build step
@@ -194,7 +189,7 @@ const appConfig = {
         exclude: /(vendor|node_modules|dist)/,
         use: {
           loader: 'babel-loader',
-          options: babelConfig,
+          options: {...babelConfig, cacheDirectory: true},
         },
       },
       {
@@ -276,8 +271,6 @@ const appConfig = {
   output: {
     path: distPath,
     filename: '[name].js',
-    libraryTarget: 'var',
-    library: 'exports',
     sourceMapFilename: '[name].js.map',
   },
   optimization: {
@@ -289,31 +282,6 @@ const appConfig = {
     },
   },
   devtool: IS_PRODUCTION ? 'source-map' : 'cheap-module-eval-source-map',
-};
-
-/**
- * Webpack entry for password strength checker
- */
-const pwConfig = {
-  mode: WEBPACK_MODE,
-  entry: {
-    pwstrength: './index',
-  },
-  context: path.resolve(path.join(__dirname, staticPrefix), 'js', 'pwstrength'),
-  module: {},
-  plugins: [],
-  resolve: {
-    modules: [path.join(__dirname, staticPrefix), 'node_modules'],
-    extensions: ['.js'],
-  },
-  output: {
-    path: distPath,
-    filename: '[name].js',
-    libraryTarget: 'window',
-    library: 'sentrypw',
-    sourceMapFilename: '[name].js.map',
-  },
-  devtool: IS_PRODUCTION ? 'source-map' : 'cheap-source-map',
 };
 
 /**
@@ -401,9 +369,8 @@ if (IS_PRODUCTION) {
   // NOTE: can't do plugins.push(Array) because webpack/webpack#2217
   minificationPlugins.forEach(function(plugin) {
     appConfig.plugins.push(plugin);
-    pwConfig.plugins.push(plugin);
     legacyCssConfig.plugins.push(plugin);
   });
 }
 
-module.exports = [appConfig, pwConfig, legacyCssConfig];
+module.exports = [appConfig, legacyCssConfig];

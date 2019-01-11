@@ -9,6 +9,7 @@ import {t, tct} from 'app/locale';
 import {updateProjects, updateDateTime} from 'app/actionCreators/globalSelection';
 import BetaTag from 'app/components/betaTag';
 import SentryTypes from 'app/sentryTypes';
+import PageHeading from 'app/components/pageHeading';
 
 import {
   DiscoverContainer,
@@ -16,7 +17,6 @@ import {
   Body,
   BodyContent,
   HeadingContainer,
-  Heading,
   Sidebar,
   SidebarTabs,
   SavedQueryWrapper,
@@ -66,7 +66,10 @@ export default class OrganizationDiscover extends React.Component {
   }
 
   componentDidMount() {
-    if (this.props.savedQuery) {
+    const {savedQuery, location} = this.props;
+
+    // Run query if there is *any* querystring
+    if (savedQuery || (location && !!location.search)) {
       this.runQuery();
     }
   }
@@ -418,9 +421,9 @@ export default class OrganizationDiscover extends React.Component {
               <React.Fragment>
                 <div>
                   <HeadingContainer>
-                    <Heading>
+                    <PageHeading>
                       {t('Discover')} <BetaTag />
-                    </Heading>
+                    </PageHeading>
                   </HeadingContainer>
                 </div>
                 <Intro updateQuery={this.updateAndRunQuery} />
