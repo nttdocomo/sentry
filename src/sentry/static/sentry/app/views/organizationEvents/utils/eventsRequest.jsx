@@ -9,7 +9,7 @@ import SentryTypes from 'app/sentryTypes';
 
 import LoadingPanel from '../loadingPanel';
 
-const propNamesToIgnore = ['api', 'children', 'organizations', 'project', 'loading'];
+const propNamesToIgnore = ['api', 'children', 'organization', 'loading'];
 const omitIgnoredProps = props =>
   omitBy(props, (value, key) => propNamesToIgnore.includes(key));
 
@@ -267,7 +267,7 @@ class EventsRequest extends React.PureComponent {
     const {timeseriesData, reloading} = this.state;
 
     // Is "loading" if data is null
-    const loading = this.props.loading || reloading || timeseriesData === null;
+    const loading = this.props.loading || timeseriesData === null;
 
     if (showLoading && loading) {
       return <LoadingPanel data-test-id="events-request-loading" />;
@@ -286,6 +286,7 @@ class EventsRequest extends React.PureComponent {
 
     return children({
       loading,
+      reloading,
 
       // timeseries data
       timeseriesData: transformedTimeseriesData,

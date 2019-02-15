@@ -148,8 +148,9 @@ class OrganizationMixin(object):
 
         # TODO(dcramer): deal with case when the user cannot create orgs
         organization = self.get_active_organization(request)
+
         if organization:
-            url = reverse('sentry-organization-home', args=[organization.slug])
+            url = organization.get_url()
         elif not features.has('organizations:create'):
             return self.respond('sentry/no-organization-access.html', status=403)
         else:

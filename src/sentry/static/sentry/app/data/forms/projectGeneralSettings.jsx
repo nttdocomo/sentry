@@ -11,11 +11,11 @@ import slugify from 'app/utils/slugify';
 import space from 'app/styles/space';
 
 // Export route to make these forms searchable by label/help
-export const route = '/settings/:orgId/:projectId/';
+export const route = '/settings/:orgId/projects/:projectId/';
 
 const getResolveAgeAllowedValues = () => {
   let i = 0;
-  let values = [];
+  const values = [];
   while (i <= 720) {
     values.push(i);
     if (i < 12) {
@@ -43,21 +43,6 @@ const ORG_DISABLED_REASON = t(
 const hasOrgOverride = ({organization, name}) => organization[name];
 
 export const fields = {
-  name: {
-    name: 'name',
-    type: 'string',
-    required: true,
-
-    label: t('Legacy Name'),
-    placeholder: t('My Service Name'),
-    help: tct(
-      '[Deprecated] In the future, only [Name] will be used to identify your project',
-      {
-        Deprecated: <strong>DEPRECATED</strong>,
-        Name: <strong>Name</strong>,
-      }
-    ),
-  },
   slug: {
     name: 'slug',
     type: 'string',

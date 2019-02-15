@@ -6,7 +6,6 @@ import styled from 'react-emotion';
 
 import Crumb from 'app/views/settings/components/settingsBreadcrumb/crumb';
 import Divider from 'app/views/settings/components/settingsBreadcrumb/divider';
-import InlineSvg from 'app/components/inlineSvg';
 import OrganizationCrumb from 'app/views/settings/components/settingsBreadcrumb/organizationCrumb';
 import ProjectCrumb from 'app/views/settings/components/settingsBreadcrumb/projectCrumb';
 import SentryTypes from 'app/sentryTypes';
@@ -45,21 +44,18 @@ class SettingsBreadcrumb extends React.Component {
   }
 
   render() {
-    let {routes, params, pathMap} = this.props;
-    let lastRouteIndex = routes.map(r => !!r.name).lastIndexOf(true);
+    const {routes, params, pathMap} = this.props;
+    const lastRouteIndex = routes.map(r => !!r.name).lastIndexOf(true);
     return (
       <Breadcrumbs>
-        <LogoLink href="/">
-          <StyledInlineSvg src="icon-sentry" size="20px" />
-        </LogoLink>
         {routes.map((route, i) => {
           if (!route.name) return null;
-          let pathTitle = pathMap[getRouteStringFromRoutes(routes.slice(0, i + 1))];
-          let isLast = i === lastRouteIndex;
-          let createMenu = MENUS[route.name];
-          let Menu = typeof createMenu === 'function' && createMenu;
-          let hasMenu = !!Menu;
-          let CrumbPicker = hasMenu
+          const pathTitle = pathMap[getRouteStringFromRoutes(routes.slice(0, i + 1))];
+          const isLast = i === lastRouteIndex;
+          const createMenu = MENUS[route.name];
+          const Menu = typeof createMenu === 'function' && createMenu;
+          const hasMenu = !!Menu;
+          const CrumbPicker = hasMenu
             ? Menu
             : () => (
                 <Crumb route={route} isLast={isLast}>
@@ -96,31 +92,4 @@ export default createReactClass({
 const Breadcrumbs = styled.div`
   display: flex;
   align-items: center;
-`;
-
-const StyledInlineSvg = styled(InlineSvg)`
-  display: block;
-`;
-
-const LogoLink = styled.a`
-  padding-right: 12px;
-  margin-right: 12px;
-  color: ${p => p.theme.gray4};
-  z-index: 1;
-  position: relative;
-
-  &:after {
-    display: block;
-    content: '';
-    position: absolute;
-    right: 0;
-    top: 2px;
-    bottom: 2px;
-    width: 1px;
-    background: ${p => p.theme.borderDark};
-  }
-
-  &:hover {
-    color: ${p => p.theme.gray5};
-  }
 `;

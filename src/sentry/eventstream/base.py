@@ -25,6 +25,8 @@ class EventStream(Service):
         'end_merge',
         'start_unmerge',
         'end_unmerge',
+        'start_delete_tag',
+        'end_delete_tag',
         'relay',
     )
 
@@ -64,3 +66,9 @@ class EventStream(Service):
     def relay(self, consumer_group, commit_log_topic,
               synchronize_commit_group, commit_batch_size=100, initial_offset_reset='latest'):
         raise RelayNotRequired
+
+    def start_delete_tag(self, project_id, tag):
+        pass
+
+    def end_delete_tag(self, state):
+        pass

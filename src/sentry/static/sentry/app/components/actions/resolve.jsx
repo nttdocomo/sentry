@@ -16,10 +16,11 @@ export default class ResolveActions extends React.Component {
     latestRelease: PropTypes.object,
     onUpdate: PropTypes.func.isRequired,
     orgId: PropTypes.string.isRequired,
-    projectId: PropTypes.string.isRequired,
+    projectId: PropTypes.string,
     shouldConfirm: PropTypes.bool,
     confirmMessage: PropTypes.node,
     disabled: PropTypes.bool,
+    disableDropdown: PropTypes.bool,
     isResolved: PropTypes.bool,
     isAutoResolved: PropTypes.bool,
     confirmLabel: PropTypes.string,
@@ -51,7 +52,7 @@ export default class ResolveActions extends React.Component {
   }
 
   renderResolved() {
-    let {isAutoResolved, onUpdate} = this.props;
+    const {isAutoResolved, onUpdate} = this.props;
 
     if (isAutoResolved) {
       return (
@@ -84,7 +85,7 @@ export default class ResolveActions extends React.Component {
   }
 
   render() {
-    let {
+    const {
       isResolved,
       hasRelease,
       latestRelease,
@@ -95,19 +96,20 @@ export default class ResolveActions extends React.Component {
       shouldConfirm,
       disabled,
       confirmLabel,
+      disableDropdown,
     } = this.props;
 
-    let buttonClass = this.getButtonClass();
+    const buttonClass = this.getButtonClass();
 
     if (isResolved) {
       return this.renderResolved();
     }
 
-    let actionTitle = !hasRelease
+    const actionTitle = !hasRelease
       ? t('Set up release tracking in order to use this feature.')
       : '';
 
-    let actionLinkProps = {
+    const actionLinkProps = {
       shouldConfirm,
       message: confirmMessage,
       confirmLabel,
@@ -141,7 +143,7 @@ export default class ResolveActions extends React.Component {
             className={buttonClass}
             title=""
             alwaysRenderMenu
-            disabled={disabled}
+            disabled={disableDropdown || disabled}
           >
             <MenuItem header={true}>{t('Resolved In')}</MenuItem>
             <MenuItem noAnchor={true}>

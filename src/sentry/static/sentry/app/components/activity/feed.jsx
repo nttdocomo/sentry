@@ -10,15 +10,16 @@ import ErrorBoundary from 'app/components/errorBoundary';
 import LoadingError from 'app/components/loadingError';
 import LoadingIndicator from 'app/components/loadingIndicator';
 import Pagination from 'app/components/pagination';
+import SentryTypes from 'app/sentryTypes';
 import space from 'app/styles/space';
 
 const ActivityFeed = createReactClass({
   displayName: 'ActivityFeed',
 
   propTypes: {
+    organization: SentryTypes.Organization,
     endpoint: PropTypes.string,
     query: PropTypes.object,
-    renderEmpty: PropTypes.func,
     pagination: PropTypes.bool,
   },
 
@@ -45,8 +46,8 @@ const ActivityFeed = createReactClass({
   },
 
   componentWillReceiveProps(nextProps) {
-    let location = this.props.location;
-    let nextLocation = nextProps.location;
+    const location = this.props.location;
+    const nextLocation = nextProps.location;
     if (
       location.pathname != nextLocation.pathname ||
       location.search != nextLocation.search
@@ -60,7 +61,7 @@ const ActivityFeed = createReactClass({
   },
 
   fetchData() {
-    let location = this.props.location;
+    const location = this.props.location;
     this.api.clear();
     this.api.request(this.props.endpoint, {
       method: 'GET',
@@ -87,7 +88,6 @@ const ActivityFeed = createReactClass({
 
   renderResults() {
     let body;
-    let {orgId} = this.props.params;
 
     if (this.state.loading) body = this.renderLoading();
     else if (this.state.error) body = <LoadingError onRetry={this.fetchData} />;
@@ -103,7 +103,7 @@ const ActivityFeed = createReactClass({
                     css={{marginBottom: space(1), borderRadius: 0}}
                     key={item.id}
                   >
-                    <ActivityItem orgId={orgId} item={item} />
+                    <ActivityItem organization={this.props.organization} item={item} />
                   </ErrorBoundary>
                 );
               } catch (ex) {
@@ -116,7 +116,7 @@ const ActivityFeed = createReactClass({
           </ul>
         </div>
       );
-    } else body = (this.props.renderEmpty || this.renderEmpty)();
+    } else body = this.renderEmpty();
 
     return body;
   },

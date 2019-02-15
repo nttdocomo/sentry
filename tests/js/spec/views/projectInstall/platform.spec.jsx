@@ -2,7 +2,7 @@ import React from 'react';
 import {shallow} from 'enzyme';
 
 import {Client} from 'app/api';
-import ProjectInstallPlatform from 'app/views/projectInstall/platform';
+import {ProjectInstallPlatform} from 'app/views/projectInstall/platform';
 
 describe('ProjectInstallPlatform', function() {
   let sandbox;
@@ -19,6 +19,7 @@ describe('ProjectInstallPlatform', function() {
 
   describe('render()', function() {
     const baseProps = {
+      organization: TestStubs.Organization(),
       location: {query: {}},
       platformData: {
         platforms: [
@@ -61,14 +62,14 @@ describe('ProjectInstallPlatform', function() {
     };
 
     it('should render NotFound if no matching integration/platform', function() {
-      let props = {
+      const props = {
         ...baseProps,
         params: {
           platform: 'lua',
         },
       };
 
-      let wrapper = shallow(<ProjectInstallPlatform {...props} />, {
+      const wrapper = shallow(<ProjectInstallPlatform {...props} />, {
         organization: {id: '1337'},
       });
 
@@ -76,14 +77,14 @@ describe('ProjectInstallPlatform', function() {
     });
 
     it('should rendering Loading if integration/platform exists', function() {
-      let props = {
+      const props = {
         ...baseProps,
         params: {
           platform: 'node-connect',
         },
       };
 
-      let wrapper = shallow(<ProjectInstallPlatform {...props} />, {
+      const wrapper = shallow(<ProjectInstallPlatform {...props} />, {
         organization: {id: '1337'},
       });
 

@@ -280,7 +280,11 @@ class Group(Model):
         super(Group, self).save(*args, **kwargs)
 
     def get_absolute_url(self, params=None):
-        url = reverse('sentry-group', args=[self.organization.slug, self.project.slug, self.id])
+        from sentry import features
+        if features.has('organizations:sentry10', self.organization):
+            url = reverse('sentry-organization-issue', args=[self.organization.slug, self.id])
+        else:
+            url = reverse('sentry-group', args=[self.organization.slug, self.project.slug, self.id])
         if params:
             url = url + '?' + urlencode(params)
         return absolute_uri(url)
@@ -417,6 +421,10 @@ class Group(Model):
     def title(self):
         et = eventtypes.get(self.get_event_type())(self.data)
         return et.to_string(self.get_event_metadata())
+
+    def location(self):
+        et = eventtypes.get(self.get_event_type())(self.data)
+        return et.get_location(self.get_event_metadata())
 
     def error(self):
         warnings.warn('Group.error is deprecated, use Group.title', DeprecationWarning)

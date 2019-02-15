@@ -27,6 +27,7 @@ from sentry.utils import db
 
 from . import models
 from sentry.tagstore.types import TagKey, TagValue, GroupTagKey, GroupTagValue
+from sentry.tasks.post_process import index_event_tags
 
 
 logger = logging.getLogger('sentry.tagstore.v2')
@@ -511,7 +512,13 @@ class V2TagStorage(TagStorage):
 
         return transformers[models.GroupTagKey](instance)
 
-    def get_group_tag_keys(self, project_id, group_id, environment_id, limit=None, keys=None):
+    def get_group_tag_keys(self, project_id, group_id, environment_ids, limit=None, keys=None):
+        # only the snuba backend supports multi env
+        if environment_ids and len(environment_ids) > 1:
+            raise NotImplementedError
+
+        environment_id = environment_ids[0] if environment_ids else None
+
         qs = models.GroupTagKey.objects.select_related('_key').filter(
             project_id=project_id,
             group_id=group_id,
@@ -663,11 +670,18 @@ class V2TagStorage(TagStorage):
                         },
                         extra=extra)
 
-    def get_group_event_filter(self, project_id, group_id, environment_id, tags):
+    def get_group_event_filter(self, project_id, group_id, environment_ids, tags, start, end):
         # NOTE: `environment_id=None` needs to be filtered differently in this method.
         # EventTag never has NULL `environment_id` fields (individual Events always have an environment),
         # and so `environment_id=None` needs to query EventTag for *all* environments (except, ironically
         # the aggregate environment).
+        if environment_ids:
+            # only the snuba backend supports multi env
+            if len(environment_ids) > 1:
+                raise NotImplementedError
+            environment_id = environment_ids[0]
+        else:
+            environment_id = None
 
         if environment_id is None:
             # filter for all 'real' environments
@@ -707,12 +721,19 @@ class V2TagStorage(TagStorage):
         # Django doesnt support union, so we limit results and try to find
         # reasonable matches
 
+        date_filters = Q()
+        if start:
+            date_filters &= Q(date_added__gte=start)
+        if end:
+            date_filters &= Q(date_added__lte=end)
+
         # get initial matches to start the filter
         kv_pairs = tag_lookups.pop()
         matches = list(
             models.EventTag.objects.filter(
                 reduce(or_, (Q(key_id=k, value_id=v)
                              for k, v in kv_pairs)),
+                date_filters,
                 project_id=project_id,
                 group_id=group_id,
             ).values_list('event_id', flat=True)[:1000]
@@ -725,6 +746,7 @@ class V2TagStorage(TagStorage):
                 models.EventTag.objects.filter(
                     reduce(or_, (Q(key_id=k, value_id=v)
                                  for k, v in kv_pairs)),
+                    date_filters,
                     project_id=project_id,
                     group_id=group_id,
                     event_id__in=matches,
@@ -1100,3 +1122,15 @@ class V2TagStorage(TagStorage):
             return queryset.filter(_key__environment_id=environment_id)
         else:
             raise ValueError("queryset of unsupported model '%s' provided" % queryset.model)
+
+    def delay_index_event_tags(self, organization_id, project_id, group_id,
+                               environment_id, event_id, tags, date_added):
+        index_event_tags.delay(
+            organization_id=organization_id,
+            project_id=project_id,
+            group_id=group_id,
+            environment_id=environment_id,
+            event_id=event_id,
+            tags=tags,
+            date_added=date_added,
+        )

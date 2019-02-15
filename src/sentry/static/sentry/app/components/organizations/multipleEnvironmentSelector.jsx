@@ -2,7 +2,9 @@ import PropTypes from 'prop-types';
 import React from 'react';
 import styled, {css} from 'react-emotion';
 
+import {analytics} from 'app/utils/analytics';
 import {fetchOrganizationEnvironments} from 'app/actionCreators/environments';
+import getRouteStringFromRoutes from 'app/utils/getRouteStringFromRoutes';
 import {t} from 'app/locale';
 import CheckboxFancy from 'app/components/checkboxFancy';
 import DropdownAutoComplete from 'app/components/dropdownAutoComplete';
@@ -37,6 +39,14 @@ class MultipleEnvironmentSelector extends React.PureComponent {
 
     // When menu is closed
     onUpdate: PropTypes.func,
+  };
+
+  static defaultProps = {
+    value: [],
+  };
+
+  static contextTypes = {
+    router: PropTypes.object,
   };
 
   constructor(props) {
@@ -74,6 +84,12 @@ class MultipleEnvironmentSelector extends React.PureComponent {
         selectedEnvs.add(env.name);
       }
 
+      analytics('environmentselector.toggle', {
+        action: selectedEnvs.has(env.name) ? 'added' : 'removed',
+        path: getRouteStringFromRoutes(this.context.router.routes),
+        org_id: parseInt(this.props.organization.id, 10),
+      });
+
       this.doChange(Array.from(selectedEnvs.values()), e);
 
       return {
@@ -94,6 +110,13 @@ class MultipleEnvironmentSelector extends React.PureComponent {
   handleClose = () => {
     // Only update if there are changes
     if (!this.state.hasChanges) return;
+
+    analytics('environmentselector.update', {
+      count: this.state.selectedEnvs.size,
+      path: getRouteStringFromRoutes(this.context.router.routes),
+      org_id: parseInt(this.props.organization.id, 10),
+    });
+
     this.doUpdate();
   };
 
@@ -101,6 +124,11 @@ class MultipleEnvironmentSelector extends React.PureComponent {
    * Clears all selected environments and updates
    */
   handleClear = () => {
+    analytics('environmentselector.clear', {
+      path: getRouteStringFromRoutes(this.context.router.routes),
+      org_id: parseInt(this.props.organization.id, 10),
+    });
+
     this.setState(
       {
         hasChanges: false,
@@ -117,6 +145,11 @@ class MultipleEnvironmentSelector extends React.PureComponent {
    * Selects an environment, should close menu and initiate an update
    */
   handleSelect = ({value: env}, e) => {
+    analytics('environmentselector.direct_selection', {
+      path: getRouteStringFromRoutes(this.context.router.routes),
+      org_id: parseInt(this.props.organization.id, 10),
+    });
+
     this.setState(state => {
       this.doChange([env.name], e);
 
@@ -136,64 +169,76 @@ class MultipleEnvironmentSelector extends React.PureComponent {
 
   render() {
     const {value, organization} = this.props;
-    const summary = value && value.length ? `${value.join(', ')}` : t('All Environments');
 
     return (
       <FetchOrganizationEnvironments organization={organization}>
-        {({environments}) => (
-          <StyledDropdownAutoComplete
-            alignMenu="left"
-            closeOnSelect={true}
-            blendCorner={false}
-            searchPlaceholder={t('Filter environments')}
-            onSelect={this.handleSelect}
-            onClose={this.handleClose}
-            maxHeight={500}
-            rootClassName={rootClassName}
-            zIndex={theme.zIndex.dropdown}
-            inputProps={{style: {padding: 8, paddingLeft: 14}}}
-            emptyMessage={
-              environments === null ? <LoadingIndicator /> : t('You have no environments')
-            }
-            noResultsMessage={t('No environments found')}
-            virtualizedHeight={40}
-            emptyHidesInput
-            menuProps={{style: {position: 'relative'}}}
-            items={
-              environments
-                ? environments.map(env => ({
-                    value: env,
-                    searchKey: env.name,
-                    label: ({inputValue}) => (
-                      <EnvironmentSelectorItem
-                        environment={env}
-                        multi={true}
-                        inputValue={inputValue}
-                        isChecked={this.state.selectedEnvs.has(env.name)}
-                        onMultiSelect={this.handleMultiSelect}
-                      />
-                    ),
-                  }))
-                : []
-            }
-          >
-            {({isOpen, getActorProps, actions}) => (
-              <StyledHeaderItem
-                icon={<StyledInlineSvg src="icon-window" />}
-                isOpen={isOpen}
-                hasSelected={value && !!value.length}
-                hasChanges={this.state.hasChanges}
-                onSubmit={() => this.handleUpdate(actions)}
-                onClear={this.handleClear}
-                {...getActorProps({
-                  isStyled: true,
-                })}
-              >
-                {summary}
-              </StyledHeaderItem>
-            )}
-          </StyledDropdownAutoComplete>
-        )}
+        {({environments}) => {
+          const envNames = new Set((environments || []).map(env => env.name));
+          const validatedValue = value.filter(env => envNames.has(env));
+          const summary = validatedValue.length
+            ? `${validatedValue.join(', ')}`
+            : t('All Environments');
+
+          return (
+            <StyledDropdownAutoComplete
+              alignMenu="left"
+              allowActorToggle={true}
+              closeOnSelect={true}
+              blendCorner={false}
+              searchPlaceholder={t('Filter environments')}
+              onSelect={this.handleSelect}
+              onClose={this.handleClose}
+              maxHeight={500}
+              rootClassName={rootClassName}
+              zIndex={theme.zIndex.dropdown}
+              inputProps={{style: {padding: 8, paddingLeft: 14}}}
+              emptyMessage={
+                environments === null ? (
+                  <LoadingIndicator />
+                ) : (
+                  t('You have no environments')
+                )
+              }
+              noResultsMessage={t('No environments found')}
+              virtualizedHeight={40}
+              emptyHidesInput
+              menuProps={{style: {position: 'relative'}}}
+              items={
+                environments
+                  ? environments.map(env => ({
+                      value: env,
+                      searchKey: env.name,
+                      label: ({inputValue}) => (
+                        <EnvironmentSelectorItem
+                          environment={env}
+                          multi={true}
+                          inputValue={inputValue}
+                          isChecked={this.state.selectedEnvs.has(env.name)}
+                          onMultiSelect={this.handleMultiSelect}
+                        />
+                      ),
+                    }))
+                  : []
+              }
+            >
+              {({isOpen, getActorProps, actions}) => (
+                <StyledHeaderItem
+                  icon={<StyledInlineSvg src="icon-window" />}
+                  isOpen={isOpen}
+                  hasSelected={value && !!value.length}
+                  hasChanges={this.state.hasChanges}
+                  onSubmit={() => this.handleUpdate(actions)}
+                  onClear={this.handleClear}
+                  {...getActorProps({
+                    isStyled: true,
+                  })}
+                >
+                  {summary}
+                </StyledHeaderItem>
+              )}
+            </StyledDropdownAutoComplete>
+          );
+        }}
       </FetchOrganizationEnvironments>
     );
   }
@@ -215,13 +260,13 @@ const FetchOrganizationEnvironments = withApi(
     }
 
     componentDidMount() {
-      let {api, organization} = this.props;
+      const {api, organization} = this.props;
       fetchOrganizationEnvironments(api, organization.slug).then(environments =>
         this.setState({environments})
       );
     }
     render() {
-      let {children} = this.props;
+      const {children} = this.props;
       return children({
         environments: this.state.environments,
       });

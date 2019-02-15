@@ -7,12 +7,12 @@ import SidebarContainer, {Sidebar} from 'app/components/sidebar';
 
 describe('Sidebar', function() {
   let wrapper;
-  let routerContext = TestStubs.routerContext();
-  let {organization, router} = routerContext.context;
-  let user = TestStubs.User();
-  let apiMocks = {};
+  const routerContext = TestStubs.routerContext();
+  const {organization, router} = routerContext.context;
+  const user = TestStubs.User();
+  const apiMocks = {};
 
-  let createWrapper = props =>
+  const createWrapper = props =>
     mount(
       <Sidebar
         organization={organization}
@@ -50,6 +50,10 @@ describe('Sidebar', function() {
       router: null,
     });
 
+    // no org displays user details
+    expect(wrapper.find('OrgOrUserName').text()).toContain(user.name);
+    expect(wrapper.find('UserNameOrEmail').text()).toContain(user.email);
+
     wrapper.find('SidebarDropdownActor').simulate('click');
     expect(wrapper.find('OrgAndUserMenu')).toMatchSnapshot();
   });
@@ -59,6 +63,9 @@ describe('Sidebar', function() {
       <SidebarContainer organization={organization} user={user} router={router} />,
       routerContext
     );
+
+    expect(wrapper.find('OrgOrUserName').text()).toContain(organization.name);
+    expect(wrapper.find('UserNameOrEmail').text()).toContain(user.name);
 
     wrapper.find('SidebarCollapseItem').simulate('click');
     await tick();
@@ -95,7 +102,7 @@ describe('Sidebar', function() {
     it('can toggle help menu', function() {
       wrapper = createWrapper();
       wrapper.find('HelpActor').simulate('click');
-      let menu = wrapper.find('HelpMenu');
+      const menu = wrapper.find('HelpMenu');
       expect(menu).toHaveLength(1);
       expect(menu).toMatchSnapshot();
       expect(menu.find('SidebarMenuItem')).toHaveLength(3);
@@ -143,7 +150,7 @@ describe('Sidebar', function() {
     });
 
     it('has can logout', function() {
-      let mock = MockApiClient.addMockResponse({
+      const mock = MockApiClient.addMockResponse({
         url: '/auth/',
         method: 'DELETE',
         status: 204,
@@ -229,7 +236,7 @@ describe('Sidebar', function() {
     it('can unmount Sidebar (and Broadcasts) and kills Broadcast timers', async function() {
       jest.useFakeTimers();
       wrapper = createWrapper();
-      let broadcasts = wrapper.find('Broadcasts').instance();
+      const broadcasts = wrapper.find('Broadcasts').instance();
 
       // This will start timer to mark as seen
       await wrapper.find('Broadcasts SidebarItem').simulate('click');
@@ -278,6 +285,18 @@ describe('Sidebar', function() {
       });
       wrapper.update();
       expect(wrapper.find('SidebarPanel')).toHaveLength(0);
+    });
+
+    it('hides assigned, bookmarks, history, activity and stats for sentry10', function() {
+      const sentry10Org = TestStubs.Organization({features: ['sentry10']});
+      wrapper = createWrapper();
+      wrapper.setProps({organization: sentry10Org});
+      wrapper.update();
+      const labels = wrapper.find('SidebarItemLabel').map(node => node.text());
+      expect(labels).toHaveLength(9);
+      expect(labels).not.toContain('Assigned to me');
+      expect(labels).not.toContain('Bookmarked issues');
+      expect(labels).not.toContain('Recently viewed');
     });
   });
 });

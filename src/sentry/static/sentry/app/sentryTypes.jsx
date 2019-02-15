@@ -71,12 +71,7 @@ export const Deploy = PropTypes.shape({
   version: PropTypes.string,
 });
 
-export const DiscoverSavedQuery = PropTypes.shape({
-  id: PropTypes.string.isRequired,
-  dateCreated: PropTypes.string.isRequired,
-  dateUpdated: PropTypes.string.isRequired,
-  name: PropTypes.string.isRequired,
-  createdBy: PropTypes.string,
+const DiscoverQueryShape = {
   projects: PropTypes.arrayOf(PropTypes.number),
   fields: PropTypes.arrayOf(PropTypes.string),
   aggregations: PropTypes.arrayOf(PropTypes.array),
@@ -85,7 +80,35 @@ export const DiscoverSavedQuery = PropTypes.shape({
   range: PropTypes.string,
   start: PropTypes.string,
   end: PropTypes.string,
+};
+
+export const DiscoverQuery = PropTypes.shape(DiscoverQueryShape);
+
+export const DiscoverSavedQuery = PropTypes.shape({
+  id: PropTypes.string.isRequired,
+  dateCreated: PropTypes.string.isRequired,
+  dateUpdated: PropTypes.string.isRequired,
+  name: PropTypes.string.isRequired,
+  createdBy: PropTypes.string,
+  ...DiscoverQueryShape,
 });
+
+const DiscoverResultsShape = {
+  data: PropTypes.arrayOf(PropTypes.object),
+  meta: PropTypes.arrayOf(
+    PropTypes.shape({
+      type: PropTypes.string,
+      name: PropTypes.string,
+    })
+  ),
+  timing: PropTypes.shape({
+    duration_ms: PropTypes.number,
+    marks_ms: PropTypes.object,
+    timestamp: PropTypes.number,
+  }),
+};
+
+export const DiscoverResults = PropTypes.arrayOf(PropTypes.shape(DiscoverResultsShape));
 
 /**
  * A Member is someone that was invited to Sentry but may
@@ -359,6 +382,15 @@ export const GlobalSelection = PropTypes.shape({
     end: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(Date)]),
     utc: PropTypes.bool,
   }),
+});
+
+export const Widget = PropTypes.shape({
+  queries: PropTypes.shape({
+    discover: PropTypes.arrayOf(DiscoverQuery),
+  }),
+  title: PropTypes.node,
+  fieldLabelMap: PropTypes.object,
+  yAxisMapping: PropTypes.array,
 });
 
 export const EChartsData = PropTypes.arrayOf(
@@ -854,7 +886,7 @@ export const SeriesUnit = PropTypes.shape({
 
 export const Series = PropTypes.arrayOf(SeriesUnit);
 
-let SentryTypes = {
+const SentryTypes = {
   AnyModel: PropTypes.shape({
     id: PropTypes.string.isRequired,
   }),
@@ -862,7 +894,9 @@ let SentryTypes = {
   AuthProvider,
   Config,
   Deploy,
+  DiscoverQuery,
   DiscoverSavedQuery,
+  DiscoverResults,
   Environment,
   Event,
   Organization: PropTypes.shape({
@@ -889,6 +923,7 @@ let SentryTypes = {
   Repository,
   User,
   SentryApplication,
+  Widget,
 
   // echarts prop types
   EChartsSeries,

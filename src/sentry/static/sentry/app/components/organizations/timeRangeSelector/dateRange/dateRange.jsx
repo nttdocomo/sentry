@@ -4,19 +4,15 @@ import 'react-date-range/dist/theme/default.css';
 import {DateRangePicker} from 'react-date-range';
 import PropTypes from 'prop-types';
 import React from 'react';
+import moment from 'moment';
 import styled from 'react-emotion';
 
-import {
-  DEFAULT_DAY_END_TIME,
-  DEFAULT_DAY_START_TIME,
-  getCoercedUtcOrLocalDate,
-  getFormattedDate,
-  getStartOfPeriodAgo,
-  setDateToTime,
-} from 'app/utils/dates';
 import {analytics} from 'app/utils/analytics';
+import {getEndOfDay, getStartOfPeriodAgo, setDateToTime} from 'app/utils/dates';
+import getRouteStringFromRoutes from 'app/utils/getRouteStringFromRoutes';
 import {t} from 'app/locale';
 import Checkbox from 'app/components/checkbox';
+import SentryTypes from 'app/sentryTypes';
 import TimePicker from 'app/components/organizations/timeRangeSelector/timePicker';
 import space from 'app/styles/space';
 import theme from 'app/utils/theme';
@@ -66,6 +62,11 @@ class DateRange extends React.Component {
      * Callback when value changes
      */
     onChange: PropTypes.func,
+
+    /**
+     * Just used for metrics
+     */
+    organization: SentryTypes.Organization,
   };
 
   static defaultProps = {
@@ -74,29 +75,24 @@ class DateRange extends React.Component {
     maxPickableDays: MAX_PICKABLE_DAYS,
   };
 
-  static getTimeStringFromDate = (date, utc) => {
-    return getFormattedDate(date, 'HH:mm', {local: !utc});
+  static contextTypes = {
+    router: PropTypes.object,
+  };
+
+  static getTimeStringFromDate = date => {
+    return moment(date)
+      .local()
+      .format('HH:mm');
   };
 
   handleSelectDateRange = ({selection}) => {
-    const {utc, onChange} = this.props;
+    const {onChange} = this.props;
     const {startDate, endDate} = selection;
 
-    let start = startDate;
-    let end = endDate;
-
-    if (start) {
-      start = setDateToTime(start, DEFAULT_DAY_START_TIME, {local: !utc});
-    }
-
-    if (end) {
-      end = setDateToTime(end, DEFAULT_DAY_END_TIME, {
-        local: !utc,
-      });
-    }
+    const end = endDate ? getEndOfDay(endDate) : endDate;
 
     onChange({
-      start,
+      start: startDate,
       end,
     });
   };
@@ -112,10 +108,12 @@ class DateRange extends React.Component {
     analytics('dateselector.time_changed', {
       field_changed: 'start',
       time: startTime,
+      path: getRouteStringFromRoutes(this.context.router.routes),
+      org_id: parseInt(this.props.organization.id, 10),
     });
 
     onChange({
-      start: setDateToTime(start, startTime, {local: !this.props.utc}),
+      start: setDateToTime(start, startTime, {local: true}),
       end,
     });
   };
@@ -127,11 +125,13 @@ class DateRange extends React.Component {
     analytics('dateselector.time_changed', {
       field_changed: 'end',
       time: endTime,
+      path: getRouteStringFromRoutes(this.context.router.routes),
+      org_id: parseInt(this.props.organization.id, 10),
     });
 
     onChange({
       start,
-      end: setDateToTime(end, endTime, {local: !this.props.utc}),
+      end: setDateToTime(end, endTime, {local: true}),
     });
   };
 
@@ -146,18 +146,13 @@ class DateRange extends React.Component {
       onChangeUtc,
     } = this.props;
 
-    const startTime = DateRange.getTimeStringFromDate(new Date(start), utc);
-    const endTime = DateRange.getTimeStringFromDate(new Date(end), utc);
+    const startTime = DateRange.getTimeStringFromDate(new Date(start));
+    const endTime = DateRange.getTimeStringFromDate(new Date(end));
 
     // Restraints on the time range that you can select
     // Can't select dates in the future b/c we're not fortune tellers (yet)
-    const minDate = getCoercedUtcOrLocalDate(
-      getStartOfPeriodAgo(maxPickableDays, 'days'),
-      {
-        local: !utc,
-      }
-    );
-    const maxDate = getCoercedUtcOrLocalDate(new Date(), {local: !utc});
+    const minDate = getStartOfPeriodAgo(maxPickableDays, 'days');
+    const maxDate = new Date();
 
     return (
       <div className={className} data-test-id="date-range">
@@ -165,8 +160,8 @@ class DateRange extends React.Component {
           rangeColors={[theme.purple]}
           ranges={[
             {
-              startDate: start ? getCoercedUtcOrLocalDate(start, {local: !utc}) : start,
-              endDate: end ? getCoercedUtcOrLocalDate(end, {local: !utc}) : end,
+              startDate: moment(start).local(),
+              endDate: moment(end).local(),
               key: 'selection',
             },
           ]}

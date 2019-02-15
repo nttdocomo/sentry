@@ -3,7 +3,6 @@ import {browserHistory} from 'react-router';
 import PropTypes from 'prop-types';
 import React from 'react';
 import createReactClass from 'create-react-class';
-import styled from 'react-emotion';
 
 import {Panel, PanelAlert, PanelBody, PanelHeader} from 'app/components/panels';
 import {
@@ -37,7 +36,6 @@ import SelectField from 'app/views/settings/components/forms/selectField';
 import SentryTypes from 'app/sentryTypes';
 import SettingsPageHeader from 'app/views/settings/components/settingsPageHeader';
 import StackedBarChart from 'app/components/stackedBarChart';
-import TextBlock from 'app/views/settings/components/text/textBlock';
 import TextCopyInput from 'app/views/settings/components/forms/textCopyInput';
 import TextField from 'app/views/settings/components/forms/textField';
 import getDynamicText from 'app/utils/getDynamicText';
@@ -62,8 +60,8 @@ const KeyStats = createReactClass({
   mixins: [ApiMixin],
 
   getInitialState() {
-    let until = Math.floor(new Date().getTime() / 1000);
-    let since = until - 3600 * 24 * 30;
+    const until = Math.floor(new Date().getTime() / 1000);
+    const since = until - 3600 * 24 * 30;
 
     return {
       since,
@@ -80,7 +78,7 @@ const KeyStats = createReactClass({
   },
 
   fetchData() {
-    let {keyId, orgId, projectId} = this.props.params;
+    const {keyId, orgId, projectId} = this.props.params;
     this.api.request(`/projects/${orgId}/${projectId}/keys/${keyId}/stats/`, {
       query: {
         since: this.state.since,
@@ -89,7 +87,7 @@ const KeyStats = createReactClass({
       },
       success: data => {
         let emptyStats = true;
-        let stats = data.map(p => {
+        const stats = data.map(p => {
           if (p.total) emptyStats = false;
           return {
             x: p.ts,
@@ -110,8 +108,8 @@ const KeyStats = createReactClass({
   },
 
   renderTooltip(point, pointIdx, chart) {
-    let timeLabel = chart.getTimeLabel(point);
-    let [accepted, dropped, filtered] = point.y;
+    const timeLabel = chart.getTimeLabel(point);
+    const [accepted, dropped, filtered] = point.y;
 
     let value = `${accepted.toLocaleString()} accepted`;
     if (dropped) {
@@ -153,12 +151,10 @@ const KeyStats = createReactClass({
               tooltip={this.renderTooltip}
             />
           ) : (
-            <EmptyMessage css={{flexDirection: 'column', alignItems: 'center'}}>
-              <EmptyHeader>{t('Nothing recorded in the last 30 days.')}</EmptyHeader>
-              <TextBlock css={{marginBottom: 0}}>
-                {t('Total events captured using these credentials.')}
-              </TextBlock>
-            </EmptyMessage>
+            <EmptyMessage
+              title={t('Nothing recorded in the last 30 days.')}
+              description={t('Total events captured using these credentials.')}
+            />
           )}
         </PanelBody>
       </Panel>
@@ -173,7 +169,7 @@ class KeyRateLimitsForm extends React.Component {
   };
 
   handleChangeWindow = (onChange, onBlur, currentValueObj, value, e) => {
-    let valueObj = {
+    const valueObj = {
       ...currentValueObj,
       window: value,
     };
@@ -182,7 +178,7 @@ class KeyRateLimitsForm extends React.Component {
   };
 
   handleChangeCount = (cb, value, e) => {
-    let valueObj = {
+    const valueObj = {
       ...value,
       count: e.target.value,
     };
@@ -191,11 +187,11 @@ class KeyRateLimitsForm extends React.Component {
   };
 
   render() {
-    let {data, disabled} = this.props;
-    let {keyId, orgId, projectId} = this.props.params;
-    let apiEndpoint = `/projects/${orgId}/${projectId}/keys/${keyId}/`;
+    const {data, disabled} = this.props;
+    const {keyId, orgId, projectId} = this.props.params;
+    const apiEndpoint = `/projects/${orgId}/${projectId}/keys/${keyId}/`;
 
-    let disabledAlert = ({features}) => (
+    const disabledAlert = ({features}) => (
       <FeatureDisabled
         alert={PanelAlert}
         features={features}
@@ -230,7 +226,7 @@ class KeyRateLimitsForm extends React.Component {
                   label={t('Rate Limit')}
                   disabled={disabled || !hasFeature}
                   validate={({id, form, model}) => {
-                    let isValid =
+                    const isValid =
                       form &&
                       form.rateLimit &&
                       typeof form.rateLimit.count !== 'undefined' &&
@@ -309,8 +305,8 @@ const KeySettings = createReactClass({
   handleRemove(e) {
     if (this.state.loading) return;
 
-    let loadingIndicator = addLoadingMessage(t('Saving changes..'));
-    let {keyId, orgId, projectId} = this.props.params;
+    const loadingIndicator = addLoadingMessage(t('Saving changes..'));
+    const {keyId, orgId, projectId} = this.props.params;
     this.api.request(`/projects/${orgId}/${projectId}/keys/${keyId}/`, {
       method: 'DELETE',
       success: (d, _, jqXHR) => {
@@ -330,9 +326,9 @@ const KeySettings = createReactClass({
   },
 
   render() {
-    let {keyId, orgId, projectId} = this.props.params;
-    let {data} = this.props;
-    let apiEndpoint = `/projects/${orgId}/${projectId}/keys/${keyId}/`;
+    const {keyId, orgId, projectId} = this.props.params;
+    const {data} = this.props;
+    const apiEndpoint = `/projects/${orgId}/${projectId}/keys/${keyId}/`;
     const loaderLink = getDynamicText({
       value: data.dsn.cdn,
       fixed: '__JS_SDK_LOADER_URL__',
@@ -481,18 +477,18 @@ export default class ProjectKeyDetails extends AsyncView {
   }
 
   getEndpoints() {
-    let {keyId, orgId, projectId} = this.props.params;
+    const {keyId, orgId, projectId} = this.props.params;
     return [['data', `/projects/${orgId}/${projectId}/keys/${keyId}/`]];
   }
 
   handleRemove = data => {
-    let {orgId, projectId} = this.props.params;
+    const {orgId, projectId} = this.props.params;
     browserHistory.push(`/${orgId}/${projectId}/settings/keys/`);
   };
 
   renderBody() {
-    let {data} = this.state;
-    let {params} = this.props;
+    const {data} = this.state;
+    const {params} = this.props;
 
     return (
       <div className="ref-key-details">
@@ -506,7 +502,3 @@ export default class ProjectKeyDetails extends AsyncView {
     );
   }
 }
-
-const EmptyHeader = styled.div`
-  font-size: 1.3em;
-`;

@@ -7,6 +7,7 @@ import qs from 'query-string';
 
 import SentryTypes from 'app/sentryTypes';
 import ApiMixin from 'app/mixins/apiMixin';
+import {fetchOrgMembers, indexMembersByProject} from 'app/actionCreators/members';
 import GroupListHeader from 'app/components/groupListHeader';
 import GroupStore from 'app/stores/groupStore';
 import LoadingError from 'app/components/loadingError';
@@ -80,6 +81,10 @@ const GroupList = createReactClass({
       error: false,
     });
 
+    fetchOrgMembers(this.api, this.props.orgId).then(members => {
+      this.setState({memberList: indexMembersByProject(members)});
+    });
+
     this.api.request(this.getGroupListEndpoint(), {
       success: (data, _, jqXHR) => {
         this._streamManager.push(data);
@@ -138,32 +143,41 @@ const GroupList = createReactClass({
   },
 
   render() {
-    if (this.state.loading) return <LoadingIndicator />;
-    else if (this.state.error) return <LoadingError onRetry={this.fetchData} />;
-    else if (this.state.groups.length === 0)
+    if (this.state.loading) {
+      return <LoadingIndicator />;
+    } else if (this.state.error) {
+      return <LoadingError onRetry={this.fetchData} />;
+    } else if (this.state.groups.length === 0) {
       return (
         <Panel>
           <PanelBody>
             <EmptyStateWarning>
-              {t("There doesn't seem to be any events fitting the query.")}
+              <p>{t("There doesn't seem to be any events fitting the query.")}</p>
             </EmptyStateWarning>
           </PanelBody>
         </Panel>
       );
+    }
 
-    let {orgId} = this.props;
+    const {orgId} = this.props;
 
     return (
       <Panel>
         <GroupListHeader />
         <PanelBody>
           {this.state.groups.map(({id, project}) => {
+            let members = null;
+            if (this.state.memberList) {
+              members = this.state.memberList[project.slug] || null;
+            }
+
             return (
               <StreamGroup
                 key={id}
                 id={id}
                 orgId={orgId}
                 canSelect={this.props.canSelectGroups}
+                memberList={members}
               />
             );
           })}

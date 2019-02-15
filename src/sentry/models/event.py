@@ -18,9 +18,15 @@ from django.utils.translation import ugettext_lazy as _
 from hashlib import md5
 
 from sentry import eventtypes
+from sentry.constants import EVENT_ORDERING_KEY
 from sentry.db.models import (
-    BoundedBigIntegerField, BoundedIntegerField, Model, NodeField, sane_repr
+    BoundedBigIntegerField,
+    BoundedIntegerField,
+    Model,
+    NodeField,
+    sane_repr
 )
+from sentry.db.models.manager import EventManager
 from sentry.interfaces.base import get_interfaces
 from sentry.utils.cache import memoize
 from sentry.utils.canonical import CanonicalKeyDict, CanonicalKeyView
@@ -48,6 +54,8 @@ class Event(Model):
         ref_version=2,
         wrapper=CanonicalKeyDict,
     )
+
+    objects = EventManager()
 
     class Meta:
         app_label = 'sentry'
@@ -152,14 +160,20 @@ class Event(Model):
 
     @property
     def title(self):
+        # also see event_manager.py which inserts this for snuba
         et = eventtypes.get(self.get_event_type())(self.data)
         return et.to_string(self.get_event_metadata())
 
-    def error(self):
-        warnings.warn('Event.error is deprecated, use Event.title', DeprecationWarning)
-        return self.title
+    @property
+    def culprit(self):
+        # For a while events did not save the culprit
+        return self.data.get('culprit') or self.group.culprit
 
-    error.short_description = _('error')
+    @property
+    def location(self):
+        # also see event_manager.py which inserts this for snuba
+        et = eventtypes.get(self.get_event_type())(self.data)
+        return et.get_location(self.get_event_metadata())
 
     @property
     def real_message(self):
@@ -204,7 +218,10 @@ class Event(Model):
 
     def get_tags(self):
         try:
-            return sorted((t, v) for t, v in self.data.get('tags') or ())
+            rv = [(t, v) for t, v in get_path(
+                self.data, 'tags', filter=True) or () if t is not None and v is not None]
+            rv.sort()
+            return rv
         except ValueError:
             # at one point Sentry allowed invalid tag sets such as (foo, bar)
             # vs ((tag, foo), (tag, bar))
@@ -213,7 +230,7 @@ class Event(Model):
     tags = property(get_tags)
 
     def get_tag(self, key):
-        for t, v in (self.data.get('tags') or ()):
+        for t, v in self.get_tags():
             if t == key:
                 return v
         return None
@@ -226,7 +243,12 @@ class Event(Model):
     def dist(self):
         return self.get_tag('sentry:dist')
 
+    def get_raw_data(self):
+        """Returns the internal raw event data dict."""
+        return dict(self.data.items())
+
     def as_dict(self):
+        """Returns the data in normalized form for external consumers."""
         # We use a OrderedDict to keep elements ordered for a potential JSON serializer
         data = OrderedDict()
         data['event_id'] = self.event_id
@@ -250,6 +272,10 @@ class Event(Model):
         if data.get('culprit') is None:
             data['culprit'] = self.group.culprit
 
+        # Override title and location with dynamically generated data
+        data['title'] = self.title
+        data['location'] = self.location
+
         return data
 
     @property
@@ -259,17 +285,18 @@ class Event(Model):
             data_len += len(repr(value))
         return data_len
 
-    # XXX(dcramer): compatibility with plugins
-    def get_level_display(self):
-        warnings.warn(
-            'Event.get_level_display is deprecated. Use Event.tags instead.', DeprecationWarning
-        )
-        return self.group.get_level_display()
-
     @property
     def level(self):
-        warnings.warn('Event.level is deprecated. Use Event.tags instead.', DeprecationWarning)
+        # we might want to move to this:
+        # return LOG_LEVELS_MAP.get(self.get_level_display()) or self.group.level
         return self.group.level
+
+    def get_level_display(self):
+        # we might want to move to this:
+        # return self.get_tag('level') or self.group.get_level_display()
+        return self.group.get_level_display()
+
+    # deprecated accessors
 
     @property
     def logger(self):
@@ -287,14 +314,15 @@ class Event(Model):
         return self.get_tag('server_name')
 
     @property
-    def culprit(self):
-        warnings.warn('Event.culprit is deprecated. Use Group.culprit instead.')
-        return self.group.culprit
-
-    @property
     def checksum(self):
         warnings.warn('Event.checksum is no longer used', DeprecationWarning)
         return ''
+
+    def error(self):
+        warnings.warn('Event.error is deprecated, use Event.title', DeprecationWarning)
+        return self.title
+
+    error.short_description = _('error')
 
     @property
     def transaction(self):
@@ -323,6 +351,36 @@ class Event(Model):
             )
 
         return self._environment_cache
+
+    # Find next and previous events based on datetime and id. We cannot
+    # simply `ORDER BY (datetime, id)` as this is too slow (no index), so
+    # we grab the next 5 / prev 5 events by datetime, and sort locally to
+    # get the next/prev events. Given that timestamps only have 1-second
+    # granularity, this will be inaccurate if there are more than 5 events
+    # in a given second.
+    @property
+    def next_event(self):
+        events = self.__class__.objects.filter(
+            datetime__gte=self.datetime,
+            group_id=self.group_id,
+        ).exclude(id=self.id).order_by('datetime')[0:5]
+
+        events = [e for e in events if e.datetime == self.datetime and e.id > self.id
+                  or e.datetime > self.datetime]
+        events.sort(key=EVENT_ORDERING_KEY)
+        return events[0] if events else None
+
+    @property
+    def prev_event(self):
+        events = self.__class__.objects.filter(
+            datetime__lte=self.datetime,
+            group_id=self.group_id,
+        ).exclude(id=self.id).order_by('-datetime')[0:5]
+
+        events = [e for e in events if e.datetime == self.datetime and e.id < self.id
+                  or e.datetime < self.datetime]
+        events.sort(key=EVENT_ORDERING_KEY, reverse=True)
+        return events[0] if events else None
 
 
 class EventSubjectTemplate(string.Template):

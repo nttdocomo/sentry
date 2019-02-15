@@ -92,6 +92,9 @@ class IssueDetailsTest(AcceptanceTestCase):
         self.wait_until_loaded()
         self.browser.snapshot('issue details javascript - event details')
 
+        self.browser.find_element_by_xpath("//a//code[contains(text(), 'curl')]").click()
+        self.browser.snapshot('issue details javascript - event details - curl command')
+
     def test_rust_event(self):
         # TODO: This should become its own "rust" platform type
         event = self.create_sample_event(
@@ -168,13 +171,14 @@ class IssueDetailsTest(AcceptanceTestCase):
         )
 
         self.browser.get(
-            u'/{}/{}/issues/{}/activity'.format(self.org.slug, self.project.slug, event.group.id)
+            u'/{}/{}/issues/{}/activity/'.format(
+                self.org.slug, self.project.slug, event.group.id)
         )
         self.browser.wait_until('.activity-item')
         self.browser.snapshot('issue activity python')
 
     def wait_until_loaded(self):
+        self.browser.wait_until_not('.loading-indicator')
         self.browser.wait_until('.entries')
         self.browser.wait_until('[data-test-id="linked-issues"]')
         self.browser.wait_until('[data-test-id="loaded-device-name"]')
-        self.browser.wait_until_not('.loading-indicator')

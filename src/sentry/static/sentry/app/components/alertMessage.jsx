@@ -27,11 +27,6 @@ const StyledCloseButton = styled.button`
   right: ${p => p.theme.grid}px;
   top: 7px;
 
-  /* stylelint-disable-next-line no-duplicate-selectors */
-  ${StyledInlineSvg} {
-    color: ${p => p.theme.gray4};
-  }
-
   &:hover {
     opacity: 0.8;
   }
@@ -53,7 +48,7 @@ export default class AlertMessage extends React.PureComponent {
   };
 
   render = () => {
-    let {alert, system} = this.props;
+    const {alert, system} = this.props;
     let icon;
 
     if (alert.type == 'success') {

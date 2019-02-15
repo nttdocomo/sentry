@@ -2,23 +2,19 @@ import PropTypes from 'prop-types';
 import React from 'react';
 import {browserHistory} from 'react-router';
 
-import {addErrorMessage, addSuccessMessage} from 'app/actionCreators/indicator';
-import {defined} from 'app/utils';
+import {addSuccessMessage} from 'app/actionCreators/indicator';
 import {Panel, PanelBody, PanelHeader} from 'app/components/panels';
 import {t} from 'app/locale';
 import AsyncView from 'app/views/asyncView';
 import Form from 'app/views/settings/components/forms/form';
 import FormModel from 'app/views/settings/components/forms/model';
 import FormField from 'app/views/settings/components/forms/formField';
-import MultipleCheckbox from 'app/views/settings/components/forms/controls/multipleCheckbox';
 import JsonForm from 'app/views/settings/components/forms/jsonForm';
 import SettingsPageHeader from 'app/views/settings/components/settingsPageHeader';
-import PermissionSelection from 'app/views/settings/organizationDeveloperSettings/permissionSelection';
+import PermissionsObserver from 'app/views/settings/organizationDeveloperSettings/permissionsObserver';
 import TextCopyInput from 'app/views/settings/components/forms/textCopyInput';
 import sentryApplicationForm from 'app/data/forms/sentryApplication';
 import getDynamicText from 'app/utils/getDynamicText';
-
-const EVENT_CHOICES = [['issue', 'Issue events']];
 
 class SentryAppFormModel extends FormModel {
   /**
@@ -62,7 +58,7 @@ export default class SentryApplicationDetails extends AsyncView {
   }
 
   getEndpoints() {
-    let {appSlug} = this.props.params;
+    const {appSlug} = this.props.params;
 
     if (appSlug) {
       return [['app', `/sentry-apps/${appSlug}/`]];
@@ -86,7 +82,7 @@ export default class SentryApplicationDetails extends AsyncView {
 
   onSubmitSuccess = data => {
     const {orgId} = this.props.params;
-    addSuccessMessage(t(`${this.state.app.name} successfully saved.`));
+    addSuccessMessage(t(`${data.name} successfully saved.`));
     browserHistory.push(`/settings/${orgId}/developer-settings/`);
   };
 
@@ -94,9 +90,10 @@ export default class SentryApplicationDetails extends AsyncView {
     const {orgId} = this.props.params;
     const {app} = this.state;
     const scopes = (app && [...app.scopes]) || [];
+    const events = (app && this.normalize(app.events)) || [];
 
-    let method = app ? 'PUT' : 'POST';
-    let endpoint = app ? `/sentry-apps/${app.slug}/` : '/sentry-apps/';
+    const method = app ? 'PUT' : 'POST';
+    const endpoint = app ? `/sentry-apps/${app.slug}/` : '/sentry-apps/';
 
     return (
       <div>
@@ -108,37 +105,10 @@ export default class SentryApplicationDetails extends AsyncView {
           initialData={{organization: orgId, isAlertable: false, ...app}}
           model={this.form}
           onSubmitSuccess={this.onSubmitSuccess}
-          onSubmitError={err => addErrorMessage(t('Unable to save change'))}
         >
           <JsonForm location={this.props.location} forms={sentryApplicationForm} />
 
-          <Panel>
-            <PanelHeader>{t('Permissions')}</PanelHeader>
-            <PanelBody>
-              <PermissionSelection scopes={scopes} />
-            </PanelBody>
-          </Panel>
-
-          <Panel>
-            <PanelHeader>{t('Event Subscriptions')}</PanelHeader>
-            <PanelBody>
-              <FormField
-                name="events"
-                inline={false}
-                flexibleControlStateSize={true}
-                choices={EVENT_CHOICES}
-                getData={data => ({events: data})}
-              >
-                {({onChange, value}) => (
-                  <MultipleCheckbox
-                    choices={EVENT_CHOICES}
-                    onChange={onChange}
-                    value={this.normalize((defined(value.peek) && value.peek()) || [])}
-                  />
-                )}
-              </FormField>
-            </PanelBody>
-          </Panel>
+          <PermissionsObserver scopes={scopes} events={events} />
 
           {app && (
             <Panel>

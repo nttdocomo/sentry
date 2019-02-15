@@ -11,6 +11,7 @@ import ProjectDocsContext from 'app/views/projectInstall/docsContext';
 import ProjectInstallPlatform from 'app/views/projectInstall/platform';
 import SentryTypes from 'app/sentryTypes';
 import Waiting from 'app/views/onboarding/configure/waiting';
+import {t} from 'app/locale';
 
 const Configure = createReactClass({
   displayName: 'Configure',
@@ -27,7 +28,7 @@ const Configure = createReactClass({
   },
 
   componentWillMount() {
-    let {platform} = this.props.params;
+    const {platform} = this.props.params;
     //redirect if platform is not known.
     if (!platform || platform === 'other') {
       this.redirectToNeutralDocs();
@@ -39,9 +40,9 @@ const Configure = createReactClass({
   },
 
   componentDidMount() {
-    let {organization} = this.context;
-    let {params} = this.props;
-    let data = {
+    const {organization} = this.context;
+    const {params} = this.props;
+    const data = {
       project: params.projectId,
       platform: params.platform,
     };
@@ -72,7 +73,7 @@ const Configure = createReactClass({
 
   sentRealEvent(data) {
     if (data.length == 1) {
-      let firstError = data[0];
+      const firstError = data[0];
       return !firstError.message.includes('This is an example');
     } else {
       return data.length > 1;
@@ -80,14 +81,19 @@ const Configure = createReactClass({
   },
 
   redirectUrl() {
-    let {orgId, projectId} = this.props.params;
+    const {orgId, projectId} = this.props.params;
+    const {organization} = this.context;
 
-    let url = `/${orgId}/${projectId}/#welcome`;
+    const hasSentry10 = new Set(organization.features).has('sentry10');
+
+    const url = hasSentry10
+      ? `/organizations/${orgId}/issues/#welcome`
+      : `/${orgId}/${projectId}/#welcome`;
     browserHistory.push(url);
   },
 
   fetchEventData() {
-    let {orgId, projectId} = this.props.params;
+    const {orgId, projectId} = this.props.params;
 
     this.api.request(`/projects/${orgId}/${projectId}/events/`, {
       method: 'GET',
@@ -108,8 +114,8 @@ const Configure = createReactClass({
   },
 
   submit() {
-    let {projectId} = this.props.params;
-    let {organization} = this.context;
+    const {projectId} = this.props.params;
+    const {organization} = this.context;
     analytics('onboarding.complete', {project: projectId});
     amplitude(
       'Completed Onboarding Installation Instructions',
@@ -120,21 +126,25 @@ const Configure = createReactClass({
   },
 
   redirectToNeutralDocs() {
-    let {orgId, projectId} = this.props.params;
-    let url = `/${orgId}/${projectId}/getting-started`;
+    const {orgId, projectId} = this.props.params;
+    const {organization} = this.context;
+
+    const url = new Set(organization.features).has('sentry10')
+      ? `/organizations/${orgId}/projects/${projectId}/getting-started/`
+      : `/${orgId}/${projectId}/getting-started/`;
 
     browserHistory.push(url);
   },
 
   render() {
-    let {orgId, projectId} = this.props.params;
-    let {hasSentRealEvent} = this.state;
+    const {orgId, projectId} = this.props.params;
+    const {hasSentRealEvent} = this.state;
 
     return (
       <div>
         <div className="onboarding-Configure">
           <h2 style={{marginBottom: 30}}>
-            Configure your application
+            {t('Configure your application')}
             {!hasSentRealEvent && (
               <CreateSampleEvent params={this.props.params} source="header" />
             )}

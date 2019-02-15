@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import createReactClass from 'create-react-class';
-import {Link} from 'react-router';
+import {Link, browserHistory} from 'react-router';
 import qs from 'query-string';
 import {omit, isEqual} from 'lodash';
 import SentryTypes from 'app/sentryTypes';
@@ -14,6 +14,7 @@ import EventUserFeedback from 'app/components/events/userFeedback';
 import EmptyStateWarning from 'app/components/emptyStateWarning';
 import {t, tct} from 'app/locale';
 import withEnvironmentInQueryString from 'app/utils/withEnvironmentInQueryString';
+import withOrganization from 'app/utils/withOrganization';
 
 import UserFeedbackContainer from './container';
 
@@ -21,10 +22,15 @@ const ProjectUserFeedback = createReactClass({
   displayName: 'ProjectUserFeedback',
 
   propTypes: {
+    organization: SentryTypes.Organization.isRequired,
     defaultQuery: PropTypes.string,
     defaultStatus: PropTypes.string,
     setProjectNavSection: PropTypes.func,
     environment: SentryTypes.Environment,
+  },
+
+  contextTypes: {
+    project: SentryTypes.Project,
   },
 
   mixins: [ApiMixin],
@@ -50,6 +56,16 @@ const ProjectUserFeedback = createReactClass({
   },
 
   componentWillMount() {
+    // Redirect any Sentry 10 user that has followed an old link and ended up here
+    const {organization, params: {orgId}} = this.props;
+    const hasSentry10 = new Set(organization.features).has('sentry10');
+    if (hasSentry10) {
+      const projectId = this.context.project.id;
+      browserHistory.replace(
+        `/organizations/${orgId}/user-feedback/?project=${projectId}`
+      );
+    }
+
     this.props.setProjectNavSection('user-feedback');
     this.fetchData();
   },
@@ -74,9 +90,9 @@ const ProjectUserFeedback = createReactClass({
   },
 
   getQueryStringState(props) {
-    let q = props.location.query;
-    let status = 'status' in q ? q.status : this.props.defaultStatus;
-    let query = 'query' in q ? q.query : this.props.defaultQuery;
+    const q = props.location.query;
+    const status = 'status' in q ? q.status : this.props.defaultStatus;
+    const query = 'query' in q ? q.query : this.props.defaultQuery;
 
     return {
       query,
@@ -90,9 +106,9 @@ const ProjectUserFeedback = createReactClass({
       error: false,
     });
 
-    let params = this.props.params;
+    const params = this.props.params;
 
-    let query = {
+    const query = {
       ...this.props.location.query,
       per_page: 50,
       query: this.state.query,
@@ -108,7 +124,7 @@ const ProjectUserFeedback = createReactClass({
     this.api.request(`/projects/${params.orgId}/${params.projectId}/user-reports/`, {
       query,
       success: (data, _, jqXHR) => {
-        let issues = data.map(r => r.issue);
+        const issues = data.map(r => r.issue);
         GroupStore.add(issues);
         this.setState({
           error: false,
@@ -127,7 +143,7 @@ const ProjectUserFeedback = createReactClass({
   },
 
   getUserFeedbackUrl() {
-    let params = this.props.params;
+    const params = this.props.params;
 
     return `/${params.orgId}/${params.projectId}/settings/user-feedback/`;
   },
@@ -180,13 +196,7 @@ const ProjectUserFeedback = createReactClass({
       const issue = item.issue;
 
       return (
-        <CompactIssue
-          key={item.id}
-          id={issue.id}
-          data={issue}
-          orgId={orgId}
-          projectId={projectId}
-        >
+        <CompactIssue key={item.id} id={issue.id} data={issue}>
           <EventUserFeedback
             report={item}
             orgId={orgId}
@@ -201,14 +211,13 @@ const ProjectUserFeedback = createReactClass({
   },
 
   render() {
-    const {location, params} = this.props;
+    const {location} = this.props;
 
     return (
       <UserFeedbackContainer
         pageLinks={this.state.pageLinks}
         status={this.state.status}
         location={location}
-        params={params}
       >
         {this.renderStreamBody()}
       </UserFeedbackContainer>
@@ -217,4 +226,4 @@ const ProjectUserFeedback = createReactClass({
 });
 
 export {ProjectUserFeedback};
-export default withEnvironmentInQueryString(ProjectUserFeedback);
+export default withOrganization(withEnvironmentInQueryString(ProjectUserFeedback));

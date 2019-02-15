@@ -2,23 +2,27 @@ import PropTypes from 'prop-types';
 import React from 'react';
 import {Link} from 'react-router';
 
-import CustomPropTypes from 'app/sentryTypes';
+import SentryTypes from 'app/sentryTypes';
 import Avatar from 'app/components/avatar';
 import DateTime from 'app/components/dateTime';
 import DeviceName from 'app/components/deviceName';
 import FileSize from 'app/components/fileSize';
+import withOrganization from 'app/utils/withOrganization';
 
 class EventsTableRow extends React.Component {
   static propTypes = {
+    organization: SentryTypes.Organization.isRequired,
     hasUser: PropTypes.bool,
     orgId: PropTypes.string.isRequired,
     groupId: PropTypes.string.isRequired,
-    projectId: PropTypes.string.isRequired,
-    event: CustomPropTypes.Event.isRequired,
-    tagList: PropTypes.arrayOf(CustomPropTypes.Tag),
+    projectId: PropTypes.string,
+    event: SentryTypes.Event.isRequired,
+    tagList: PropTypes.arrayOf(SentryTypes.Tag),
   };
 
   getEventTitle = event => {
+    // XXX(mitsuhiko): event.title did not exist originally.  At one point
+    // all events will have this and most of this logic could go
     switch (event.type) {
       case 'error':
         if (event.metadata.type && event.metadata.value)
@@ -29,18 +33,18 @@ class EventsTableRow extends React.Component {
       case 'default':
         return event.metadata.title;
       default:
-        return event.message.split('\n')[0];
+        return event.title || event.message.split('\n')[0];
     }
   };
 
   renderCrashFileLink() {
-    let {orgId, event, projectId} = this.props;
+    const {orgId, event, projectId} = this.props;
     if (!event.crashFile) {
       return null;
     }
-    let url = `/api/0/projects/${orgId}/${projectId}/events/${event.id}/attachments/${event
+    const url = `/api/0/projects/${orgId}/${projectId}/events/${event.id}/attachments/${event
       .crashFile.id}/?download=1`;
-    let crashFileType =
+    const crashFileType =
       event.crashFile.type === 'event.minidump' ? 'Minidump' : 'Crash file';
     return (
       <small>
@@ -50,17 +54,30 @@ class EventsTableRow extends React.Component {
   }
 
   render() {
-    let {className, event, orgId, projectId, groupId, tagList, hasUser} = this.props;
-    let tagMap = {};
+    const {
+      organization,
+      className,
+      event,
+      orgId,
+      projectId,
+      groupId,
+      tagList,
+      hasUser,
+    } = this.props;
+    const tagMap = {};
     event.tags.forEach(tag => {
       tagMap[tag.key] = tag.value;
     });
+
+    const basePath = new Set(organization.features).has('sentry10')
+      ? `/organizations/${orgId}/issues/`
+      : `/${orgId}/${projectId}/issues/`;
 
     return (
       <tr key={event.id} className={className}>
         <td>
           <h5>
-            <Link to={`/${orgId}/${projectId}/issues/${groupId}/events/${event.id}/`}>
+            <Link to={`${basePath}${groupId}/events/${event.id}/`}>
               <DateTime date={event.dateCreated} />
             </Link>
             <small>{(this.getEventTitle(event) || '').substr(0, 100)}</small>
@@ -99,4 +116,5 @@ class EventsTableRow extends React.Component {
   }
 }
 
-export default EventsTableRow;
+export {EventsTableRow};
+export default withOrganization(EventsTableRow);

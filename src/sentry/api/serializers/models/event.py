@@ -89,11 +89,14 @@ class EventSerializer(Serializer):
         meta = get_path(event.data, '_meta', 'tags') or {}
 
         tags = sorted(
-            [{
-                'key': k.split('sentry:', 1)[-1],
-                'value': v,
-                '_meta': meta.get(k) or get_path(meta, six.text_type(i), '1') or None,
-            } for i, (k, v) in enumerate(event.data.get('tags') or ())],
+            [
+                {
+                    'key': kv[0].split('sentry:', 1)[-1],
+                    'value': kv[1],
+                    '_meta': meta.get(kv[0]) or get_path(meta, six.text_type(i), '1') or None,
+                }
+                for i, kv in enumerate(event.data.get('tags') or ())
+                if kv is not None and kv[0] is not None and kv[1] is not None],
             key=lambda x: x['key']
         )
 
@@ -179,10 +182,22 @@ class EventSerializer(Serializer):
             }
         return results
 
+    def should_display_error(self, error):
+        name = error.get('name')
+        if not isinstance(name, six.string_types):
+            return True
+
+        return not name.startswith('breadcrumbs.') \
+            and not name.startswith('extra.') \
+            and '.frames.' not in name
+
     def serialize(self, obj, attrs, user):
         errors = [
             EventError(error).get_api_context() for error
             in get_path(obj.data, 'errors', filter=True, default=())
+            # TODO(ja): Temporary workaround to hide certain normalization errors.
+            # Remove this and the test in tests/sentry/api/serializers/test_event.py
+            if self.should_display_error(error)
         ]
 
         (message, message_meta) = self._get_legacy_message_with_meta(obj)
@@ -210,6 +225,9 @@ class EventSerializer(Serializer):
             'dist': obj.dist,
             # See GH-3248
             'message': message,
+            'title': obj.title,
+            'location': obj.location,
+            'culprit': obj.culprit,
             'user': attrs['user'],
             'contexts': attrs['contexts'],
             'crashFile': attrs['crash_file'],
@@ -243,6 +261,7 @@ class DetailedEventSerializer(EventSerializer):
     """
     Adds release and user report info to the serialized event.
     """
+
     def serialize(self, obj, attrs, user):
         result = super(DetailedEventSerializer, self).serialize(obj, attrs, user)
         result['release'] = self._get_release_info(user, obj)
@@ -280,6 +299,9 @@ class SnubaEvent(object):
         'event_id',
         'project_id',
         'message',
+        'title',
+        'location',
+        'culprit',
         'user_id',
         'username',
         'ip_address',
@@ -288,7 +310,8 @@ class SnubaEvent(object):
     ]
 
     def __init__(self, kv):
-        assert set(kv.keys()) == set(self.selected_columns)
+        assert len(set(self.selected_columns) - set(kv.keys())
+                   ) == 0, "SnubaEvents need all of the selected_columns"
         self.__dict__ = kv
 
 
@@ -300,16 +323,37 @@ class SnubaEventSerializer(Serializer):
         serialization returned by EventSerializer.
     """
 
+    def get_tags_dict(self, obj):
+        keys = getattr(obj, 'tags.key', None)
+        values = getattr(obj, 'tags.value', None)
+        if keys and values and len(keys) == len(values):
+            return sorted([
+                {
+                    'key': k.split('sentry:', 1)[-1],
+                    'value': v,
+                } for (k, v) in zip(keys, values)
+            ], key=lambda x: x['key'])
+        return []
+
     def serialize(self, obj, attrs, user):
-        return {
+        result = {
             'eventID': six.text_type(obj.event_id),
             'projectID': six.text_type(obj.project_id),
             'message': obj.message,
+            'title': obj.title,
+            'location': obj.location,
+            'culprit': obj.culprit,
             'dateCreated': obj.timestamp,
             'user': {
                 'id': obj.user_id,
                 'email': obj.email,
                 'username': obj.username,
                 'ipAddress': obj.ip_address,
-            }
+            },
         }
+
+        tags = self.get_tags_dict(obj)
+        if tags:
+            result['tags'] = tags
+
+        return result

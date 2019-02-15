@@ -12,11 +12,12 @@ __all__ = (
     'TestCase', 'TransactionTestCase', 'APITestCase', 'TwoFactorAPITestCase', 'AuthProviderTestCase', 'RuleTestCase',
     'PermissionTestCase', 'PluginTestCase', 'CliTestCase', 'AcceptanceTestCase',
     'IntegrationTestCase', 'UserReportEnvironmentTestCase', 'SnubaTestCase', 'IntegrationRepositoryTestCase',
-    'ReleaseCommitPatchTest', 'SetRefsTestCase'
+    'ReleaseCommitPatchTest', 'SetRefsTestCase', 'OrganizationDashboardWidgetTestCase'
 )
 
 import base64
 import calendar
+import contextlib
 import os
 import os.path
 import pytest
@@ -24,6 +25,7 @@ import requests
 import six
 import types
 import logging
+import mock
 
 from sentry_sdk import Hub
 
@@ -54,12 +56,15 @@ from sentry.auth.superuser import (
     COOKIE_SECURE as SU_COOKIE_SECURE, COOKIE_DOMAIN as SU_COOKIE_DOMAIN, COOKIE_PATH as SU_COOKIE_PATH
 )
 from sentry.constants import MODULE_ROOT
+from sentry.eventstream.snuba import SnubaEventStream
 from sentry.models import (
     GroupEnvironment, GroupHash, GroupMeta, ProjectOption, Repository, DeletedOrganization,
     Environment, GroupStatus, Organization, TotpInterface, UserReport,
+    Dashboard, ObjectStatus, WidgetDataSource, WidgetDataSourceTypes
 )
 from sentry.plugins import plugins
 from sentry.rules import EventState
+from sentry.tagstore.snuba import SnubaCompatibilityTagStorage
 from sentry.utils import json
 from sentry.utils.auth import SSO_SESSION_KEY
 
@@ -436,8 +441,17 @@ class APITestCase(BaseTestCase, BaseAPITestCase):
     def get_response(self, *args, **params):
         if self.endpoint is None:
             raise Exception('Implement self.endpoint to use this method.')
+
         url = reverse(self.endpoint, args=args)
-        return getattr(self.client, self.method)(
+        # In some cases we want to pass querystring params to put/post, handle
+        # this here.
+        if 'qs_params' in params:
+            query_string = urlencode(params.pop('qs_params'), doseq=True)
+            url = u'{}?{}'.format(url, query_string)
+
+        method = params.pop('method', self.method)
+
+        return getattr(self.client, method)(
             url,
             format='json',
             data=params,
@@ -834,8 +848,22 @@ class IntegrationTestCase(TestCase):
 class SnubaTestCase(TestCase):
     def setUp(self):
         super(SnubaTestCase, self).setUp()
-
+        self.snuba_eventstream = SnubaEventStream()
+        self.snuba_tagstore = SnubaCompatibilityTagStorage()
         assert requests.post(settings.SENTRY_SNUBA + '/tests/drop').status_code == 200
+
+    def store_event(self, *args, **kwargs):
+        with contextlib.nested(
+            mock.patch('sentry.eventstream.insert',
+                       self.snuba_eventstream.insert),
+            mock.patch('sentry.tagstore.delay_index_event_tags',
+                       self.snuba_tagstore.delay_index_event_tags),
+            mock.patch('sentry.tagstore.incr_tag_value_times_seen',
+                       self.snuba_tagstore.incr_tag_value_times_seen),
+            mock.patch('sentry.tagstore.incr_group_tag_value_times_seen',
+                       self.snuba_tagstore.incr_group_tag_value_times_seen),
+        ):
+            return super(SnubaTestCase, self).store_event(*args, **kwargs)
 
     def __wrap_event(self, event, data, primary_hash):
         # TODO: Abstract and combine this with the stream code in
@@ -862,6 +890,8 @@ class SnubaTestCase(TestCase):
         doesn't run them through the 'real' event pipeline. In a perfect
         world all test events would go through the full regular pipeline.
         """
+        # XXX: Use `store_event` instead of this!
+
         event = super(SnubaTestCase, self).create_event(*args, **kwargs)
 
         data = event.data.data
@@ -1013,3 +1043,84 @@ class SetRefsTestCase(APITestCase):
         assert self.org.id == commit.organization_id
         assert self.repo.id == commit.repository_id
         assert commit.key == key
+
+
+class OrganizationDashboardWidgetTestCase(APITestCase):
+    def setUp(self):
+        super(OrganizationDashboardWidgetTestCase, self).setUp()
+        self.login_as(self.user)
+        self.dashboard = Dashboard.objects.create(
+            title='Dashboard 1',
+            created_by=self.user,
+            organization=self.organization,
+        )
+        self.anon_users_query = {
+            'name': 'anonymousUsersAffectedQuery',
+            'fields': [],
+            'conditions': [['user.email', 'IS NULL', None]],
+            'aggregations': [['count()', None, 'Anonymous Users']],
+            'limit': 1000,
+            'orderby': '-time',
+            'groupby': ['time'],
+            'rollup': 86400,
+        }
+        self.known_users_query = {
+            'name': 'knownUsersAffectedQuery',
+            'fields': [],
+            'conditions': [['user.email', 'IS NOT NULL', None]],
+            'aggregations': [['uniq', 'user.email', 'Known Users']],
+            'limit': 1000,
+            'orderby': '-time',
+            'groupby': ['time'],
+            'rollup': 86400,
+        }
+        self.geo_erorrs_query = {
+            'name': 'errorsByGeo',
+            'fields': ['geo.country_code'],
+            'conditions': [['geo.country_code', 'IS NOT NULL', None]],
+            'aggregations': [['count()', None, 'count']],
+            'limit': 10,
+            'orderby': '-count',
+            'groupby': ['geo.country_code'],
+        }
+
+    def assert_widget_data_sources(self, widget_id, data):
+        result_data_sources = sorted(
+            WidgetDataSource.objects.filter(
+                widget_id=widget_id,
+                status=ObjectStatus.VISIBLE
+            ),
+            key=lambda x: x.order
+        )
+        data.sort(key=lambda x: x['order'])
+        for ds, expected_ds in zip(result_data_sources, data):
+            assert ds.name == expected_ds['name']
+            assert ds.type == WidgetDataSourceTypes.get_id_for_type_name(expected_ds['type'])
+            assert ds.order == expected_ds['order']
+            assert ds.data == expected_ds['data']
+
+    def assert_widget(self, widget, order, title, display_type,
+                      display_options=None, data_sources=None):
+        assert widget.order == order
+        assert widget.display_type == display_type
+        if display_options:
+            assert widget.display_options == display_options
+        assert widget.title == title
+
+        if not data_sources:
+            return
+
+        self.assert_widget_data_sources(widget.id, data_sources)
+
+    def assert_widget_data(self, data, order, title, display_type,
+                           display_options=None, data_sources=None):
+        assert data['order'] == order
+        assert data['displayType'] == display_type
+        if display_options:
+            assert data['displayOptions'] == display_options
+        assert data['title'] == title
+
+        if not data_sources:
+            return
+
+        self.assert_widget_data_sources(data['id'], data_sources)

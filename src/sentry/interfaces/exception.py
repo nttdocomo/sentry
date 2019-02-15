@@ -882,7 +882,7 @@ class SingleException(Interface):
         else:
             raw_stacktrace = None
 
-        return {
+        return prune_empty_keys({
             'type': self.type,
             'value': self.value,
             'mechanism': mechanism,
@@ -890,7 +890,7 @@ class SingleException(Interface):
             'stacktrace': stacktrace,
             'thread_id': self.thread_id,
             'raw_stacktrace': raw_stacktrace,
-        }
+        })
 
     def get_api_context(self, is_public=False):
         mechanism = isinstance(self.mechanism, Mechanism) and \
@@ -1031,7 +1031,7 @@ class Exception(Interface):
             'exc_omitted': self.exc_omitted,
         })
 
-    def compute_hashes(self, platform):
+    def compute_hashes(self, platform=None):
         system_hash = self.get_hash(platform, system_frames=True)
         if not system_hash:
             return []
@@ -1081,7 +1081,8 @@ class Exception(Interface):
         values = meta.get('values', meta)
         for index, value in six.iteritems(values):
             exc = self.values[int(index)]
-            result[index] = exc.get_api_meta(value, is_public=is_public)
+            if exc is not None:
+                result[index] = exc.get_api_meta(value, is_public=is_public)
 
         return {'values': result}
 

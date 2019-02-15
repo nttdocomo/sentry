@@ -8,6 +8,7 @@ import {t} from 'app/locale';
 import Avatar from 'app/components/avatar';
 import ConfigStore from 'app/stores/configStore';
 import ExternalLink from 'app/components/externalLink';
+import {fetchOrganizationDetails} from 'app/actionCreators/organizations';
 import InlineSvg from 'app/components/inlineSvg';
 import Link from 'app/components/link';
 import LoadingIndicator from 'app/components/loadingIndicator';
@@ -44,21 +45,36 @@ class SettingsIndex extends React.Component {
     organization: SentryTypes.Organization,
   };
 
-  render() {
-    let {organization} = this.props;
-    let user = ConfigStore.get('user');
-    let isOnPremise = ConfigStore.get('isOnPremise');
-    let isSuperuser = user.isSuperuser;
+  componentDidUpdate(prevProps) {
+    const {organization} = this.props;
+    if (prevProps.organization === organization) return;
 
-    let organizationSettingsUrl =
+    // if there is no org in context, SidebarDropdown uses an org from `withLatestContext`
+    // (which queries the org index endpoint instead of org details)
+    // and does not have `access` info
+    if (organization && typeof organization.access === 'undefined') {
+      fetchOrganizationDetails(organization.slug, {
+        setActive: true,
+        loadProjects: true,
+      });
+    }
+  }
+
+  render() {
+    const {organization} = this.props;
+    const user = ConfigStore.get('user');
+    const isOnPremise = ConfigStore.get('isOnPremise');
+    const isSuperuser = user.isSuperuser;
+
+    const organizationSettingsUrl =
       (organization && `/settings/${organization.slug}/`) || '';
 
-    let supportLinkProps = {
+    const supportLinkProps = {
       isOnPremise,
       href: LINKS.FORUM,
       to: `${organizationSettingsUrl}support`,
     };
-    let supportText = isOnPremise ? t('Community Forums') : t('Contact Support');
+    const supportText = isOnPremise ? t('Community Forums') : t('Contact Support');
 
     return (
       <DocumentTitle title={organization ? `${organization.slug} Settings` : 'Settings'}>

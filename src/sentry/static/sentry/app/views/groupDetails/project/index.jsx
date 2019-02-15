@@ -1,10 +1,10 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import SentryTypes from 'app/sentryTypes';
+import {browserHistory} from 'react-router';
 
 import withEnvironment from 'app/utils/withEnvironment';
 import {analytics} from 'app/utils/analytics';
-
 import GroupDetails from '../shared/groupDetails';
 
 class ProjectGroupDetails extends React.Component {
@@ -19,6 +19,18 @@ class ProjectGroupDetails extends React.Component {
   };
 
   componentDidMount() {
+    // Redirect any Sentry 10 user that has followed an old link and ended up here
+    const {location, params: {orgId, groupId, eventId}} = this.props;
+    const hasSentry10 = new Set(this.context.organization.features).has('sentry10');
+
+    if (hasSentry10) {
+      const redirectPath = eventId
+        ? `/organizations/${orgId}/issues/${groupId}/events/${eventId}/${location.search}`
+        : `/organizations/${orgId}/issues/${groupId}/${location.search}`;
+
+      browserHistory.replace(redirectPath);
+    }
+
     this.props.setProjectNavSection('stream');
     analytics('issue_page.viewed', {
       group_id: parseInt(this.props.params.groupId, 10),
@@ -29,8 +41,15 @@ class ProjectGroupDetails extends React.Component {
 
   render() {
     // eslint-disable-next-line no-unused-vars
-    const {setProjectNavSection, ...props} = this.props;
-    return <GroupDetails project={this.context.project} {...props} />;
+    const {setProjectNavSection, environment, ...props} = this.props;
+
+    return (
+      <GroupDetails
+        project={this.context.project}
+        environments={environment ? [environment.name] : []}
+        {...props}
+      />
+    );
   }
 }
 

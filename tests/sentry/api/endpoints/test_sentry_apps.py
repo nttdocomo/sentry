@@ -120,7 +120,7 @@ class PostSentryAppsTest(SentryAppsTest):
         response = self._post()
         expected = {
             'name': 'MyApp',
-            'scopes': ['project:read', 'project:write'],
+            'scopes': ['project:read', 'event:read'],
             'events': ['issue'],
             'webhookUrl': 'https://example.com',
         }
@@ -129,12 +129,49 @@ class PostSentryAppsTest(SentryAppsTest):
         assert six.viewitems(expected) <= six.viewitems(json.loads(response.content))
 
     @with_feature('organizations:internal-catchall')
+    def test_cannot_create_app_without_correct_permissions(self):
+        self.login_as(user=self.user)
+        kwargs = {'scopes': ('project:read',)}
+        response = self._post(**kwargs)
+
+        assert response.status_code == 422
+        assert response.data == \
+            {'events': ['issue webhooks require the event:read permission.']}
+
+    @with_feature('organizations:internal-catchall')
+    def test_wrong_schema_format(self):
+        self.login_as(user=self.user)
+        kwargs = {'schema': {
+            'elements': [
+                {
+                    'type': 'alert-rule-action',
+                    'required_fields': [
+                        {
+                            'type': 'select',
+                            'label': 'Channel',
+                            'name': 'channel',
+                            'options': [
+                                # option items should have 2 elements
+                                # i.e. ['channel_id', '#general']
+                                ['#general'],
+                            ]
+                        },
+                    ],
+                }
+            ],
+        }}
+        response = self._post(**kwargs)
+        assert response.status_code == 422
+        assert response.data == \
+            {'schema': ["['#general'] is too short"]}
+
+    @with_feature('organizations:internal-catchall')
     def test_missing_name(self):
         self.login_as(self.user)
         response = self._post(name=None)
 
         assert response.status_code == 422, response.content
-        assert 'name' in response.data['errors']
+        assert 'name' in response.data
 
     @with_feature('organizations:internal-catchall')
     def test_missing_scopes(self):
@@ -142,7 +179,7 @@ class PostSentryAppsTest(SentryAppsTest):
         response = self._post(scopes=None)
 
         assert response.status_code == 422, response.content
-        assert 'scopes' in response.data['errors']
+        assert 'scopes' in response.data
 
     @with_feature('organizations:internal-catchall')
     def test_invalid_events(self):
@@ -150,7 +187,7 @@ class PostSentryAppsTest(SentryAppsTest):
         response = self._post(events=['project'])
 
         assert response.status_code == 422, response.content
-        assert 'events' in response.data['errors']
+        assert 'events' in response.data
 
     @with_feature('organizations:internal-catchall')
     def test_invalid_scope(self):
@@ -158,7 +195,7 @@ class PostSentryAppsTest(SentryAppsTest):
         response = self._post(scopes=('not:ascope', ))
 
         assert response.status_code == 422, response.content
-        assert 'scopes' in response.data['errors']
+        assert 'scopes' in response.data
 
     @with_feature('organizations:internal-catchall')
     def test_missing_webhook_url(self):
@@ -166,13 +203,13 @@ class PostSentryAppsTest(SentryAppsTest):
         response = self._post(webhookUrl=None)
 
         assert response.status_code == 422, response.content
-        assert 'webhookUrl' in response.data['errors']
+        assert 'webhookUrl' in response.data
 
     def _post(self, **kwargs):
         body = {
             'name': 'MyApp',
             'organization': self.org.slug,
-            'scopes': ('project:read', 'project:write'),
+            'scopes': ('project:read', 'event:read'),
             'events': ('issue',),
             'webhookUrl': 'https://example.com',
             'isAlertable': False,

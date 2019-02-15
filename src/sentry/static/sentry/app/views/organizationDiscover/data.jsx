@@ -23,7 +23,6 @@ export const PROMOTED_TAGS = [
   'os',
   'os.name',
   'os.rooted',
-  'sentry:release',
 ];
 
 // All tags are assumed to be strings, except the following
@@ -31,14 +30,19 @@ export const SPECIAL_TAGS = {
   os_rooted: TYPES.BOOLEAN,
 };
 
+// Hide the following tags if they are returned from Snuba since these are
+// already mapped to user and release attributes
+export const HIDDEN_TAGS = ['sentry:user', 'sentry:release'];
+
 export const COLUMNS = [
   {name: 'id', type: TYPES.STRING},
-  {name: 'issue.id', type: TYPES.STRING},
+  {name: 'issue.id', type: TYPES.NUMBER},
   {name: 'project.id', type: TYPES.STRING},
   {name: 'project.name', type: TYPES.STRING},
   {name: 'platform', type: TYPES.STRING},
   {name: 'message', type: TYPES.STRING},
   {name: 'timestamp', type: TYPES.DATETIME},
+  {name: 'release', type: TYPES.STRING},
 
   {name: 'user.id', type: TYPES.STRING},
   {name: 'user.username', type: TYPES.STRING},
@@ -84,23 +88,32 @@ export const COLUMNS = [
   {name: 'stack.stack_level', type: TYPES.STRING},
 ];
 
-export const NON_SNUBA_FIELDS = ['issue.id', 'project.name'];
+export const NON_SNUBA_FIELDS = ['project.name'];
 
 export const NON_CONDITIONS_FIELDS = [...NON_SNUBA_FIELDS, 'project.id'];
 
-export const CONDITION_OPERATORS = [
-  '>',
-  '<',
-  '>=',
-  '<=',
-  '=',
-  '!=',
-  // 'IN', commented out since condition input doesn't support arrays yet :(
-  'IS NULL',
-  'IS NOT NULL',
-  'LIKE',
-  'NOT LIKE',
+export const OPERATOR = {
+  GREATER_THAN: '>',
+  LESS_THAN: '<',
+  GREATER_THAN_OR_EQUAL: '>=',
+  LESS_THAN_OR_EQUAL: '<=',
+  EQUAL: '=',
+  NOT_EQUAL: '!=',
+  IS_NULL: 'IS NULL',
+  IS_NOT_NULL: 'IS NOT NULL',
+  LIKE: 'LIKE',
+  NOT_LIKE: 'NOT LIKE',
+};
+
+export const CONDITION_OPERATORS = Object.values(OPERATOR);
+
+export const NEGATION_OPERATORS = [
+  OPERATOR.IS_NOT_NULL,
+  OPERATOR.NOT_EQUAL,
+  OPERATOR.NOT_LIKE,
 ];
+export const NULL_OPERATORS = [OPERATOR.IS_NOT_NULL, OPERATOR.IS_NULL];
+export const WILDCARD_OPERATORS = [OPERATOR.LIKE, OPERATOR.NOT_LIKE];
 
 export const ARRAY_FIELD_PREFIXES = ['error', 'stack'];
 

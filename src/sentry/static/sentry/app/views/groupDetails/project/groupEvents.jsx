@@ -15,7 +15,6 @@ import {t, tct} from 'app/locale';
 import ApiMixin from 'app/mixins/apiMixin';
 import EmptyStateWarning from 'app/components/emptyStateWarning';
 import EventsTable from 'app/components/eventsTable/eventsTable';
-import GroupState from 'app/mixins/groupState';
 import LoadingError from 'app/components/loadingError';
 import LoadingIndicator from 'app/components/loadingIndicator';
 import Pagination from 'app/components/pagination';
@@ -28,10 +27,11 @@ const GroupEvents = createReactClass({
   displayName: 'GroupEvents',
 
   propTypes: {
+    group: SentryTypes.Group,
     environment: SentryTypes.Environment,
   },
 
-  mixins: [ApiMixin, GroupState],
+  mixins: [ApiMixin],
 
   getInitialState() {
     const queryParams = this.props.location.query;
@@ -103,9 +103,9 @@ const GroupEvents = createReactClass({
     }
 
     query = getQueryStringWithoutEnvironment(query);
-    let targetQueryParams = {...this.props.location.query};
+    const targetQueryParams = {...this.props.location.query};
     targetQueryParams.query = query;
-    let {groupId, orgId, projectId} = this.props.params;
+    const {groupId, orgId, projectId} = this.props.params;
 
     browserHistory.push({
       pathname: `/${orgId}/${projectId}/issues/${groupId}/events/`,
@@ -177,8 +177,8 @@ const GroupEvents = createReactClass({
   },
 
   renderResults() {
-    let group = this.getGroup();
-    let tagList = group.tags.filter(tag => tag.key !== 'user') || [];
+    const group = this.props.group;
+    const tagList = group.tags.filter(tag => tag.key !== 'user') || [];
 
     return (
       <EventsTable

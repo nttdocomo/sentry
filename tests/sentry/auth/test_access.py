@@ -5,7 +5,6 @@ from mock import Mock
 
 from sentry.auth import access
 from sentry.models import AuthProvider, AuthIdentity, Organization
-from sentry.mediators import sentry_app_installations
 from sentry.testutils import TestCase
 
 
@@ -13,6 +12,7 @@ class FromUserTest(TestCase):
     def test_no_access(self):
         organization = self.create_organization()
         team = self.create_team(organization=organization)
+        project = self.create_project(organization=organization, teams=[team])
         user = self.create_user()
 
         result = access.from_user(user, organization)
@@ -20,7 +20,10 @@ class FromUserTest(TestCase):
         assert not result.requires_sso
         assert not result.scopes
         assert not result.has_team_access(team)
-        assert not result.has_team_membership(team)
+        assert not result.has_team_scope(team, 'project:read')
+        assert not result.has_project_access(project)
+        assert not result.has_project_scope(project, 'project:read')
+        assert not result.has_project_membership(project)
 
     def test_owner_all_teams(self):
         user = self.create_user()
@@ -31,13 +34,17 @@ class FromUserTest(TestCase):
             role='owner',
         )
         team = self.create_team(organization=organization)
+        project = self.create_project(organization=organization, teams=[team])
 
         result = access.from_user(user, organization)
         assert result.sso_is_valid
         assert not result.requires_sso
         assert result.scopes == member.get_scopes()
         assert result.has_team_access(team)
-        assert result.has_team_membership(team)
+        assert result.has_team_scope(team, 'project:read')
+        assert result.has_project_access(project)
+        assert result.has_project_scope(project, 'project:read')
+        assert result.has_project_membership(project)
 
     def test_member_no_teams_closed_membership(self):
         user = self.create_user()
@@ -51,13 +58,17 @@ class FromUserTest(TestCase):
             role='member',
         )
         team = self.create_team(organization=organization)
+        project = self.create_project(organization=organization, teams=[team])
 
         result = access.from_user(user, organization)
         assert result.sso_is_valid
         assert not result.requires_sso
         assert result.scopes == member.get_scopes()
         assert not result.has_team_access(team)
-        assert not result.has_team_membership(team)
+        assert not result.has_team_scope(team, 'project:read')
+        assert not result.has_project_access(project)
+        assert not result.has_project_scope(project, 'project:read')
+        assert not result.has_project_membership(project)
 
     def test_member_no_teams_open_membership(self):
         user = self.create_user()
@@ -72,18 +83,23 @@ class FromUserTest(TestCase):
             teams=(),
         )
         team = self.create_team(organization=organization)
+        project = self.create_project(organization=organization, teams=[team])
 
         result = access.from_user(user, organization)
         assert result.sso_is_valid
         assert not result.requires_sso
         assert result.scopes == member.get_scopes()
         assert result.has_team_access(team)
-        assert not result.has_team_membership(team)
+        assert result.has_team_scope(team, 'project:read')
+        assert result.has_project_access(project)
+        assert result.has_project_scope(project, 'project:read')
+        assert not result.has_project_membership(project)
 
     def test_team_restricted_org_member_access(self):
         user = self.create_user()
         organization = self.create_organization()
         team = self.create_team(organization=organization)
+        project = self.create_project(organization=organization, teams=[team])
         member = self.create_member(
             organization=organization,
             user=user,
@@ -95,7 +111,10 @@ class FromUserTest(TestCase):
         assert not result.requires_sso
         assert result.scopes == member.get_scopes()
         assert result.has_team_access(team)
-        assert result.has_team_membership(team)
+        assert result.has_team_scope(team, 'project:read')
+        assert result.has_project_access(project)
+        assert result.has_project_scope(project, 'project:read')
+        assert result.has_project_membership(project)
 
     def test_unlinked_sso(self):
         user = self.create_user()
@@ -177,7 +196,7 @@ class FromSentryAppTest(TestCase):
 
         self.proxy_user = self.sentry_app.proxy_user
 
-        self.install = sentry_app_installations.Creator.run(
+        self.install = self.create_sentry_app_installation(
             organization=self.org,
             slug=self.sentry_app.slug,
             user=self.user,
@@ -200,4 +219,7 @@ class DefaultAccessTest(TestCase):
         assert result.sso_is_valid
         assert not result.scopes
         assert not result.has_team_access(Mock())
-        assert not result.has_team_membership(Mock())
+        assert not result.has_team_scope(Mock(), 'project:read')
+        assert not result.has_project_access(Mock())
+        assert not result.has_project_scope(Mock(), 'project:read')
+        assert not result.has_project_membership(Mock())

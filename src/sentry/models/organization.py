@@ -438,3 +438,13 @@ class Organization(Model):
             actor_key_id=api_key_id,
             ip_address=ip_address
         )
+
+    def get_url_viewname(self):
+        from sentry import features
+        if features.has('organizations:sentry10', self):
+            return 'sentry-organization-issue-list'
+        else:
+            return 'sentry-organization-home'
+
+    def get_url(self):
+        return reverse(self.get_url_viewname(), args=[self.slug])

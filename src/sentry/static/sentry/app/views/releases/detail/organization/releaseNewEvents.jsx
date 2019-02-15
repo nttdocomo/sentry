@@ -7,19 +7,19 @@ import GroupList from 'app/components/groupList';
 import {t} from 'app/locale';
 
 export default class OrganizationReleaseNewEvents extends React.Component {
-  static contextTypes = {
+  static propTypes = {
     release: SentryTypes.Release,
   };
 
   render() {
-    let {orgId} = this.props.params;
+    const {orgId} = this.props.params;
     return (
       <div>
         <Alert icon="icon-open" iconSize="14px" type="warning">
           <Link
             to={{
               pathname: `/organizations/${orgId}/issues/`,
-              query: {query: 'first-release:' + this.context.release.version},
+              query: {query: 'first-release:' + this.props.release.version},
             }}
           >
             {t('View new issues seen in this release in the stream')}
@@ -27,7 +27,7 @@ export default class OrganizationReleaseNewEvents extends React.Component {
         </Alert>
         <GroupList
           orgId={orgId}
-          query={'first-release:"' + this.context.release.version + '"'}
+          query={'first-release:"' + this.props.release.version + '"'}
           canSelectGroups={false}
         />
       </div>

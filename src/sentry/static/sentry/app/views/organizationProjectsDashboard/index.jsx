@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import {Link} from 'react-router';
 import LazyLoad from 'react-lazyload';
 import React from 'react';
@@ -9,6 +8,7 @@ import styled from 'react-emotion';
 
 import SentryTypes from 'app/sentryTypes';
 import IdBadge from 'app/components/idBadge';
+import NoProjectMessage from 'app/components/noProjectMessage';
 import OrganizationState from 'app/mixins/organizationState';
 import ProjectsStatsStore from 'app/stores/projectsStatsStore';
 import getProjectsByTeams from 'app/utils/getProjectsByTeams';
@@ -19,7 +19,6 @@ import {t} from 'app/locale';
 
 import ProjectNav from './projectNav';
 import TeamSection from './teamSection';
-import EmptyState from './emptyState';
 import Resources from './resources';
 
 class Dashboard extends React.Component {
@@ -30,10 +29,10 @@ class Dashboard extends React.Component {
   };
 
   componentDidMount() {
-    $(document.body).addClass('org-dashboard');
+    document.body.classList.add('org-dashboard');
   }
   componentWillUnmount() {
-    $(document.body).removeClass('org-dashboard');
+    document.body.classList.remove('org-dashboard');
     ProjectsStatsStore.reset();
   }
 
@@ -91,9 +90,7 @@ class Dashboard extends React.Component {
           );
         })}
         {teamSlugs.length === 0 &&
-          favorites.length === 0 && (
-            <EmptyState projects={projects} teams={teams} organization={organization} />
-          )}
+          favorites.length === 0 && <NoProjectMessage organization={organization} />}
       </React.Fragment>
     );
   }

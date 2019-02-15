@@ -83,6 +83,11 @@ export function getExternal(internal, columns) {
       external[2] = internal.replace(strStart, '');
     }
 
+    // Ignore double quotes if they have been entered
+    if (external[2] !== null && external[2].match(/^".*"$/)) {
+      external[2] = external[2].slice(1, -1);
+    }
+
     const type = columns.find(({name}) => name === colValue).type;
 
     if (type === 'number') {
@@ -121,7 +126,7 @@ export function ignoreCase(input = '') {
 
   // Strip column name from the start
   const match = input.match(/^[\w._]+\s(.*)/);
-  let remaining = match ? match[1] : null;
+  const remaining = match ? match[1] : null;
 
   if (!remaining) {
     return input;

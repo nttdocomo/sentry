@@ -8,6 +8,7 @@ const ProjectsStore = Reflux.createStore({
   init() {
     this.reset();
     this.listenTo(ProjectActions.createSuccess, this.onCreateSuccess);
+    this.listenTo(ProjectActions.fetchSuccess, this.onFetchSuccess);
     this.listenTo(ProjectActions.updateSuccess, this.onUpdateSuccess);
     this.listenTo(ProjectActions.loadStatsSuccess, this.onStatsLoadSuccess);
     this.listenTo(ProjectActions.changeSlug, this.onChangeSlug);
@@ -29,7 +30,7 @@ const ProjectsStore = Reflux.createStore({
   },
 
   onChangeSlug(prevSlug, newSlug) {
-    let prevProject = this.getBySlug(prevSlug);
+    const prevProject = this.getBySlug(prevSlug);
 
     // This shouldn't happen
     if (!prevProject) return;
@@ -57,9 +58,17 @@ const ProjectsStore = Reflux.createStore({
     this.trigger(new Set([project.id]));
   },
 
+  onFetchSuccess(project) {
+    this.itemsById = {
+      ...this.itemsById,
+      [project.id]: project,
+    };
+    this.trigger(new Set([project.id]));
+  },
+
   onUpdateSuccess(data) {
-    let project = this.getById(data.id);
-    let newProject = Object.assign({}, project, data);
+    const project = this.getById(data.id);
+    const newProject = Object.assign({}, project, data);
     this.itemsById = {
       ...this.itemsById,
       [project.id]: newProject,
@@ -68,7 +77,7 @@ const ProjectsStore = Reflux.createStore({
   },
 
   onStatsLoadSuccess(data) {
-    let touchedIds = [];
+    const touchedIds = [];
     _.each(data || [], (stats, projectId) => {
       if (projectId in this.itemsById) {
         this.itemsById[projectId].stats = stats;
@@ -84,7 +93,7 @@ const ProjectsStore = Reflux.createStore({
    */
   onDeleteTeam(teamSlug) {
     // Look for team in all projects
-    let projectIds = this.getWithTeam(teamSlug).map(projectWithTeam => {
+    const projectIds = this.getWithTeam(teamSlug).map(projectWithTeam => {
       this.removeTeamFromProject(teamSlug, projectWithTeam);
       return projectWithTeam.id;
     });
@@ -93,7 +102,7 @@ const ProjectsStore = Reflux.createStore({
   },
 
   onRemoveTeam(teamSlug, projectSlug) {
-    let project = this.getBySlug(projectSlug);
+    const project = this.getBySlug(projectSlug);
     if (!project) return;
 
     this.removeTeamFromProject(teamSlug, project);
@@ -101,7 +110,7 @@ const ProjectsStore = Reflux.createStore({
   },
 
   onAddTeam(team, projectSlug) {
-    let project = this.getBySlug(projectSlug);
+    const project = this.getBySlug(projectSlug);
 
     // Don't do anything if we can't find a project
     if (!project) return;
@@ -119,7 +128,7 @@ const ProjectsStore = Reflux.createStore({
 
   // Internal method, does not trigger
   removeTeamFromProject(teamSlug, project) {
-    let newTeams = project.teams.filter(({slug}) => slug !== teamSlug);
+    const newTeams = project.teams.filter(({slug}) => slug !== teamSlug);
 
     this.itemsById = {
       ...this.itemsById,

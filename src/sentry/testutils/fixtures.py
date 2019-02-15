@@ -305,7 +305,7 @@ class Fixtures(object):
             project_id=project.id,
             name=name,
         )
-        env.add_project(project)
+        env.add_project(project, is_hidden=kwargs.get('is_hidden'))
         return env
 
     def create_project(self, **kwargs):
@@ -333,13 +333,17 @@ class Fixtures(object):
         return project.key_set.get_or_create()[0]
 
     # TODO(maxbittker) make new fixtures less hardcoded
-    def create_release(self, project, user=None, version=None):
+    def create_release(self, project, user=None, version=None, date_added=None):
         if version is None:
             version = os.urandom(20).encode('hex')
+
+        if date_added is None:
+            date_added = timezone.now().replace(microsecond=0)
 
         release = Release.objects.create(
             version=version,
             organization_id=project.organization_id,
+            date_added=date_added,
         )
 
         release.add_project(project)
@@ -462,6 +466,7 @@ class Fixtures(object):
         return useremail
 
     def create_event(self, event_id=None, normalize=True, **kwargs):
+        # XXX: Do not use this method for new tests! Prefer `store_event`.
         if event_id is None:
             event_id = uuid4().hex
         if 'group' not in kwargs:
@@ -494,7 +499,7 @@ class Fixtures(object):
         # parameter just like our API would
         if 'logentry' not in kwargs['data']:
             kwargs['data']['logentry'] = {
-                'message': kwargs.get('message') or '<unlabeled event>',
+                'message': kwargs['message'] or '<unlabeled event>',
             }
 
         if normalize:
@@ -503,9 +508,6 @@ class Fixtures(object):
             manager.normalize()
             kwargs['data'] = manager.get_data()
             kwargs['message'] = manager.get_search_message()
-
-        else:
-            assert 'message' not in kwargs, 'do not pass message this way'
 
         event = Event(event_id=event_id, **kwargs)
         EventMapping.objects.create(
@@ -518,15 +520,28 @@ class Fixtures(object):
         event.save()
         return event
 
+    def store_event(self, data, project_id, assert_no_errors=True):
+        # Like `create_event`, but closer to how events are actually
+        # ingested. Prefer to use this method over `create_event`
+        manager = EventManager(data)
+        manager.normalize()
+        if assert_no_errors:
+            errors = manager.get_data().get('errors')
+            assert not errors, errors
+
+        event = manager.save(project_id)
+        event.group.save()
+        return event
+
     def create_full_event(self, event_id='a', **kwargs):
         payload = """
             {
-                "id": "f5dd88e612bc406ba89dfebd09120769",
+                "event_id": "f5dd88e612bc406ba89dfebd09120769",
                 "project": 11276,
                 "release": "e1b5d1900526feaf20fe2bc9cad83d392136030a",
                 "platform": "javascript",
                 "culprit": "app/components/events/eventEntries in map",
-                "message": "TypeError: Cannot read property '1' of null",
+                "logentry": {"formatted": "TypeError: Cannot read property '1' of null"},
                 "tags": [
                     ["environment", "prod"],
                     ["sentry_version", "e1b5d1900526feaf20fe2bc9cad83d392136030a"],
@@ -606,8 +621,16 @@ class Fixtures(object):
                 }
             }"""
 
-        return self.create_event(event_id=event_id, platform='javascript',
-                                 data=json.loads(payload))
+        event = self.create_event(
+            event_id=event_id, platform='javascript',
+            data=json.loads(payload),
+
+            # This payload already went through sourcemap
+            # processing, normalizing it would remove
+            # frame.data (orig_filename, etc)
+            normalize=False
+        )
+        return event
 
     def create_group(self, project=None, checksum=None, **kwargs):
         if checksum:
@@ -739,26 +762,34 @@ class Fixtures(object):
         return app
 
     def create_sentry_app_installation(self, organization=None, slug=None, user=None):
+        if not organization:
+            organization = self.create_organization()
+
+        self.create_project(organization=organization)
+
         return sentry_app_installations.Creator.run(
             slug=(slug or self.create_sentry_app().slug),
-            organization=(organization or self.create_organization()),
+            organization=organization,
             user=(user or self.create_user()),
         )
 
-    def create_service_hook(self, actor=None, project=None, events=None, url=None, **kwargs):
+    def create_service_hook(self, actor=None, org=None, project=None,
+                            events=None, url=None, **kwargs):
         if not actor:
             actor = self.create_user()
-        if not project:
+        if not org:
             org = self.create_organization(owner=actor)
+        if not project:
             project = self.create_project(organization=org)
         if not events:
             events = ('event.created',)
         if not url:
-            url = 'https://example/sentry/webhook'
+            url = 'https://example.com/sentry/webhook'
 
         _kwargs = {
             'actor': actor,
-            'project': project,
+            'projects': [project],
+            'organization': org,
             'events': events,
             'url': url,
         }

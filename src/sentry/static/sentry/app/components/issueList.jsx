@@ -10,6 +10,7 @@ import EmptyMessage from 'app/views/settings/components/emptyMessage';
 import LoadingError from 'app/components/loadingError';
 import LoadingIndicator from 'app/components/loadingIndicator';
 import Pagination from 'app/components/pagination';
+import space from 'app/styles/space';
 import {t} from 'app/locale';
 
 const IssueList = createReactClass({
@@ -50,8 +51,8 @@ const IssueList = createReactClass({
   },
 
   componentWillReceiveProps(nextProps) {
-    let location = this.props.location;
-    let nextLocation = nextProps.location;
+    const location = this.props.location;
+    const nextLocation = nextProps.location;
     if (!location) return;
 
     if (
@@ -67,7 +68,7 @@ const IssueList = createReactClass({
   },
 
   fetchData() {
-    let location = this.props.location;
+    const location = this.props.location;
     this.api.clear();
     this.api.request(this.props.endpoint, {
       method: 'GET',
@@ -95,10 +96,10 @@ const IssueList = createReactClass({
 
   renderResults() {
     let body;
-    const {params, noBorder} = this.props;
+    const {noBorder} = this.props;
 
     if (this.state.loading) body = this.renderLoading();
-    else if (this.state.error) body = <LoadingError onRetry={this.fetchData} />;
+    else if (this.state.error) body = this.renderError();
     else if (this.state.issueIds.length > 0) {
       const panelStyle = noBorder ? {border: 0, borderRadius: 0} : {};
 
@@ -111,7 +112,6 @@ const IssueList = createReactClass({
                   key={issue.id}
                   id={issue.id}
                   data={issue}
-                  orgId={params.orgId}
                   statsPeriod={this.props.statsPeriod}
                   showActions={this.props.showActions}
                 />
@@ -125,9 +125,17 @@ const IssueList = createReactClass({
     return body;
   },
 
+  renderError() {
+    return (
+      <div style={{margin: `${space(2)} ${space(2)} 0`}}>
+        <LoadingError onRetry={this.fetchData} />
+      </div>
+    );
+  },
+
   renderLoading() {
     return (
-      <div className="box">
+      <div style={{margin: '18px 18px 0'}}>
         <LoadingIndicator />
       </div>
     );

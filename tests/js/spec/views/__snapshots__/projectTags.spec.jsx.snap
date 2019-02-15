@@ -16,11 +16,12 @@ exports[`ProjectTags renders 1`] = `
       title="Sentry"
     >
       <SettingsPageHeading
+        noTitleStyles={false}
         title="Tags"
       >
         <Wrapper>
           <div
-            className="css-1pnrn3o-Wrapper e1kblvez1"
+            className="css-1r5ylk7-Wrapper e1kblvez2"
           >
             <Flex
               align="center"
@@ -33,15 +34,23 @@ exports[`ProjectTags renders 1`] = `
                   className="css-5ipae5"
                   is={null}
                 >
-                  <Title>
+                  <Title
+                    styled={false}
+                  >
                     <Base
-                      className="css-1mqcea-Title e1kblvez0"
+                      className="css-1ky52ze-Title e1kblvez0"
                     >
                       <div
-                        className="css-1mqcea-Title e1kblvez0"
+                        className="css-1ky52ze-Title e1kblvez0"
                         is={null}
                       >
-                        Tags
+                        <HeaderTitle>
+                          <h4
+                            className="css-1w8ttcn-HeaderTitle e6lvex72"
+                          >
+                            Tags
+                          </h4>
+                        </HeaderTitle>
                       </div>
                     </Base>
                   </Title>
@@ -357,6 +366,7 @@ exports[`ProjectTags renders 1`] = `
                                         priority="primary"
                                       >
                                         <a
+                                          className=""
                                           disabled={false}
                                           onClick={[Function]}
                                           title="Remove tag?"
@@ -585,6 +595,7 @@ exports[`ProjectTags renders 1`] = `
                                         priority="primary"
                                       >
                                         <a
+                                          className=""
                                           disabled={false}
                                           onClick={[Function]}
                                           title="Remove tag?"
@@ -813,6 +824,7 @@ exports[`ProjectTags renders 1`] = `
                                         priority="primary"
                                       >
                                         <a
+                                          className=""
                                           disabled={false}
                                           onClick={[Function]}
                                           title="Remove tag?"
@@ -1044,7 +1056,7 @@ exports[`ProjectTags renders 1`] = `
                                         priority="primary"
                                       >
                                         <a
-                                          className="undefined disabled"
+                                          className="disabled"
                                           disabled={true}
                                           onClick={[Function]}
                                           title="Remove tag?"

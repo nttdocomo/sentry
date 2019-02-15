@@ -7,9 +7,9 @@ import OrganizationsStore from 'app/stores/organizationsStore';
 import ProjectsStore from 'app/stores/projectsStore';
 import TeamStore from 'app/stores/teamStore';
 
-export function redirectToRemainingOrganization({orgId}) {
+export function redirectToRemainingOrganization({orgId, removeOrg}) {
   // Remove queued, should redirect
-  let allOrgs = OrganizationsStore.getAll().filter(
+  const allOrgs = OrganizationsStore.getAll().filter(
     org => org.status.id === 'active' && org.slug !== orgId
   );
   if (!allOrgs.length) {
@@ -18,12 +18,17 @@ export function redirectToRemainingOrganization({orgId}) {
   }
 
   // Let's be smart and select the best org to redirect to
-  let firstRemainingOrg = allOrgs[0];
+  const firstRemainingOrg = allOrgs[0];
   browserHistory.push(`/${firstRemainingOrg.slug}/`);
+
+  // Remove org from SidebarDropdown
+  if (removeOrg) {
+    OrganizationsStore.remove(orgId);
+  }
 }
 
 export function remove(api, {successMessage, errorMessage, orgId} = {}) {
-  let endpoint = `/organizations/${orgId}/`;
+  const endpoint = `/organizations/${orgId}/`;
   return api
     .requestPromise(endpoint, {
       method: 'DELETE',
@@ -60,17 +65,21 @@ export function updateOrganization(org) {
   OrganizationsActions.update(org);
 }
 
-export function fetchOrganizationByMember(memberId, {loadOrg, setActive}) {
-  let api = new Client();
-  let request = api.requestPromise(`/organizations/?query=member_id:${memberId}`);
+export function fetchOrganizationByMember(memberId, {addOrg, fetchOrgDetails}) {
+  const api = new Client();
+  const request = api.requestPromise(`/organizations/?query=member_id:${memberId}`);
 
   request.then(data => {
-    if (data.length && loadOrg) {
-      OrganizationsStore.add(data[0]);
-    }
+    if (data.length) {
+      if (addOrg) {
+        // add org to SwitchOrganization dropdown
+        OrganizationsStore.add(data[0]);
+      }
 
-    if (data.length && setActive) {
-      setActiveOrganization(data[0]);
+      if (fetchOrgDetails) {
+        // load SidebarDropdown with org details including `access`
+        fetchOrganizationDetails(data[0].slug, {setActive: true, loadProjects: true});
+      }
     }
   });
 
@@ -78,8 +87,8 @@ export function fetchOrganizationByMember(memberId, {loadOrg, setActive}) {
 }
 
 export function fetchOrganizationDetails(orgId, {setActive, loadProjects, loadTeam}) {
-  let api = new Client();
-  let request = api.requestPromise(`/organizations/${orgId}/`);
+  const api = new Client();
+  const request = api.requestPromise(`/organizations/${orgId}/`);
 
   request.then(data => {
     if (setActive) {

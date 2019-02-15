@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import React from 'react';
 import PropTypes from 'prop-types';
 import styled from 'react-emotion';
@@ -13,11 +12,6 @@ const StyledSettingsWrapper = styled.div`
   color: ${p => p.theme.gray5};
   margin: 0 auto;
   line-height: 1;
-
-  footer > .container {
-    max-width: ${p => p.theme.settings.containerWidth};
-    padding: ${p => p.theme.grid * 2}px;
-  }
 `;
 
 class SettingsWrapper extends React.Component {
@@ -46,11 +40,11 @@ class SettingsWrapper extends React.Component {
   }
 
   componentDidMount() {
-    $(document.body).addClass('new-settings');
+    document.body.classList.add('new-settings');
   }
 
   componentWillUnmount() {
-    $(document.body).removeClass('new-settings');
+    document.body.classList.remove('new-settings');
   }
 
   render() {

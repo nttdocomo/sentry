@@ -39,6 +39,9 @@ SENTRY_SNUBA_MAP = {
     'project.id': 'project_id',
     'platform': 'platform',
     'message': 'message',
+    'title': 'title',
+    'location': 'location',
+    'culprit': 'culprit',
     'issue.id': 'issue',
     'timestamp': 'timestamp',
     'time': 'time',
@@ -355,11 +358,14 @@ def transform_aliases_and_query(**kwargs):
 
 
 def raw_query(start, end, groupby=None, conditions=None, filter_keys=None,
-              aggregations=None, rollup=None, arrayjoin=None, limit=None, offset=None,
-              orderby=None, having=None, referrer=None, is_grouprelease=False,
-              selected_columns=None, totals=None, limitby=None, turbo=False):
+              aggregations=None, rollup=None, referrer=None,
+              is_grouprelease=False, **kwargs):
     """
     Sends a query to snuba.
+
+    `start` and `end`: The beginning and end of the query time window (required)
+
+    `groupby`: A list of column names to group by.
 
     `conditions`: A list of (column, operator, literal) conditions to be passed
     to the query. Conditions that we know will not have to be translated should
@@ -375,6 +381,9 @@ def raw_query(start, end, groupby=None, conditions=None, filter_keys=None,
 
     `aggregations` a list of (aggregation_function, column, alias) tuples to be
     passed to the query.
+
+    The rest of the args are passed directly into the query JSON unmodified.
+    See the snuba schema for details.
     """
 
     # convert to naive UTC datetimes, as Snuba only deals in UTC
@@ -384,10 +393,8 @@ def raw_query(start, end, groupby=None, conditions=None, filter_keys=None,
 
     groupby = groupby or []
     conditions = conditions or []
-    having = having or []
     aggregations = aggregations or []
     filter_keys = filter_keys or {}
-    selected_columns = selected_columns or []
 
     with timer('get_snuba_map'):
         forward, reverse = get_snuba_translators(filter_keys, is_grouprelease=is_grouprelease)
@@ -424,34 +431,34 @@ def raw_query(start, end, groupby=None, conditions=None, filter_keys=None,
         if start > end:
             raise QueryOutsideRetentionError
 
-    start = shrink_time_window(filter_keys.get('issue'), start)
-
     # if `shrink_time_window` pushed `start` after `end` it means the user queried
     # a Group for T1 to T2 when the group was only active for T3 to T4, so the query
     # wouldn't return any results anyway
+    new_start = shrink_time_window(filter_keys.get('issue'), start)
+
+    # TODO (alexh) this is a quick emergency fix for an occasion where a search
+    # results in only 1 django candidate, which is then passed to snuba to
+    # check and we raised because of it. Remove this once we figure out why the
+    # candidate was returned from django at all if it existed only outside the
+    # time range of the query
+    if new_start <= end:
+        start = new_start
+
     if start > end:
         raise QueryOutsideGroupActivityError
 
-    request = {k: v for k, v in six.iteritems({
+    kwargs.update({
         'from_date': start.isoformat(),
         'to_date': end.isoformat(),
-        'conditions': conditions,
-        'having': having,
         'groupby': groupby,
-        'totals': totals,
-        'project': project_ids,
+        'conditions': conditions,
         'aggregations': aggregations,
-        'granularity': rollup,
-        'arrayjoin': arrayjoin,
-        'limit': limit,
-        'offset': offset,
-        'limitby': limitby,
-        'orderby': orderby,
-        'selected_columns': selected_columns,
-        'turbo': turbo
-    }) if v is not None}
+        'project': project_ids,
+        'granularity': rollup,  # TODO name these things the same
+    })
+    kwargs = {k: v for k, v in six.iteritems(kwargs) if v is not None}
 
-    request.update(OVERRIDE_OPTIONS)
+    kwargs.update(OVERRIDE_OPTIONS)
 
     headers = {}
     if referrer:
@@ -460,7 +467,7 @@ def raw_query(start, end, groupby=None, conditions=None, filter_keys=None,
     try:
         with timer('snuba_query'):
             response = _snuba_pool.urlopen(
-                'POST', '/query', body=json.dumps(request), headers=headers)
+                'POST', '/query', body=json.dumps(kwargs), headers=headers)
     except urllib3.exceptions.HTTPError as err:
         raise SnubaError(err)
 
@@ -491,10 +498,8 @@ def raw_query(start, end, groupby=None, conditions=None, filter_keys=None,
     return body
 
 
-def query(start, end, groupby, conditions=None, filter_keys=None,
-          aggregations=None, rollup=None, arrayjoin=None, limit=None, offset=None,
-          orderby=None, having=None, referrer=None, is_grouprelease=False,
-          selected_columns=None, totals=None, limitby=None):
+def query(start, end, groupby, conditions=None, filter_keys=None, aggregations=None,
+          selected_columns=None, totals=None, **kwargs):
 
     aggregations = aggregations or [['count()', '', 'aggregate']]
     filter_keys = filter_keys or {}
@@ -503,9 +508,8 @@ def query(start, end, groupby, conditions=None, filter_keys=None,
     try:
         body = raw_query(
             start, end, groupby=groupby, conditions=conditions, filter_keys=filter_keys,
-            selected_columns=selected_columns, aggregations=aggregations, rollup=rollup,
-            arrayjoin=arrayjoin, limit=limit, offset=offset, orderby=orderby, having=having,
-            referrer=referrer, is_grouprelease=is_grouprelease, totals=totals, limitby=limitby
+            aggregations=aggregations, selected_columns=selected_columns, totals=totals,
+            **kwargs
         )
     except (QueryOutsideRetentionError, QueryOutsideGroupActivityError):
         if totals:
@@ -514,17 +518,19 @@ def query(start, end, groupby, conditions=None, filter_keys=None,
             return OrderedDict()
 
     # Validate and scrub response, and translate snuba keys back to IDs
-    aggregate_cols = [a[2] for a in aggregations]
-    expected_cols = set(groupby + aggregate_cols + selected_columns)
+    aggregate_names = [a[2] for a in aggregations]
+    selected_names = [c[2] if isinstance(c, (list, tuple)) else c for c in selected_columns]
+    expected_cols = set(groupby + aggregate_names + selected_names)
     got_cols = set(c['name'] for c in body['meta'])
 
-    assert expected_cols == got_cols
+    assert expected_cols == got_cols, 'expected {}, got {}'.format(expected_cols, got_cols)
 
     with timer('process_result'):
         if totals:
-            return nest_groups(body['data'], groupby, aggregate_cols), body['totals']
+            return nest_groups(body['data'], groupby, aggregate_names
+                               + selected_names), body['totals']
         else:
-            return nest_groups(body['data'], groupby, aggregate_cols)
+            return nest_groups(body['data'], groupby, aggregate_names + selected_names)
 
 
 def nest_groups(data, groups, aggregate_cols):
@@ -674,21 +680,6 @@ def get_related_project_ids(column, ids):
                 project_field + '__isnull': False,
             }).values_list(project_field, flat=True)
     return []
-
-
-def insert_raw(data):
-    data = json.dumps(data)
-    try:
-        with timer('snuba_insert_raw'):
-            resp = _snuba_pool.urlopen(
-                'POST', '/tests/insert',
-                body=data,
-            )
-            if resp.status != 200:
-                raise SnubaError("Non-200 response from Snuba insert!")
-            return resp
-    except urllib3.exceptions.HTTPError as err:
-        raise SnubaError(err)
 
 
 def shrink_time_window(issues, start):

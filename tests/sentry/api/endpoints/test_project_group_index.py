@@ -219,23 +219,21 @@ class GroupListTest(APITestCase):
         project = self.project
         project.update_option('sentry:resolve_age', 1)
         self.create_environment(name="test", project=project)
-        group = self.create_group(checksum='a' * 32)
-        self.create_group(checksum='b' * 32)
-        event_id = 'c' * 32
-        event = self.create_event(
+        event = self.store_event(
+            data={
+                'environment': 'test',
+            },
             project_id=self.project.id,
-            group=group,
-            event_id=event_id,
-            tags={
-                'environment': 'test'})
+        )
+
         self.login_as(user=self.user)
 
         response = self.client.get(
             u'{}?query={}&environment=test'.format(
-                self.path, 'c' * 32), format='json')
+                self.path, event.event_id), format='json')
         assert response.status_code == 200
         assert len(response.data) == 1
-        assert response.data[0]['id'] == six.text_type(group.id)
+        assert response.data[0]['id'] == six.text_type(event.group.id)
         assert response.data[0]['matchingEventId'] == event.id
         assert response.data[0]['matchingEventEnvironment'] == 'test'
 
@@ -1574,9 +1572,9 @@ class GroupUpdateTest(APITestCase):
         r4 = GroupSeen.objects.filter(group=group4, user=self.user)
         assert not r4.exists()
 
-    @patch('sentry.api.endpoints.project_group_index.uuid4')
-    @patch('sentry.api.endpoints.project_group_index.merge_groups')
-    @patch('sentry.api.endpoints.project_group_index.eventstream')
+    @patch('sentry.api.helpers.group_index.uuid4')
+    @patch('sentry.api.helpers.group_index.merge_groups')
+    @patch('sentry.api.helpers.group_index.eventstream')
     def test_merge(self, mock_eventstream, merge_groups, mock_uuid4):
         eventstream_state = object()
         mock_eventstream.start_merge = Mock(return_value=eventstream_state)
@@ -1782,7 +1780,7 @@ class GroupDeleteTest(APITestCase):
             self.project.slug,
         )
 
-    @patch('sentry.api.endpoints.project_group_index.eventstream')
+    @patch('sentry.api.helpers.group_index.eventstream')
     @patch('sentry.eventstream')
     def test_delete_by_id(self, mock_eventstream_task, mock_eventstream_api):
         eventstream_state = object()

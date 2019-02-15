@@ -26,6 +26,7 @@ from sentry.utils import db
 
 from . import models
 from sentry.tagstore.types import TagKey, TagValue, GroupTagKey, GroupTagValue
+from sentry.tasks.post_process import index_event_tags
 
 
 transformers = {
@@ -341,7 +342,7 @@ class LegacyTagStorage(TagStorage):
 
         return transformers[models.GroupTagKey](instance)
 
-    def get_group_tag_keys(self, project_id, group_id, environment_id, limit=None, keys=None):
+    def get_group_tag_keys(self, project_id, group_id, environment_ids, limit=None, keys=None):
         qs = models.GroupTagKey.objects.filter(group_id=group_id)
 
         if keys is not None:
@@ -442,7 +443,7 @@ class LegacyTagStorage(TagStorage):
                     },
                     extra=extra)
 
-    def get_group_event_filter(self, project_id, group_id, environment_id, tags):
+    def get_group_event_filter(self, project_id, group_id, environment_ids, tags, start, end):
         tagkeys = dict(
             models.TagKey.objects.filter(
                 project_id=project_id,
@@ -759,3 +760,15 @@ class LegacyTagStorage(TagStorage):
             project_id=project_id,
             event_id__in=event_ids,
         ).update(group_id=destination_id)
+
+    def delay_index_event_tags(self, organization_id, project_id, group_id,
+                               environment_id, event_id, tags, date_added):
+        index_event_tags.delay(
+            organization_id=organization_id,
+            project_id=project_id,
+            group_id=group_id,
+            environment_id=environment_id,
+            event_id=event_id,
+            tags=tags,
+            date_added=date_added,
+        )

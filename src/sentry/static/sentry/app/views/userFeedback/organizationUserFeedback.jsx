@@ -10,6 +10,7 @@ import CompactIssue from 'app/components/compactIssue';
 import EventUserFeedback from 'app/components/events/userFeedback';
 import LoadingIndicator from 'app/components/loadingIndicator';
 import GlobalSelectionHeader from 'app/components/organizations/globalSelectionHeader';
+import NoProjectMessage from 'app/components/noProjectMessage';
 import AsyncView from 'app/views/asyncView';
 import {PageContent} from 'app/styles/organization';
 
@@ -18,7 +19,7 @@ import {getQuery} from './utils';
 
 class OrganizationUserFeedback extends AsyncView {
   static propTypes = {
-    organization: SentryTypes.Organization,
+    organization: SentryTypes.Organization.isRequired,
   };
 
   getEndpoints() {
@@ -44,21 +45,9 @@ class OrganizationUserFeedback extends AsyncView {
 
     const children = this.state.reportList.map(item => {
       const issue = item.issue;
-      const projectId = issue.project.slug;
       return (
-        <CompactIssue
-          key={item.id}
-          id={issue.id}
-          data={issue}
-          orgId={orgId}
-          projectId={projectId}
-        >
-          <EventUserFeedback
-            report={item}
-            orgId={orgId}
-            projectId={projectId}
-            issueId={issue.id}
-          />
+        <CompactIssue key={item.id} id={issue.id} data={issue}>
+          <EventUserFeedback report={item} orgId={orgId} issueId={issue.id} />
         </CompactIssue>
       );
     });
@@ -95,28 +84,24 @@ class OrganizationUserFeedback extends AsyncView {
   }
 
   renderStreamBody() {
-    const {location, params} = this.props;
-    const {status} = getQuery(location.search);
-    const {reportList, reportListPageLinks} = this.state;
+    const {loading, reportList} = this.state;
 
-    if (this.state.loading) {
+    if (loading) {
       return <LoadingIndicator />;
     }
 
-    return (
-      <UserFeedbackContainer
-        pageLinks={reportListPageLinks}
-        status={status}
-        location={location}
-        params={params}
-      >
-        {reportList.length ? this.renderResults() : this.renderEmpty()}
-      </UserFeedbackContainer>
-    );
+    if (!reportList.length) {
+      return this.renderEmpty();
+    }
+
+    return this.renderResults();
   }
 
   renderBody() {
     const {organization} = this.props;
+    const {location} = this.props;
+    const {status} = getQuery(location.search);
+    const {reportListPageLinks} = this.state;
 
     return (
       <Feature
@@ -125,7 +110,17 @@ class OrganizationUserFeedback extends AsyncView {
         renderDisabled={this.renderNoAccess}
       >
         <GlobalSelectionHeader organization={organization} />
-        <PageContent>{this.renderStreamBody()}</PageContent>
+        <PageContent>
+          <NoProjectMessage organization={organization}>
+            <UserFeedbackContainer
+              pageLinks={reportListPageLinks}
+              status={status}
+              location={location}
+            >
+              {this.renderStreamBody()}
+            </UserFeedbackContainer>
+          </NoProjectMessage>
+        </PageContent>
       </Feature>
     );
   }

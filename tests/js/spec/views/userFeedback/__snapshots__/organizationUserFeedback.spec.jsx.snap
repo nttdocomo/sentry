@@ -27,7 +27,17 @@ exports[`OrganizationUserFeedback renders 1`] = `
       "id": "3",
       "name": "Organization Name",
       "onboardingTasks": Array [],
-      "projects": Array [],
+      "projects": Array [
+        Object {
+          "hasAccess": true,
+          "id": "2",
+          "isBookmarked": false,
+          "isMember": true,
+          "name": "Project Name",
+          "slug": "project-slug",
+          "teams": Array [],
+        },
+      ],
       "scrapeJavaScript": true,
       "slug": "org-slug",
       "status": Object {
@@ -74,7 +84,17 @@ exports[`OrganizationUserFeedback renders 1`] = `
             "id": "3",
             "name": "Organization Name",
             "onboardingTasks": Array [],
-            "projects": Array [],
+            "projects": Array [
+              Object {
+                "hasAccess": true,
+                "id": "2",
+                "isBookmarked": false,
+                "isMember": true,
+                "name": "Project Name",
+                "slug": "project-slug",
+                "teams": Array [],
+              },
+            ],
             "scrapeJavaScript": true,
             "slug": "org-slug",
             "status": Object {
@@ -112,7 +132,17 @@ exports[`OrganizationUserFeedback renders 1`] = `
               "id": "3",
               "name": "Organization Name",
               "onboardingTasks": Array [],
-              "projects": Array [],
+              "projects": Array [
+                Object {
+                  "hasAccess": true,
+                  "id": "2",
+                  "isBookmarked": false,
+                  "isMember": true,
+                  "name": "Project Name",
+                  "slug": "project-slug",
+                  "teams": Array [],
+                },
+              ],
               "scrapeJavaScript": true,
               "slug": "org-slug",
               "status": Object {
@@ -156,7 +186,17 @@ exports[`OrganizationUserFeedback renders 1`] = `
                 "id": "3",
                 "name": "Organization Name",
                 "onboardingTasks": Array [],
-                "projects": Array [],
+                "projects": Array [
+                  Object {
+                    "hasAccess": true,
+                    "id": "2",
+                    "isBookmarked": false,
+                    "isMember": true,
+                    "name": "Project Name",
+                    "slug": "project-slug",
+                    "teams": Array [],
+                  },
+                ],
                 "scrapeJavaScript": true,
                 "slug": "org-slug",
                 "status": Object {
@@ -192,7 +232,17 @@ exports[`OrganizationUserFeedback renders 1`] = `
                   "id": "3",
                   "name": "Organization Name",
                   "onboardingTasks": Array [],
-                  "projects": Array [],
+                  "projects": Array [
+                    Object {
+                      "hasAccess": true,
+                      "id": "2",
+                      "isBookmarked": false,
+                      "isMember": true,
+                      "name": "Project Name",
+                      "slug": "project-slug",
+                      "teams": Array [],
+                    },
+                  ],
                   "scrapeJavaScript": true,
                   "slug": "org-slug",
                   "status": Object {
@@ -200,6 +250,11 @@ exports[`OrganizationUserFeedback renders 1`] = `
                     "name": "active",
                   },
                   "teams": Array [],
+                }
+              }
+              params={
+                Object {
+                  "orgId": "org-slug",
                 }
               }
               router={
@@ -230,32 +285,32 @@ exports[`OrganizationUserFeedback renders 1`] = `
                         "/org-slug/project-slug/issues/1/activity/",
                       ],
                       Array [
-                        "/org-slug/project-slug/issues/1/events/1",
+                        "/organizations/org-slug/issues/1/events/1/",
                       ],
                     ],
                     "results": Array [
                       Object {
-                        "isThrow": false,
+                        "type": "return",
                         "value": undefined,
                       },
                       Object {
-                        "isThrow": false,
+                        "type": "return",
                         "value": undefined,
                       },
                       Object {
-                        "isThrow": false,
+                        "type": "return",
                         "value": undefined,
                       },
                       Object {
-                        "isThrow": false,
+                        "type": "return",
                         "value": undefined,
                       },
                       Object {
-                        "isThrow": false,
+                        "type": "return",
                         "value": undefined,
                       },
                       Object {
-                        "isThrow": false,
+                        "type": "return",
                         "value": undefined,
                       },
                     ],
@@ -268,6 +323,9 @@ exports[`OrganizationUserFeedback renders 1`] = `
                   "location": Object {
                     "query": Object {},
                   },
+                  "params": Object {
+                    "orgId": "org-slug",
+                  },
                   "push": [MockFunction] {
                     "calls": Array [
                       Array [
@@ -275,7 +333,9 @@ exports[`OrganizationUserFeedback renders 1`] = `
                           "pathname": undefined,
                           "query": Object {
                             "environment": Array [],
-                            "project": Array [],
+                            "project": Array [
+                              2,
+                            ],
                             "statsPeriod": "14d",
                             "utc": "true",
                           },
@@ -284,7 +344,7 @@ exports[`OrganizationUserFeedback renders 1`] = `
                     ],
                     "results": Array [
                       Object {
-                        "isThrow": false,
+                        "type": "return",
                         "value": undefined,
                       },
                     ],
@@ -320,7 +380,17 @@ exports[`OrganizationUserFeedback renders 1`] = `
                     "id": "3",
                     "name": "Organization Name",
                     "onboardingTasks": Array [],
-                    "projects": Array [],
+                    "projects": Array [
+                      Object {
+                        "hasAccess": true,
+                        "id": "2",
+                        "isBookmarked": false,
+                        "isMember": true,
+                        "name": "Project Name",
+                        "slug": "project-slug",
+                        "teams": Array [],
+                      },
+                    ],
                     "scrapeJavaScript": true,
                     "slug": "org-slug",
                     "status": Object {
@@ -328,6 +398,11 @@ exports[`OrganizationUserFeedback renders 1`] = `
                       "name": "active",
                     },
                     "teams": Array [],
+                  }
+                }
+                params={
+                  Object {
+                    "orgId": "org-slug",
                   }
                 }
                 resetParamsOnChange={Array []}
@@ -359,32 +434,32 @@ exports[`OrganizationUserFeedback renders 1`] = `
                           "/org-slug/project-slug/issues/1/activity/",
                         ],
                         Array [
-                          "/org-slug/project-slug/issues/1/events/1",
+                          "/organizations/org-slug/issues/1/events/1/",
                         ],
                       ],
                       "results": Array [
                         Object {
-                          "isThrow": false,
+                          "type": "return",
                           "value": undefined,
                         },
                         Object {
-                          "isThrow": false,
+                          "type": "return",
                           "value": undefined,
                         },
                         Object {
-                          "isThrow": false,
+                          "type": "return",
                           "value": undefined,
                         },
                         Object {
-                          "isThrow": false,
+                          "type": "return",
                           "value": undefined,
                         },
                         Object {
-                          "isThrow": false,
+                          "type": "return",
                           "value": undefined,
                         },
                         Object {
-                          "isThrow": false,
+                          "type": "return",
                           "value": undefined,
                         },
                       ],
@@ -397,6 +472,9 @@ exports[`OrganizationUserFeedback renders 1`] = `
                     "location": Object {
                       "query": Object {},
                     },
+                    "params": Object {
+                      "orgId": "org-slug",
+                    },
                     "push": [MockFunction] {
                       "calls": Array [
                         Array [
@@ -404,7 +482,9 @@ exports[`OrganizationUserFeedback renders 1`] = `
                             "pathname": undefined,
                             "query": Object {
                               "environment": Array [],
-                              "project": Array [],
+                              "project": Array [
+                                2,
+                              ],
                               "statsPeriod": "14d",
                               "utc": "true",
                             },
@@ -413,7 +493,7 @@ exports[`OrganizationUserFeedback renders 1`] = `
                       ],
                       "results": Array [
                         Object {
-                          "isThrow": false,
+                          "type": "return",
                           "value": undefined,
                         },
                       ],
@@ -434,14 +514,15 @@ exports[`OrganizationUserFeedback renders 1`] = `
                     "projects": Array [],
                   }
                 }
+                showDateSelector={true}
                 showEnvironmentSelector={true}
               >
                 <Header>
                   <Base
-                    className="css-1651jh1-Header e10yv9i90"
+                    className="css-14hw0r3-Header e10yv9i90"
                   >
                     <div
-                      className="css-1651jh1-Header e10yv9i90"
+                      className="css-14hw0r3-Header e10yv9i90"
                       is={null}
                     >
                       <HeaderItemPosition>
@@ -449,6 +530,7 @@ exports[`OrganizationUserFeedback renders 1`] = `
                           className="css-5udiwc-HeaderItemPosition e165b9e40"
                         >
                           <MultipleProjectSelector
+                            multi={false}
                             onChange={[Function]}
                             onUpdate={[Function]}
                             organization={
@@ -470,7 +552,17 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                 "id": "3",
                                 "name": "Organization Name",
                                 "onboardingTasks": Array [],
-                                "projects": Array [],
+                                "projects": Array [
+                                  Object {
+                                    "hasAccess": true,
+                                    "id": "2",
+                                    "isBookmarked": false,
+                                    "isMember": true,
+                                    "name": "Project Name",
+                                    "slug": "project-slug",
+                                    "teams": Array [],
+                                  },
+                                ],
                                 "scrapeJavaScript": true,
                                 "slug": "org-slug",
                                 "status": Object {
@@ -480,11 +572,23 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                 "teams": Array [],
                               }
                             }
-                            projects={Array []}
+                            projects={
+                              Array [
+                                Object {
+                                  "hasAccess": true,
+                                  "id": "2",
+                                  "isBookmarked": false,
+                                  "isMember": true,
+                                  "name": "Project Name",
+                                  "slug": "project-slug",
+                                  "teams": Array [],
+                                },
+                              ]
+                            }
                             value={Array []}
                           >
                             <StyledProjectSelector
-                              multi={true}
+                              multi={false}
                               onChange={[Function]}
                               onClose={[Function]}
                               onMultiSelect={[Function]}
@@ -509,7 +613,17 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                   "id": "3",
                                   "name": "Organization Name",
                                   "onboardingTasks": Array [],
-                                  "projects": Array [],
+                                  "projects": Array [
+                                    Object {
+                                      "hasAccess": true,
+                                      "id": "2",
+                                      "isBookmarked": false,
+                                      "isMember": true,
+                                      "name": "Project Name",
+                                      "slug": "project-slug",
+                                      "teams": Array [],
+                                    },
+                                  ],
                                   "scrapeJavaScript": true,
                                   "slug": "org-slug",
                                   "status": Object {
@@ -519,14 +633,26 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                   "teams": Array [],
                                 }
                               }
-                              projects={Array []}
+                              projects={
+                                Array [
+                                  Object {
+                                    "hasAccess": true,
+                                    "id": "2",
+                                    "isBookmarked": false,
+                                    "isMember": true,
+                                    "name": "Project Name",
+                                    "slug": "project-slug",
+                                    "teams": Array [],
+                                  },
+                                ]
+                              }
                               rootClassName="css-h5t9nh-rootContainerStyles"
                               selectedProjects={Array []}
                               value={Array []}
                             >
                               <ProjectSelector
                                 className="css-iw79rr-StyledProjectSelector ewlipse0"
-                                multi={true}
+                                multi={false}
                                 onChange={[Function]}
                                 onClose={[Function]}
                                 onMultiSelect={[Function]}
@@ -551,7 +677,17 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                     "id": "3",
                                     "name": "Organization Name",
                                     "onboardingTasks": Array [],
-                                    "projects": Array [],
+                                    "projects": Array [
+                                      Object {
+                                        "hasAccess": true,
+                                        "id": "2",
+                                        "isBookmarked": false,
+                                        "isMember": true,
+                                        "name": "Project Name",
+                                        "slug": "project-slug",
+                                        "teams": Array [],
+                                      },
+                                    ],
                                     "scrapeJavaScript": true,
                                     "slug": "org-slug",
                                     "status": Object {
@@ -562,18 +698,32 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                   }
                                 }
                                 projectId={null}
-                                projects={Array []}
+                                projects={
+                                  Array [
+                                    Object {
+                                      "hasAccess": true,
+                                      "id": "2",
+                                      "isBookmarked": false,
+                                      "isMember": true,
+                                      "name": "Project Name",
+                                      "slug": "project-slug",
+                                      "teams": Array [],
+                                    },
+                                  ]
+                                }
                                 rootClassName="css-h5t9nh-rootContainerStyles"
                                 selectedProjects={Array []}
                                 value={Array []}
                               >
                                 <DropdownAutoComplete
                                   alignMenu="left"
+                                  allowActorToggle={true}
                                   blendCorner={false}
                                   className="ewlipse0 css-11ijjr3-StyledProjectSelector"
                                   closeOnSelect={true}
                                   emptyHidesInput={true}
                                   emptyMessage="You have no projects"
+                                  inputActions={[Function]}
                                   inputProps={
                                     Object {
                                       "style": Object {
@@ -582,7 +732,23 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                       },
                                     }
                                   }
-                                  items={Array []}
+                                  items={
+                                    Array [
+                                      Object {
+                                        "label": [Function],
+                                        "searchKey": "project-slug",
+                                        "value": Object {
+                                          "hasAccess": true,
+                                          "id": "2",
+                                          "isBookmarked": false,
+                                          "isMember": true,
+                                          "name": "Project Name",
+                                          "slug": "project-slug",
+                                          "teams": Array [],
+                                        },
+                                      },
+                                    ]
+                                  }
                                   maxHeight={500}
                                   menuFooter={[Function]}
                                   noResultsMessage="No projects found"
@@ -600,6 +766,7 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                     closeOnSelect={true}
                                     emptyHidesInput={true}
                                     emptyMessage="You have no projects"
+                                    inputActions={[Function]}
                                     inputProps={
                                       Object {
                                         "style": Object {
@@ -608,7 +775,23 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                         },
                                       }
                                     }
-                                    items={Array []}
+                                    items={
+                                      Array [
+                                        Object {
+                                          "label": [Function],
+                                          "searchKey": "project-slug",
+                                          "value": Object {
+                                            "hasAccess": true,
+                                            "id": "2",
+                                            "isBookmarked": false,
+                                            "isMember": true,
+                                            "name": "Project Name",
+                                            "slug": "project-slug",
+                                            "teams": Array [],
+                                          },
+                                        },
+                                      ]
+                                    }
                                     maxHeight={500}
                                     menuFooter={[Function]}
                                     noResultsMessage="No projects found"
@@ -678,6 +861,7 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                                 >
                                                   <StyledHeaderItem
                                                     active={false}
+                                                    allowClear={false}
                                                     hasChanges={false}
                                                     hasSelected={false}
                                                     icon={
@@ -701,7 +885,8 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                                   >
                                                     <ForwardRef
                                                       active={false}
-                                                      className="css-22y332-StyledHeaderItem ewlipse1"
+                                                      allowClear={false}
+                                                      className="css-12jjx2u-StyledHeaderItem ewlipse1"
                                                       hasChanges={false}
                                                       hasSelected={false}
                                                       icon={
@@ -725,8 +910,8 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                                     >
                                                       <HeaderItem
                                                         active={false}
-                                                        allowClear={true}
-                                                        className="css-22y332-StyledHeaderItem ewlipse1"
+                                                        allowClear={false}
+                                                        className="css-12jjx2u-StyledHeaderItem ewlipse1"
                                                         hasChanges={false}
                                                         hasSelected={false}
                                                         icon={
@@ -751,7 +936,7 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                                       >
                                                         <StyledHeaderItem
                                                           active={false}
-                                                          className="css-22y332-StyledHeaderItem ewlipse1"
+                                                          className="css-12jjx2u-StyledHeaderItem ewlipse1"
                                                           hasSelected={false}
                                                           innerRef={null}
                                                           isOpen={false}
@@ -767,7 +952,7 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                                           tabIndex={-1}
                                                         >
                                                           <div
-                                                            className="ewlipse1 css-1v6igws-StyledHeaderItem-StyledHeaderItem enk2k7v0"
+                                                            className="ewlipse1 css-11wumjj-StyledHeaderItem-StyledHeaderItem enk2k7v0"
                                                             onClick={[Function]}
                                                             onKeyDown={[Function]}
                                                             onMouseEnter={[Function]}
@@ -783,7 +968,7 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                                               hasSelected={false}
                                                             >
                                                               <span
-                                                                className="css-1af7peg-IconContainer enk2k7v2"
+                                                                className="css-1g4tz50-IconContainer enk2k7v2"
                                                               >
                                                                 <StyledInlineSvg
                                                                   src="icon-project"
@@ -908,7 +1093,17 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                 "id": "3",
                                 "name": "Organization Name",
                                 "onboardingTasks": Array [],
-                                "projects": Array [],
+                                "projects": Array [
+                                  Object {
+                                    "hasAccess": true,
+                                    "id": "2",
+                                    "isBookmarked": false,
+                                    "isMember": true,
+                                    "name": "Project Name",
+                                    "slug": "project-slug",
+                                    "teams": Array [],
+                                  },
+                                ],
                                 "scrapeJavaScript": true,
                                 "slug": "org-slug",
                                 "status": Object {
@@ -943,7 +1138,17 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                   "id": "3",
                                   "name": "Organization Name",
                                   "onboardingTasks": Array [],
-                                  "projects": Array [],
+                                  "projects": Array [
+                                    Object {
+                                      "hasAccess": true,
+                                      "id": "2",
+                                      "isBookmarked": false,
+                                      "isMember": true,
+                                      "name": "Project Name",
+                                      "slug": "project-slug",
+                                      "teams": Array [],
+                                    },
+                                  ],
                                   "scrapeJavaScript": true,
                                   "slug": "org-slug",
                                   "status": Object {
@@ -975,7 +1180,17 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                     "id": "3",
                                     "name": "Organization Name",
                                     "onboardingTasks": Array [],
-                                    "projects": Array [],
+                                    "projects": Array [
+                                      Object {
+                                        "hasAccess": true,
+                                        "id": "2",
+                                        "isBookmarked": false,
+                                        "isMember": true,
+                                        "name": "Project Name",
+                                        "slug": "project-slug",
+                                        "teams": Array [],
+                                      },
+                                    ],
                                     "scrapeJavaScript": true,
                                     "slug": "org-slug",
                                     "status": Object {
@@ -1007,7 +1222,17 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                       "id": "3",
                                       "name": "Organization Name",
                                       "onboardingTasks": Array [],
-                                      "projects": Array [],
+                                      "projects": Array [
+                                        Object {
+                                          "hasAccess": true,
+                                          "id": "2",
+                                          "isBookmarked": false,
+                                          "isMember": true,
+                                          "name": "Project Name",
+                                          "slug": "project-slug",
+                                          "teams": Array [],
+                                        },
+                                      ],
                                       "scrapeJavaScript": true,
                                       "slug": "org-slug",
                                       "status": Object {
@@ -1020,6 +1245,7 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                 >
                                   <StyledDropdownAutoComplete
                                     alignMenu="left"
+                                    allowActorToggle={true}
                                     blendCorner={false}
                                     closeOnSelect={true}
                                     emptyHidesInput={true}
@@ -1051,6 +1277,7 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                   >
                                     <DropdownAutoComplete
                                       alignMenu="left"
+                                      allowActorToggle={true}
                                       blendCorner={false}
                                       className="css-qn89t6-StyledDropdownAutoComplete e1gsuvme2"
                                       closeOnSelect={true}
@@ -1274,7 +1501,7 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                                                   hasSelected={false}
                                                                 >
                                                                   <span
-                                                                    className="css-1af7peg-IconContainer enk2k7v2"
+                                                                    className="css-1g4tz50-IconContainer enk2k7v2"
                                                                   >
                                                                     <StyledInlineSvg
                                                                       src="icon-window"
@@ -1384,6 +1611,45 @@ exports[`OrganizationUserFeedback renders 1`] = `
                             key="period:14d-start:null-end:null-utc:true"
                             onChange={[Function]}
                             onUpdate={[Function]}
+                            organization={
+                              Object {
+                                "access": Array [
+                                  "org:read",
+                                  "org:write",
+                                  "org:admin",
+                                  "project:read",
+                                  "project:write",
+                                  "project:admin",
+                                  "team:read",
+                                  "team:write",
+                                  "team:admin",
+                                ],
+                                "features": Array [
+                                  "sentry10",
+                                ],
+                                "id": "3",
+                                "name": "Organization Name",
+                                "onboardingTasks": Array [],
+                                "projects": Array [
+                                  Object {
+                                    "hasAccess": true,
+                                    "id": "2",
+                                    "isBookmarked": false,
+                                    "isMember": true,
+                                    "name": "Project Name",
+                                    "slug": "project-slug",
+                                    "teams": Array [],
+                                  },
+                                ],
+                                "scrapeJavaScript": true,
+                                "slug": "org-slug",
+                                "status": Object {
+                                  "id": "active",
+                                  "name": "active",
+                                },
+                                "teams": Array [],
+                              }
+                            }
                             relative="14d"
                             showAbsolute={true}
                             showRelative={true}
@@ -1402,9 +1668,9 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                   className="css-1lz3nth-TimeRangeRoot e1u8612l0"
                                 >
                                   <StyledHeaderItem
-                                    allowClear={false}
+                                    allowClear={true}
                                     hasChanges={false}
-                                    hasSelected={true}
+                                    hasSelected={false}
                                     icon={
                                       <StyledInlineSvg
                                         src="icon-calendar"
@@ -1412,6 +1678,7 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                     }
                                     innerRef={[Function]}
                                     isOpen={false}
+                                    onClear={[Function]}
                                     onClick={[Function]}
                                     onKeyDown={[Function]}
                                     onMouseEnter={[Function]}
@@ -1425,16 +1692,17 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                     tabIndex={-1}
                                   >
                                     <ForwardRef
-                                      allowClear={false}
+                                      allowClear={true}
                                       className="css-22y332-StyledHeaderItem e1u8612l1"
                                       hasChanges={false}
-                                      hasSelected={true}
+                                      hasSelected={false}
                                       icon={
                                         <StyledInlineSvg
                                           src="icon-calendar"
                                         />
                                       }
                                       isOpen={false}
+                                      onClear={[Function]}
                                       onClick={[Function]}
                                       onKeyDown={[Function]}
                                       onMouseEnter={[Function]}
@@ -1448,10 +1716,10 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                       tabIndex={-1}
                                     >
                                       <HeaderItem
-                                        allowClear={false}
+                                        allowClear={true}
                                         className="css-22y332-StyledHeaderItem e1u8612l1"
                                         hasChanges={false}
-                                        hasSelected={true}
+                                        hasSelected={false}
                                         icon={
                                           <StyledInlineSvg
                                             src="icon-calendar"
@@ -1459,6 +1727,7 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                         }
                                         innerRef={[Function]}
                                         isOpen={false}
+                                        onClear={[Function]}
                                         onClick={[Function]}
                                         onKeyDown={[Function]}
                                         onMouseEnter={[Function]}
@@ -1473,7 +1742,7 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                       >
                                         <StyledHeaderItem
                                           className="css-22y332-StyledHeaderItem e1u8612l1"
-                                          hasSelected={true}
+                                          hasSelected={false}
                                           innerRef={[Function]}
                                           isOpen={false}
                                           onClick={[Function]}
@@ -1488,7 +1757,7 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                           tabIndex={-1}
                                         >
                                           <div
-                                            className="e1u8612l1 css-xvcre7-StyledHeaderItem-StyledHeaderItem enk2k7v0"
+                                            className="e1u8612l1 css-1v6igws-StyledHeaderItem-StyledHeaderItem enk2k7v0"
                                             onClick={[Function]}
                                             onKeyDown={[Function]}
                                             onMouseEnter={[Function]}
@@ -1501,10 +1770,10 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                             tabIndex={-1}
                                           >
                                             <IconContainer
-                                              hasSelected={true}
+                                              hasSelected={false}
                                             >
                                               <span
-                                                className="css-mzutvw-IconContainer enk2k7v2"
+                                                className="css-1g4tz50-IconContainer enk2k7v2"
                                               >
                                                 <StyledInlineSvg
                                                   src="icon-calendar"
@@ -1593,184 +1862,260 @@ exports[`OrganizationUserFeedback renders 1`] = `
           </withRouter(withGlobalSelection(GlobalSelectionHeader))>
           <PageContent>
             <div
-              className="css-rejmra-PageContent e6lvex70"
+              className="css-16fe6ul-PageContent e6lvex70"
             >
-              <UserFeedbackContainer
-                location={
+              <NoProjectMessage
+                organization={
                   Object {
-                    "query": Object {},
-                    "search": "",
+                    "access": Array [
+                      "org:read",
+                      "org:write",
+                      "org:admin",
+                      "project:read",
+                      "project:write",
+                      "project:admin",
+                      "team:read",
+                      "team:write",
+                      "team:admin",
+                    ],
+                    "features": Array [
+                      "sentry10",
+                    ],
+                    "id": "3",
+                    "name": "Organization Name",
+                    "onboardingTasks": Array [],
+                    "projects": Array [
+                      Object {
+                        "hasAccess": true,
+                        "id": "2",
+                        "isBookmarked": false,
+                        "isMember": true,
+                        "name": "Project Name",
+                        "slug": "project-slug",
+                        "teams": Array [],
+                      },
+                    ],
+                    "scrapeJavaScript": true,
+                    "slug": "org-slug",
+                    "status": Object {
+                      "id": "active",
+                      "name": "active",
+                    },
+                    "teams": Array [],
                   }
                 }
-                pageLinks="<https://sentry.io/api/0/organizations/sentry/user-feedback/?statsPeriod=14d&cursor=0:0:1>; rel=\\"previous\\"; results=\\"false\\"; cursor=\\"0:0:1\\", <https://sentry.io/api/0/organizations/sentry/user-feedback/?statsPeriod=14d&cursor=0:100:0>; rel=\\"next\\"; results=\\"true\\"; cursor=\\"0:100:0\\""
-                params={
-                  Object {
-                    "orgId": "org-slug",
-                  }
-                }
-                status="unresolved"
               >
-                <div>
-                  <div
-                    className="row"
-                  >
+                <UserFeedbackContainer
+                  location={
+                    Object {
+                      "query": Object {},
+                      "search": "",
+                    }
+                  }
+                  pageLinks="<https://sentry.io/api/0/organizations/sentry/user-feedback/?statsPeriod=14d&cursor=0:0:1>; rel=\\"previous\\"; results=\\"false\\"; cursor=\\"0:0:1\\", <https://sentry.io/api/0/organizations/sentry/user-feedback/?statsPeriod=14d&cursor=0:100:0>; rel=\\"next\\"; results=\\"true\\"; cursor=\\"0:100:0\\""
+                  status="unresolved"
+                >
+                  <div>
                     <div
-                      className="col-sm-9"
-                      style={
-                        Object {
-                          "marginBottom": "5px",
-                        }
-                      }
+                      className="row"
                     >
-                      <PageHeading
-                        withMargins={true}
+                      <div
+                        className="col-sm-9"
+                        style={
+                          Object {
+                            "marginBottom": "5px",
+                          }
+                        }
                       >
-                        <Wrapper
+                        <PageHeading
                           withMargins={true}
                         >
-                          <h1
-                            className="css-13ev48w-Wrapper e1f8hk460"
+                          <Wrapper
+                            withMargins={true}
                           >
-                            User Feedback
-                          </h1>
-                        </Wrapper>
-                      </PageHeading>
-                    </div>
-                    <div
-                      className="col-sm-3"
-                      style={
-                        Object {
-                          "marginTop": "4px",
-                          "textAlign": "right",
-                        }
-                      }
-                    >
+                            <h1
+                              className="css-13ev48w-Wrapper e1f8hk460"
+                            >
+                              User Feedback
+                            </h1>
+                          </Wrapper>
+                        </PageHeading>
+                      </div>
                       <div
-                        className="btn-group"
+                        className="col-sm-3"
+                        style={
+                          Object {
+                            "marginTop": "4px",
+                            "textAlign": "right",
+                          }
+                        }
                       >
-                        <Link
-                          className="btn btn-sm btn-default active"
-                          onlyActiveOnIndex={false}
-                          style={Object {}}
-                          to={
-                            Object {
-                              "pathname": undefined,
-                              "query": Object {},
-                            }
-                          }
+                        <div
+                          className="btn-group"
                         >
-                          <a
+                          <Link
                             className="btn btn-sm btn-default active"
-                            onClick={[Function]}
+                            onlyActiveOnIndex={false}
                             style={Object {}}
-                          >
-                            Unresolved
-                          </a>
-                        </Link>
-                        <Link
-                          className="btn btn-sm btn-default"
-                          onlyActiveOnIndex={false}
-                          style={Object {}}
-                          to={
-                            Object {
-                              "pathname": undefined,
-                              "query": Object {
-                                "status": "",
-                              },
+                            to={
+                              Object {
+                                "pathname": undefined,
+                                "query": Object {},
+                              }
                             }
-                          }
-                        >
-                          <a
-                            className="btn btn-sm btn-default"
-                            onClick={[Function]}
-                            style={Object {}}
                           >
-                            All Issues
-                          </a>
-                        </Link>
+                            <a
+                              className="btn btn-sm btn-default active"
+                              onClick={[Function]}
+                              style={Object {}}
+                            >
+                              Unresolved
+                            </a>
+                          </Link>
+                          <Link
+                            className="btn btn-sm btn-default"
+                            onlyActiveOnIndex={false}
+                            style={Object {}}
+                            to={
+                              Object {
+                                "pathname": undefined,
+                                "query": Object {
+                                  "status": "",
+                                },
+                              }
+                            }
+                          >
+                            <a
+                              className="btn btn-sm btn-default"
+                              onClick={[Function]}
+                              style={Object {}}
+                            >
+                              All Issues
+                            </a>
+                          </Link>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <Panel>
-                    <Component
-                      className="css-yahxlu-Panel e1laxa7d0"
-                    >
-                      <div
+                    <Panel>
+                      <Component
                         className="css-yahxlu-Panel e1laxa7d0"
                       >
-                        <PanelBody
-                          className="issue-list"
-                          direction="column"
-                          disablePadding={true}
-                          flex={false}
+                        <div
+                          className="css-yahxlu-Panel e1laxa7d0"
                         >
-                          <div
-                            className="css-9vq8an-textStyles issue-list"
+                          <PanelBody
+                            className="issue-list"
+                            direction="column"
+                            disablePadding={true}
+                            flex={false}
                           >
-                            <CompactIssue
-                              data={
-                                Object {
-                                  "assignedTo": null,
-                                  "id": "1",
-                                  "project": Object {
-                                    "id": "2",
-                                    "slug": "project-slug",
-                                  },
-                                  "stats": Object {
-                                    "24h": Array [
-                                      Array [
-                                        1517281200,
-                                        2,
-                                      ],
-                                      Array [
-                                        1517310000,
-                                        1,
-                                      ],
-                                    ],
-                                    "30d": Array [
-                                      Array [
-                                        1514764800,
-                                        1,
-                                      ],
-                                      Array [
-                                        1515024000,
-                                        122,
-                                      ],
-                                    ],
-                                  },
-                                  "tags": Array [],
-                                }
-                              }
-                              id="1"
-                              key="123"
-                              orgId="org-slug"
-                              projectId="project-slug"
+                            <div
+                              className="css-9vq8an-textStyles issue-list"
                             >
-                              <PanelItem
-                                className="issue level-undefined"
-                                direction="column"
-                                p={2}
-                                style={
+                              <WithOrganizationMockWrapper
+                                data={
                                   Object {
-                                    "paddingBottom": "6px",
-                                    "paddingTop": "12px",
+                                    "assignedTo": null,
+                                    "id": "1",
+                                    "project": Object {
+                                      "id": "2",
+                                      "slug": "project-slug",
+                                    },
+                                    "stats": Object {
+                                      "24h": Array [
+                                        Array [
+                                          1517281200,
+                                          2,
+                                        ],
+                                        Array [
+                                          1517310000,
+                                          1,
+                                        ],
+                                      ],
+                                      "30d": Array [
+                                        Array [
+                                          1514764800,
+                                          1,
+                                        ],
+                                        Array [
+                                          1515024000,
+                                          122,
+                                        ],
+                                      ],
+                                    },
+                                    "tags": Array [],
                                   }
                                 }
+                                id="1"
+                                key="123"
                               >
-                                <Base
-                                  className="issue level-undefined css-1cf8lr1-PanelItem eo8n7lk0"
-                                  direction="column"
-                                  p={2}
-                                  style={
+                                <CompactIssue
+                                  data={
                                     Object {
-                                      "paddingBottom": "6px",
-                                      "paddingTop": "12px",
+                                      "assignedTo": null,
+                                      "id": "1",
+                                      "project": Object {
+                                        "id": "2",
+                                        "slug": "project-slug",
+                                      },
+                                      "stats": Object {
+                                        "24h": Array [
+                                          Array [
+                                            1517281200,
+                                            2,
+                                          ],
+                                          Array [
+                                            1517310000,
+                                            1,
+                                          ],
+                                        ],
+                                        "30d": Array [
+                                          Array [
+                                            1514764800,
+                                            1,
+                                          ],
+                                          Array [
+                                            1515024000,
+                                            122,
+                                          ],
+                                        ],
+                                      },
+                                      "tags": Array [],
+                                    }
+                                  }
+                                  id="1"
+                                  organization={
+                                    Object {
+                                      "access": Array [
+                                        "org:read",
+                                        "org:write",
+                                        "org:admin",
+                                        "project:read",
+                                        "project:write",
+                                        "project:admin",
+                                        "team:read",
+                                        "team:write",
+                                        "team:admin",
+                                      ],
+                                      "features": Array [],
+                                      "id": "3",
+                                      "name": "Organization Name",
+                                      "onboardingTasks": Array [],
+                                      "projects": Array [],
+                                      "scrapeJavaScript": true,
+                                      "slug": "org-slug",
+                                      "status": Object {
+                                        "id": "active",
+                                        "name": "active",
+                                      },
+                                      "teams": Array [],
                                     }
                                   }
                                 >
-                                  <div
-                                    className="issue level-undefined css-1cf8lr1-PanelItem eo8n7lk0"
-                                    is={null}
+                                  <PanelItem
+                                    className="issue level-undefined"
+                                    direction="column"
+                                    p={2}
                                     style={
                                       Object {
                                         "paddingBottom": "6px",
@@ -1778,503 +2123,551 @@ exports[`OrganizationUserFeedback renders 1`] = `
                                       }
                                     }
                                   >
-                                    <CompactIssueHeader
-                                      data={
+                                    <Base
+                                      className="issue level-undefined css-1cf8lr1-PanelItem eo8n7lk0"
+                                      direction="column"
+                                      p={2}
+                                      style={
                                         Object {
-                                          "assignedTo": null,
-                                          "id": "1",
-                                          "project": Object {
-                                            "id": "2",
-                                            "slug": "project-slug",
-                                          },
-                                          "stats": Object {
-                                            "24h": Array [
-                                              Array [
-                                                1517281200,
-                                                2,
-                                              ],
-                                              Array [
-                                                1517310000,
-                                                1,
-                                              ],
-                                            ],
-                                            "30d": Array [
-                                              Array [
-                                                1514764800,
-                                                1,
-                                              ],
-                                              Array [
-                                                1515024000,
-                                                122,
-                                              ],
-                                            ],
-                                          },
-                                          "tags": Array [],
+                                          "paddingBottom": "6px",
+                                          "paddingTop": "12px",
                                         }
                                       }
-                                      orgId="org-slug"
-                                      projectId="project-slug"
                                     >
-                                      <Flex
-                                        align="center"
+                                      <div
+                                        className="issue level-undefined css-1cf8lr1-PanelItem eo8n7lk0"
+                                        is={null}
+                                        style={
+                                          Object {
+                                            "paddingBottom": "6px",
+                                            "paddingTop": "12px",
+                                          }
+                                        }
                                       >
-                                        <Base
-                                          align="center"
-                                          className="css-5ipae5"
+                                        <CompactIssueHeader
+                                          data={
+                                            Object {
+                                              "assignedTo": null,
+                                              "id": "1",
+                                              "project": Object {
+                                                "id": "2",
+                                                "slug": "project-slug",
+                                              },
+                                              "stats": Object {
+                                                "24h": Array [
+                                                  Array [
+                                                    1517281200,
+                                                    2,
+                                                  ],
+                                                  Array [
+                                                    1517310000,
+                                                    1,
+                                                  ],
+                                                ],
+                                                "30d": Array [
+                                                  Array [
+                                                    1514764800,
+                                                    1,
+                                                  ],
+                                                  Array [
+                                                    1515024000,
+                                                    122,
+                                                  ],
+                                                ],
+                                              },
+                                              "tags": Array [],
+                                            }
+                                          }
+                                          organization={
+                                            Object {
+                                              "access": Array [
+                                                "org:read",
+                                                "org:write",
+                                                "org:admin",
+                                                "project:read",
+                                                "project:write",
+                                                "project:admin",
+                                                "team:read",
+                                                "team:write",
+                                                "team:admin",
+                                              ],
+                                              "features": Array [],
+                                              "id": "3",
+                                              "name": "Organization Name",
+                                              "onboardingTasks": Array [],
+                                              "projects": Array [],
+                                              "scrapeJavaScript": true,
+                                              "slug": "org-slug",
+                                              "status": Object {
+                                                "id": "active",
+                                                "name": "active",
+                                              },
+                                              "teams": Array [],
+                                            }
+                                          }
+                                          projectId="project-slug"
                                         >
-                                          <div
-                                            className="css-5ipae5"
-                                            is={null}
+                                          <Flex
+                                            align="center"
                                           >
-                                            <Box
-                                              mr={1}
+                                            <Base
+                                              align="center"
+                                              className="css-5ipae5"
                                             >
-                                              <Base
-                                                className="css-xgysgc"
-                                                mr={1}
+                                              <div
+                                                className="css-5ipae5"
+                                                is={null}
                                               >
-                                                <div
-                                                  className="css-xgysgc"
-                                                  is={null}
+                                                <Box
+                                                  mr={1}
                                                 >
-                                                  <span
-                                                    className="error-level truncate"
-                                                  />
-                                                </div>
-                                              </Base>
-                                            </Box>
-                                            <h3
-                                              className="truncate"
+                                                  <Base
+                                                    className="css-xgysgc"
+                                                    mr={1}
+                                                  >
+                                                    <div
+                                                      className="css-xgysgc"
+                                                      is={null}
+                                                    >
+                                                      <span
+                                                        className="error-level truncate"
+                                                      />
+                                                    </div>
+                                                  </Base>
+                                                </Box>
+                                                <h3
+                                                  className="truncate"
+                                                >
+                                                  <ProjectLink
+                                                    to="/org-slug/project-slug/issues/1/"
+                                                  >
+                                                    <Link
+                                                      onlyActiveOnIndex={false}
+                                                      style={Object {}}
+                                                      to="/org-slug/project-slug/issues/1/"
+                                                    >
+                                                      <a
+                                                        onClick={[Function]}
+                                                        style={Object {}}
+                                                      >
+                                                        <span
+                                                          className="icon icon-soundoff"
+                                                        />
+                                                        <span
+                                                          className="icon icon-star-solid"
+                                                        />
+                                                        <span />
+                                                      </a>
+                                                    </Link>
+                                                  </ProjectLink>
+                                                </h3>
+                                              </div>
+                                            </Base>
+                                          </Flex>
+                                          <div
+                                            className="event-extra"
+                                          >
+                                            <span
+                                              className="project-name"
                                             >
                                               <ProjectLink
-                                                to="/org-slug/project-slug/issues/1/"
+                                                to="/org-slug/project-slug/"
                                               >
                                                 <Link
                                                   onlyActiveOnIndex={false}
                                                   style={Object {}}
-                                                  to="/org-slug/project-slug/issues/1/"
+                                                  to="/org-slug/project-slug/"
                                                 >
                                                   <a
                                                     onClick={[Function]}
                                                     style={Object {}}
                                                   >
-                                                    <span
-                                                      className="icon icon-soundoff"
-                                                    />
-                                                    <span
-                                                      className="icon icon-star-solid"
-                                                    />
-                                                    <span />
+                                                    project-slug
                                                   </a>
                                                 </Link>
                                               </ProjectLink>
-                                            </h3>
-                                          </div>
-                                        </Base>
-                                      </Flex>
-                                      <div
-                                        className="event-extra"
-                                      >
-                                        <span
-                                          className="project-name"
-                                        >
-                                          <ProjectLink
-                                            to="/org-slug/project-slug/"
-                                          >
-                                            <Link
-                                              onlyActiveOnIndex={false}
-                                              style={Object {}}
-                                              to="/org-slug/project-slug/"
-                                            >
-                                              <a
-                                                onClick={[Function]}
-                                                style={Object {}}
-                                              >
-                                                project-slug
-                                              </a>
-                                            </Link>
-                                          </ProjectLink>
-                                        </span>
-                                        <span>
-                                          <Link
-                                            className="comments"
-                                            to="/org-slug/project-slug/issues/1/activity/"
-                                          >
-                                            <Link
-                                              className="comments"
-                                              onlyActiveOnIndex={false}
-                                              style={Object {}}
-                                              to="/org-slug/project-slug/issues/1/activity/"
-                                            >
-                                              <a
+                                            </span>
+                                            <span>
+                                              <Link
                                                 className="comments"
-                                                onClick={[Function]}
-                                                style={Object {}}
+                                                to="/org-slug/project-slug/issues/1/activity/"
                                               >
-                                                <span
-                                                  className="icon icon-comments"
+                                                <Link
+                                                  className="comments"
+                                                  onlyActiveOnIndex={false}
                                                   style={Object {}}
-                                                />
-                                                <span
-                                                  className="tag-count"
-                                                />
-                                              </a>
-                                            </Link>
-                                          </Link>
-                                        </span>
-                                        <span
-                                          className="culprit"
-                                        />
-                                      </div>
-                                    </CompactIssueHeader>
-                                    <EventUserFeedback
-                                      issueId="1"
-                                      orgId="org-slug"
-                                      projectId="project-slug"
-                                      report={
-                                        Object {
-                                          "comments": "Something bad happened",
-                                          "dateCreated": "2018-12-20T00:00:00.000Z",
-                                          "email": "lyn@sentry.io",
-                                          "event": Object {
-                                            "eventID": "12345678901234567890123456789012",
-                                            "groupID": "1",
-                                            "id": "1",
-                                            "message": "ApiException",
-                                          },
-                                          "id": "123",
-                                          "issue": Object {
-                                            "assignedTo": null,
-                                            "id": "1",
-                                            "project": Object {
-                                              "id": "2",
-                                              "slug": "project-slug",
-                                            },
-                                            "stats": Object {
-                                              "24h": Array [
-                                                Array [
-                                                  1517281200,
-                                                  2,
-                                                ],
-                                                Array [
-                                                  1517310000,
-                                                  1,
-                                                ],
-                                              ],
-                                              "30d": Array [
-                                                Array [
-                                                  1514764800,
-                                                  1,
-                                                ],
-                                                Array [
-                                                  1515024000,
-                                                  122,
-                                                ],
-                                              ],
-                                            },
-                                            "tags": Array [],
-                                          },
-                                          "name": "Lyn",
-                                        }
-                                      }
-                                    >
-                                      <div
-                                        className="user-report"
-                                      >
-                                        <div
-                                          className="activity-container"
-                                        >
-                                          <ul
-                                            className="activity"
-                                          >
-                                            <li
-                                              className="activity-note"
-                                            >
-                                              <Avatar
-                                                className="avatar"
-                                                hasTooltip={false}
-                                                size={38}
-                                                user={
-                                                  Object {
-                                                    "comments": "Something bad happened",
-                                                    "dateCreated": "2018-12-20T00:00:00.000Z",
-                                                    "email": "lyn@sentry.io",
-                                                    "event": Object {
-                                                      "eventID": "12345678901234567890123456789012",
-                                                      "groupID": "1",
-                                                      "id": "1",
-                                                      "message": "ApiException",
-                                                    },
-                                                    "id": "123",
-                                                    "issue": Object {
-                                                      "assignedTo": null,
-                                                      "id": "1",
-                                                      "project": Object {
-                                                        "id": "2",
-                                                        "slug": "project-slug",
-                                                      },
-                                                      "stats": Object {
-                                                        "24h": Array [
-                                                          Array [
-                                                            1517281200,
-                                                            2,
-                                                          ],
-                                                          Array [
-                                                            1517310000,
-                                                            1,
-                                                          ],
-                                                        ],
-                                                        "30d": Array [
-                                                          Array [
-                                                            1514764800,
-                                                            1,
-                                                          ],
-                                                          Array [
-                                                            1515024000,
-                                                            122,
-                                                          ],
-                                                        ],
-                                                      },
-                                                      "tags": Array [],
-                                                    },
-                                                    "name": "Lyn",
-                                                  }
-                                                }
-                                              >
-                                                <UserAvatar
-                                                  className="avatar"
-                                                  gravatar={false}
-                                                  hasTooltip={false}
-                                                  size={38}
-                                                  user={
-                                                    Object {
-                                                      "comments": "Something bad happened",
-                                                      "dateCreated": "2018-12-20T00:00:00.000Z",
-                                                      "email": "lyn@sentry.io",
-                                                      "event": Object {
-                                                        "eventID": "12345678901234567890123456789012",
-                                                        "groupID": "1",
-                                                        "id": "1",
-                                                        "message": "ApiException",
-                                                      },
-                                                      "id": "123",
-                                                      "issue": Object {
-                                                        "assignedTo": null,
-                                                        "id": "1",
-                                                        "project": Object {
-                                                          "id": "2",
-                                                          "slug": "project-slug",
-                                                        },
-                                                        "stats": Object {
-                                                          "24h": Array [
-                                                            Array [
-                                                              1517281200,
-                                                              2,
-                                                            ],
-                                                            Array [
-                                                              1517310000,
-                                                              1,
-                                                            ],
-                                                          ],
-                                                          "30d": Array [
-                                                            Array [
-                                                              1514764800,
-                                                              1,
-                                                            ],
-                                                            Array [
-                                                              1515024000,
-                                                              122,
-                                                            ],
-                                                          ],
-                                                        },
-                                                        "tags": Array [],
-                                                      },
-                                                      "name": "Lyn",
-                                                    }
-                                                  }
+                                                  to="/org-slug/project-slug/issues/1/activity/"
                                                 >
-                                                  <BaseAvatar
-                                                    className="avatar"
-                                                    gravatarId="lyn@sentry.io"
-                                                    hasTooltip={false}
-                                                    letterId="lyn@sentry.io"
-                                                    round={true}
-                                                    size={38}
+                                                  <a
+                                                    className="comments"
+                                                    onClick={[Function]}
                                                     style={Object {}}
-                                                    title="Lyn"
-                                                    tooltip="Lyn (lyn@sentry.io)"
-                                                    type="letter_avatar"
-                                                    uploadPath="avatar"
                                                   >
-                                                    <Tooltip
-                                                      disabled={true}
-                                                      title="Lyn (lyn@sentry.io)"
-                                                    >
-                                                      <StyledBaseAvatar
-                                                        className="avatar avatar"
-                                                        loaded={true}
-                                                        round={true}
-                                                        style={
-                                                          Object {
-                                                            "height": "38px",
-                                                            "width": "38px",
-                                                          }
-                                                        }
-                                                      >
-                                                        <span
-                                                          className="avatar avatar css-3f9bmx-StyledBaseAvatar e1z0ohzl0"
-                                                          style={
-                                                            Object {
-                                                              "height": "38px",
-                                                              "width": "38px",
-                                                            }
-                                                          }
-                                                        >
-                                                          <LetterAvatar
-                                                            displayName="Lyn"
-                                                            identifier="lyn@sentry.io"
-                                                            round={true}
-                                                          >
-                                                            <Svg
-                                                              round={true}
-                                                              viewBox="0 0 120 120"
-                                                            >
-                                                              <svg
-                                                                className="css-1r4mnb9-Svg e1knxa8x0"
-                                                                viewBox="0 0 120 120"
-                                                              >
-                                                                <rect
-                                                                  fill="#57b1be"
-                                                                  height="120"
-                                                                  rx="15"
-                                                                  ry="15"
-                                                                  width="120"
-                                                                  x="0"
-                                                                  y="0"
-                                                                />
-                                                                <text
-                                                                  fill="#FFFFFF"
-                                                                  fontSize="65"
-                                                                  style={
-                                                                    Object {
-                                                                      "dominantBaseline": "central",
-                                                                    }
-                                                                  }
-                                                                  textAnchor="middle"
-                                                                  x="50%"
-                                                                  y="50%"
-                                                                >
-                                                                  L
-                                                                </text>
-                                                              </svg>
-                                                            </Svg>
-                                                          </LetterAvatar>
-                                                        </span>
-                                                      </StyledBaseAvatar>
-                                                    </Tooltip>
-                                                  </BaseAvatar>
-                                                </UserAvatar>
-                                              </Avatar>
-                                              <div
-                                                className="activity-bubble"
+                                                    <span
+                                                      className="icon icon-comments"
+                                                      style={Object {}}
+                                                    />
+                                                    <span
+                                                      className="tag-count"
+                                                    />
+                                                  </a>
+                                                </Link>
+                                              </Link>
+                                            </span>
+                                            <span
+                                              className="culprit"
+                                            />
+                                          </div>
+                                        </CompactIssueHeader>
+                                        <EventUserFeedback
+                                          issueId="1"
+                                          orgId="org-slug"
+                                          report={
+                                            Object {
+                                              "comments": "Something bad happened",
+                                              "dateCreated": "2018-12-20T00:00:00.000Z",
+                                              "email": "lyn@sentry.io",
+                                              "event": Object {
+                                                "eventID": "12345678901234567890123456789012",
+                                                "groupID": "1",
+                                                "id": "1",
+                                                "message": "ApiException",
+                                              },
+                                              "id": "123",
+                                              "issue": Object {
+                                                "assignedTo": null,
+                                                "id": "1",
+                                                "project": Object {
+                                                  "id": "2",
+                                                  "slug": "project-slug",
+                                                },
+                                                "stats": Object {
+                                                  "24h": Array [
+                                                    Array [
+                                                      1517281200,
+                                                      2,
+                                                    ],
+                                                    Array [
+                                                      1517310000,
+                                                      1,
+                                                    ],
+                                                  ],
+                                                  "30d": Array [
+                                                    Array [
+                                                      1514764800,
+                                                      1,
+                                                    ],
+                                                    Array [
+                                                      1515024000,
+                                                      122,
+                                                    ],
+                                                  ],
+                                                },
+                                                "tags": Array [],
+                                              },
+                                              "name": "Lyn",
+                                            }
+                                          }
+                                        >
+                                          <div
+                                            className="user-report"
+                                          >
+                                            <div
+                                              className="activity-container"
+                                            >
+                                              <ul
+                                                className="activity"
                                               >
-                                                <div>
-                                                  <TimeSince
-                                                    date="2018-12-20T00:00:00.000Z"
-                                                    suffix="ago"
-                                                  >
-                                                    <time
-                                                      dateTime="2018-12-20T00:00:00.000Z"
-                                                      title="December 20, 2018 12:00 AM UTC"
-                                                    >
-                                                      in a year
-                                                    </time>
-                                                  </TimeSince>
-                                                  <div
-                                                    className="activity-author"
-                                                  >
-                                                    Lyn
-                                                    <small>
-                                                      lyn@sentry.io
-                                                    </small>
-                                                    <small>
-                                                      <Link
-                                                        to="/org-slug/project-slug/issues/1/events/1"
-                                                      >
-                                                        <Link
-                                                          onlyActiveOnIndex={false}
-                                                          style={Object {}}
-                                                          to="/org-slug/project-slug/issues/1/events/1"
-                                                        >
-                                                          <a
-                                                            onClick={[Function]}
-                                                            style={Object {}}
-                                                          >
-                                                            View event
-                                                          </a>
-                                                        </Link>
-                                                      </Link>
-                                                    </small>
-                                                  </div>
-                                                  <p
-                                                    dangerouslySetInnerHTML={
+                                                <li
+                                                  className="activity-note"
+                                                >
+                                                  <Avatar
+                                                    className="avatar"
+                                                    hasTooltip={false}
+                                                    size={38}
+                                                    user={
                                                       Object {
-                                                        "__html": "Something bad happened",
+                                                        "comments": "Something bad happened",
+                                                        "dateCreated": "2018-12-20T00:00:00.000Z",
+                                                        "email": "lyn@sentry.io",
+                                                        "event": Object {
+                                                          "eventID": "12345678901234567890123456789012",
+                                                          "groupID": "1",
+                                                          "id": "1",
+                                                          "message": "ApiException",
+                                                        },
+                                                        "id": "123",
+                                                        "issue": Object {
+                                                          "assignedTo": null,
+                                                          "id": "1",
+                                                          "project": Object {
+                                                            "id": "2",
+                                                            "slug": "project-slug",
+                                                          },
+                                                          "stats": Object {
+                                                            "24h": Array [
+                                                              Array [
+                                                                1517281200,
+                                                                2,
+                                                              ],
+                                                              Array [
+                                                                1517310000,
+                                                                1,
+                                                              ],
+                                                            ],
+                                                            "30d": Array [
+                                                              Array [
+                                                                1514764800,
+                                                                1,
+                                                              ],
+                                                              Array [
+                                                                1515024000,
+                                                                122,
+                                                              ],
+                                                            ],
+                                                          },
+                                                          "tags": Array [],
+                                                        },
+                                                        "name": "Lyn",
                                                       }
                                                     }
-                                                  />
-                                                </div>
-                                              </div>
-                                            </li>
-                                          </ul>
-                                        </div>
+                                                  >
+                                                    <UserAvatar
+                                                      className="avatar"
+                                                      gravatar={false}
+                                                      hasTooltip={false}
+                                                      size={38}
+                                                      user={
+                                                        Object {
+                                                          "comments": "Something bad happened",
+                                                          "dateCreated": "2018-12-20T00:00:00.000Z",
+                                                          "email": "lyn@sentry.io",
+                                                          "event": Object {
+                                                            "eventID": "12345678901234567890123456789012",
+                                                            "groupID": "1",
+                                                            "id": "1",
+                                                            "message": "ApiException",
+                                                          },
+                                                          "id": "123",
+                                                          "issue": Object {
+                                                            "assignedTo": null,
+                                                            "id": "1",
+                                                            "project": Object {
+                                                              "id": "2",
+                                                              "slug": "project-slug",
+                                                            },
+                                                            "stats": Object {
+                                                              "24h": Array [
+                                                                Array [
+                                                                  1517281200,
+                                                                  2,
+                                                                ],
+                                                                Array [
+                                                                  1517310000,
+                                                                  1,
+                                                                ],
+                                                              ],
+                                                              "30d": Array [
+                                                                Array [
+                                                                  1514764800,
+                                                                  1,
+                                                                ],
+                                                                Array [
+                                                                  1515024000,
+                                                                  122,
+                                                                ],
+                                                              ],
+                                                            },
+                                                            "tags": Array [],
+                                                          },
+                                                          "name": "Lyn",
+                                                        }
+                                                      }
+                                                    >
+                                                      <BaseAvatar
+                                                        className="avatar"
+                                                        gravatarId="lyn@sentry.io"
+                                                        hasTooltip={false}
+                                                        letterId="lyn@sentry.io"
+                                                        round={true}
+                                                        size={38}
+                                                        style={Object {}}
+                                                        title="Lyn"
+                                                        tooltip="Lyn (lyn@sentry.io)"
+                                                        type="letter_avatar"
+                                                        uploadPath="avatar"
+                                                      >
+                                                        <Tooltip
+                                                          disabled={true}
+                                                          title="Lyn (lyn@sentry.io)"
+                                                        >
+                                                          <StyledBaseAvatar
+                                                            className="avatar avatar"
+                                                            loaded={true}
+                                                            round={true}
+                                                            style={
+                                                              Object {
+                                                                "height": "38px",
+                                                                "width": "38px",
+                                                              }
+                                                            }
+                                                          >
+                                                            <span
+                                                              className="avatar avatar css-3f9bmx-StyledBaseAvatar e1z0ohzl0"
+                                                              style={
+                                                                Object {
+                                                                  "height": "38px",
+                                                                  "width": "38px",
+                                                                }
+                                                              }
+                                                            >
+                                                              <LetterAvatar
+                                                                displayName="Lyn"
+                                                                identifier="lyn@sentry.io"
+                                                                round={true}
+                                                              >
+                                                                <Svg
+                                                                  round={true}
+                                                                  viewBox="0 0 120 120"
+                                                                >
+                                                                  <svg
+                                                                    className="css-1r4mnb9-Svg e1knxa8x0"
+                                                                    viewBox="0 0 120 120"
+                                                                  >
+                                                                    <rect
+                                                                      fill="#57b1be"
+                                                                      height="120"
+                                                                      rx="15"
+                                                                      ry="15"
+                                                                      width="120"
+                                                                      x="0"
+                                                                      y="0"
+                                                                    />
+                                                                    <text
+                                                                      fill="#FFFFFF"
+                                                                      fontSize="65"
+                                                                      style={
+                                                                        Object {
+                                                                          "dominantBaseline": "central",
+                                                                        }
+                                                                      }
+                                                                      textAnchor="middle"
+                                                                      x="50%"
+                                                                      y="50%"
+                                                                    >
+                                                                      L
+                                                                    </text>
+                                                                  </svg>
+                                                                </Svg>
+                                                              </LetterAvatar>
+                                                            </span>
+                                                          </StyledBaseAvatar>
+                                                        </Tooltip>
+                                                      </BaseAvatar>
+                                                    </UserAvatar>
+                                                  </Avatar>
+                                                  <div
+                                                    className="activity-bubble"
+                                                  >
+                                                    <div>
+                                                      <TimeSince
+                                                        date="2018-12-20T00:00:00.000Z"
+                                                        suffix="ago"
+                                                      >
+                                                        <time
+                                                          dateTime="2018-12-20T00:00:00.000Z"
+                                                          title="December 20, 2018 12:00 AM UTC"
+                                                        >
+                                                          in a year
+                                                        </time>
+                                                      </TimeSince>
+                                                      <div
+                                                        className="activity-author"
+                                                      >
+                                                        Lyn
+                                                        <small>
+                                                          lyn@sentry.io
+                                                        </small>
+                                                        <small>
+                                                          <Link
+                                                            to="/organizations/org-slug/issues/1/events/1/"
+                                                          >
+                                                            <Link
+                                                              onlyActiveOnIndex={false}
+                                                              style={Object {}}
+                                                              to="/organizations/org-slug/issues/1/events/1/"
+                                                            >
+                                                              <a
+                                                                onClick={[Function]}
+                                                                style={Object {}}
+                                                              >
+                                                                View event
+                                                              </a>
+                                                            </Link>
+                                                          </Link>
+                                                        </small>
+                                                      </div>
+                                                      <p
+                                                        dangerouslySetInnerHTML={
+                                                          Object {
+                                                            "__html": "Something bad happened",
+                                                          }
+                                                        }
+                                                      />
+                                                    </div>
+                                                  </div>
+                                                </li>
+                                              </ul>
+                                            </div>
+                                          </div>
+                                        </EventUserFeedback>
                                       </div>
-                                    </EventUserFeedback>
-                                  </div>
-                                </Base>
-                              </PanelItem>
-                            </CompactIssue>
-                          </div>
-                        </PanelBody>
-                      </div>
-                    </Component>
-                  </Panel>
-                  <Pagination
-                    className="stream-pagination"
-                    onCursor={[Function]}
-                    pageLinks="<https://sentry.io/api/0/organizations/sentry/user-feedback/?statsPeriod=14d&cursor=0:0:1>; rel=\\"previous\\"; results=\\"false\\"; cursor=\\"0:0:1\\", <https://sentry.io/api/0/organizations/sentry/user-feedback/?statsPeriod=14d&cursor=0:100:0>; rel=\\"next\\"; results=\\"true\\"; cursor=\\"0:100:0\\""
-                  >
-                    <div
-                      className="clearfix stream-pagination"
+                                    </Base>
+                                  </PanelItem>
+                                </CompactIssue>
+                              </WithOrganizationMockWrapper>
+                            </div>
+                          </PanelBody>
+                        </div>
+                      </Component>
+                    </Panel>
+                    <Pagination
+                      className="stream-pagination"
+                      onCursor={[Function]}
+                      pageLinks="<https://sentry.io/api/0/organizations/sentry/user-feedback/?statsPeriod=14d&cursor=0:0:1>; rel=\\"previous\\"; results=\\"false\\"; cursor=\\"0:0:1\\", <https://sentry.io/api/0/organizations/sentry/user-feedback/?statsPeriod=14d&cursor=0:100:0>; rel=\\"next\\"; results=\\"true\\"; cursor=\\"0:100:0\\""
                     >
                       <div
-                        className="btn-group pull-right"
+                        className="clearfix stream-pagination"
                       >
-                        <a
-                          className="btn btn-default btn-lg prev disabled"
-                          disabled={true}
-                          onClick={[Function]}
+                        <div
+                          className="btn-group pull-right"
                         >
-                          <span
-                            className="icon-arrow-left"
-                            title="Previous"
-                          />
-                        </a>
-                        <a
-                          className="btn btn-default btn-lg next"
-                          disabled={false}
-                          onClick={[Function]}
-                        >
-                          <span
-                            className="icon-arrow-right"
-                            title="Next"
-                          />
-                        </a>
+                          <a
+                            className="btn btn-default btn-lg prev disabled"
+                            disabled={true}
+                            onClick={[Function]}
+                          >
+                            <span
+                              className="icon-arrow-left"
+                              title="Previous"
+                            />
+                          </a>
+                          <a
+                            className="btn btn-default btn-lg next"
+                            disabled={false}
+                            onClick={[Function]}
+                          >
+                            <span
+                              className="icon-arrow-right"
+                              title="Next"
+                            />
+                          </a>
+                        </div>
                       </div>
-                    </div>
-                  </Pagination>
-                </div>
-              </UserFeedbackContainer>
+                    </Pagination>
+                  </div>
+                </UserFeedbackContainer>
+              </NoProjectMessage>
             </div>
           </PageContent>
         </Feature>

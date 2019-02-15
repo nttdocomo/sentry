@@ -86,6 +86,28 @@ describe('AssigneeSelector', function() {
     Client.clearMockResponses();
   });
 
+  describe('render with props', function() {
+    it('renders members from the prop when present', async function() {
+      assigneeSelector = mount(
+        <AssigneeSelectorComponent id={GROUP_1.id} memberList={[USER_2, USER_3]} />,
+        TestStubs.routerContext()
+      );
+      MemberListStore.loadInitialData([USER_1]);
+      openMenu();
+
+      assigneeSelector.update();
+      expect(assigneeSelector.find('LoadingIndicator')).toHaveLength(0);
+      expect(assigneeSelector.find('Avatar')).toHaveLength(3);
+      expect(assigneeSelector.find('UserAvatar')).toHaveLength(2);
+      expect(assigneeSelector.find('TeamAvatar')).toHaveLength(1);
+
+      const names = assigneeSelector
+        .find('MenuItemWrapper Label Highlight')
+        .map(el => el.text());
+      expect(names).toEqual([`#${TEAM_1.slug}`, USER_2.name, USER_3.name]);
+    });
+  });
+
   describe('putSessionUserFirst()', function() {
     const putSessionUserFirst = AssigneeSelectorComponent.putSessionUserFirst;
     it('should place the session user at the top of the member list if present', function() {
@@ -245,7 +267,7 @@ describe('AssigneeSelector', function() {
   });
 
   it('shows invite member button', async function() {
-    let routerContext = TestStubs.routerContext();
+    const routerContext = TestStubs.routerContext();
 
     openMenu();
     MemberListStore.loadInitialData([USER_1, USER_2]);

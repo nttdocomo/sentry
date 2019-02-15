@@ -400,6 +400,36 @@ urlpatterns += patterns(
         react_page_view, name='sentry-organization-home'),
     url(r'^organizations/new/$', generic_react_page_view),
     url(
+        r'^organizations/(?P<organization_slug>[\w_-]+)/$',
+        react_page_view,
+        name='sentry-organization-index'
+    ),
+    url(
+        r'^organizations/(?P<organization_slug>[\w_-]+)/issues/$',
+        react_page_view,
+        name='sentry-organization-issue-list'
+    ),
+    url(
+        r'^organizations/(?P<organization_slug>[\w_-]+)/issues/(?P<group_id>\d+)/$',
+        react_page_view,
+        name='sentry-organization-issue'
+    ),
+    url(
+        r'^organizations/(?P<organization_slug>[\w_-]+)/issues/(?P<issue_id>\d+)/$',
+        react_page_view,
+        name='sentry-organization-issue-detail'
+    ),
+    url(
+        r'^organizations/(?P<organization_slug>[\w_-]+)/issues/(?P<group_id>\d+)/events/(?P<event_id_or_latest>(\d+|latest))/$',
+        react_page_view,
+        name='sentry-organization-event-detail'
+    ),
+    url(
+        r'^organizations/(?P<organization_slug>[\w_-]+)/projects/(?P<project_slug>[\w_-]+)/events/(?P<client_event_id>[\w_-]+)/$',
+        ProjectEventRedirect.as_view(),
+        name='sentry-project-event-redirect'
+    ),
+    url(
         r'^organizations/(?P<organization_slug>[\w_-]+)/api-keys/$',
         react_page_view,
         name='sentry-organization-api-keys'
@@ -462,6 +492,10 @@ urlpatterns += patterns(
     # Settings - Projects
     url(
         r'^(?P<organization_slug>[\w_-]+)/(?P<project_slug>[\w_-]+)/settings/$',
+        RedirectView.as_view(pattern_name="sentry-manage-project", permanent=False),
+    ),
+    url(
+        r'^settings/(?P<organization_slug>[\w_-]+)/projects/(?P<project_slug>[\w_-]+)/$',
         react_page_view,
         name='sentry-manage-project'
     ),

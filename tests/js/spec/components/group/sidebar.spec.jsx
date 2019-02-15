@@ -1,11 +1,12 @@
 import React from 'react';
 import {shallow} from 'enzyme';
 
-import {GroupSidebar} from 'app/components/group/sidebar';
+import GroupSidebar from 'app/components/group/sidebar';
 
 describe('GroupSidebar', function() {
   let group = TestStubs.Group({tags: TestStubs.Tags()});
-  let environment = {name: 'production', displayName: 'Production', id: '1'};
+  const project = TestStubs.Project();
+  const environment = {name: 'production', displayName: 'Production', id: '1'};
   let wrapper;
   let tagValuesMock;
 
@@ -26,7 +27,12 @@ describe('GroupSidebar', function() {
     });
 
     wrapper = shallow(
-      <GroupSidebar group={group} event={TestStubs.Event()} environment={environment} />,
+      <GroupSidebar
+        group={group}
+        project={project}
+        event={TestStubs.Event()}
+        environments={[environment]}
+      />,
       TestStubs.routerContext()
     );
   });
@@ -67,8 +73,9 @@ describe('GroupSidebar', function() {
       wrapper = shallow(
         <GroupSidebar
           group={group}
+          project={project}
           event={TestStubs.Event()}
-          environment={environment}
+          environments={[environment]}
         />,
         TestStubs.routerContext()
       );
@@ -80,7 +87,7 @@ describe('GroupSidebar', function() {
 
     it('renders empty text', function() {
       expect(wrapper.find('[data-test-id="no-tags"]').text()).toBe(
-        'No tags found in the Production environment'
+        'No tags found in the selected environments'
       );
     });
   });
@@ -113,13 +120,13 @@ describe('GroupSidebar', function() {
     it('re-requests tags with correct environment', function() {
       const stagingEnv = {name: 'staging', displayName: 'Staging', id: '2'};
       expect(tagValuesMock).toHaveBeenCalledTimes(1);
-      wrapper.setProps({environment: stagingEnv});
+      wrapper.setProps({environments: [stagingEnv]});
       expect(tagValuesMock).toHaveBeenCalledTimes(2);
       expect(tagValuesMock).toHaveBeenCalledWith(
         '/issues/1/tags/',
         expect.objectContaining({
           query: expect.objectContaining({
-            environment: 'staging',
+            environment: ['staging'],
           }),
         })
       );

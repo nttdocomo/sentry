@@ -13,9 +13,6 @@ import LoadingError from 'app/components/loadingError';
 import LoadingIndicator from 'app/components/loadingIndicator';
 import {Panel, PanelBody, PanelHeader} from 'app/components/panels';
 import StackedBarChart from 'app/components/stackedBarChart';
-import TextBlock from 'app/views/settings/components/text/textBlock';
-
-const noMarginBottom = {marginBottom: 0};
 
 const ProjectFiltersChart = createReactClass({
   displayName: 'ProjectFiltersChart',
@@ -25,8 +22,8 @@ const ProjectFiltersChart = createReactClass({
   mixins: [ApiMixin],
 
   getInitialState() {
-    let until = Math.floor(new Date().getTime() / 1000);
-    let since = until - 3600 * 24 * 30;
+    const until = Math.floor(new Date().getTime() / 1000);
+    const since = until - 3600 * 24 * 30;
 
     return {
       loading: true,
@@ -76,10 +73,10 @@ const ProjectFiltersChart = createReactClass({
   },
 
   getFilterStats() {
-    let statOptions = Object.keys(this.getStatOpts());
-    let {orgId, projectId} = this.props.params;
-    let statEndpoint = `/projects/${orgId}/${projectId}/stats/`;
-    let query = {
+    const statOptions = Object.keys(this.getStatOpts());
+    const {orgId, projectId} = this.props.params;
+    const statEndpoint = `/projects/${orgId}/${projectId}/stats/`;
+    const query = {
       since: this.state.querySince,
       until: this.state.queryUntil,
       resolution: '1d',
@@ -89,7 +86,7 @@ const ProjectFiltersChart = createReactClass({
         $,
         // parallelize requests for each statistic
         statOptions.map(stat => {
-          let deferred = $.Deferred();
+          const deferred = $.Deferred();
           this.api.request(statEndpoint, {
             query: Object.assign({stat}, query),
             success: deferred.resolve.bind(deferred),
@@ -100,7 +97,7 @@ const ProjectFiltersChart = createReactClass({
       )
       .done(
         function(/* statOption1, statOption2, ... statOptionN */) {
-          let rawStatsData = {};
+          const rawStatsData = {};
           // when there is a single request made, this is inexplicably called without being wrapped in an array
           if (statOptions.length === 1) {
             rawStatsData[statOptions[0]] = arguments[0];
@@ -130,18 +127,18 @@ const ProjectFiltersChart = createReactClass({
   },
 
   timeLabelAsDay(point) {
-    let timeMoment = moment(point.x * 1000);
+    const timeMoment = moment(point.x * 1000);
 
     return timeMoment.format('LL');
   },
 
   renderTooltip(point, pointIdx, chart) {
-    let timeLabel = this.timeLabelAsDay(point);
+    const timeLabel = this.timeLabelAsDay(point);
     let totalY = 0;
     for (let i = 0; i < point.y.length; i++) {
       totalY += point.y[i];
     }
-    let {formattedData} = this.state;
+    const {formattedData} = this.state;
 
     return ReactDOMServer.renderToStaticMarkup(
       <div style={{width: '175px'}}>
@@ -173,11 +170,11 @@ const ProjectFiltersChart = createReactClass({
   },
 
   render() {
-    let {loading, error} = this.state;
-    let isLoading = loading || !this.state.formattedData;
-    let hasError = !isLoading && error;
-    let hasLoaded = !isLoading && !error;
-    let classes = Object.keys(this.getStatOpts());
+    const {loading, error} = this.state;
+    const isLoading = loading || !this.state.formattedData;
+    const hasError = !isLoading && error;
+    const hasLoaded = !isLoading && !error;
+    const classes = Object.keys(this.getStatOpts());
 
     return (
       <Panel>
@@ -199,14 +196,12 @@ const ProjectFiltersChart = createReactClass({
             )}
           {hasLoaded &&
             this.state.blankStats && (
-              <EmptyMessage css={{flexDirection: 'column', alignItems: 'center'}}>
-                <h3 css={noMarginBottom}>{t('Nothing filtered in the last 30 days.')}</h3>
-                <TextBlock css={{fontSize: '0.9em', ...noMarginBottom}}>
-                  {t(
-                    'Issues filtered as a result of your settings below will be shown here.'
-                  )}
-                </TextBlock>
-              </EmptyMessage>
+              <EmptyMessage
+                title={t('Nothing filtered in the last 30 days.')}
+                description={t(
+                  'Issues filtered as a result of your settings below will be shown here.'
+                )}
+              />
             )}
         </PanelBody>
       </Panel>

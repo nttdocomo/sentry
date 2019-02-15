@@ -1,8 +1,6 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 
-import createReactClass from 'create-react-class';
-
 import {analytics} from 'app/utils/analytics';
 import {logException} from 'app/utils/logging';
 import EventAttachments from 'app/components/events/eventAttachments';
@@ -18,8 +16,8 @@ import EventSdk from 'app/components/events/sdk';
 import EventDevice from 'app/components/events/device';
 import EventUserFeedback from 'app/components/events/userFeedback';
 import SentryTypes from 'app/sentryTypes';
-import GroupState from 'app/mixins/groupState';
 import utils from 'app/utils';
+import withOrganization from 'app/utils/withOrganization';
 import {t} from 'app/locale';
 
 import ExceptionInterface from 'app/components/events/interfaces/exception';
@@ -48,10 +46,9 @@ export const INTERFACES = {
   debugmeta: DebugMetaInterface,
 };
 
-const EventEntries = createReactClass({
-  displayName: 'EventEntries',
-
-  propTypes: {
+class EventEntries extends React.Component {
+  static propTypes = {
+    organization: SentryTypes.Organization.isRequired,
     group: SentryTypes.Group.isRequired,
     event: SentryTypes.Event.isRequired,
     orgId: PropTypes.string.isRequired,
@@ -59,52 +56,47 @@ const EventEntries = createReactClass({
     // TODO(dcramer): ideally isShare would be replaced with simple permission
     // checks
     isShare: PropTypes.bool,
-  },
+  };
 
-  mixins: [GroupState],
-
-  getDefaultProps() {
-    return {
-      isShare: false,
-    };
-  },
+  static defaultProps = {
+    isShare: false,
+  };
 
   componentDidMount() {
-    let {event} = this.props;
+    const {event} = this.props;
 
-    if (!event || !event.errors || !event.errors.length > 0) return;
-    let errors = event.errors;
-    let errorTypes = errors.map(errorEntries => errorEntries.type);
-    let errorMessages = errors.map(errorEntries => errorEntries.message);
+    if (!event || !event.errors || !(event.errors.length > 0)) return;
+    const errors = event.errors;
+    const errorTypes = errors.map(errorEntries => errorEntries.type);
+    const errorMessages = errors.map(errorEntries => errorEntries.message);
 
     this.recordIssueError(errorTypes, errorMessages);
-  },
+  }
 
   shouldComponentUpdate(nextProps, nextState) {
     return this.props.event.id !== nextProps.event.id;
-  },
+  }
 
   recordIssueError(errorTypes, errorMessages) {
-    let {project, event} = this.props;
-    let orgId = this.getOrganization().id;
+    const {organization, project, event} = this.props;
+    const orgId = organization.id;
+    const platform = project.platform;
 
     analytics('issue_error_banner.viewed', {
       org_id: parseInt(orgId, 10),
-      platform: project.platform,
       group: event.groupID,
       error_type: errorTypes,
       error_message: errorMessages,
+      ...(platform && {platform}),
     });
-  },
-
-  interfaces: INTERFACES,
+  }
 
   renderEntries() {
-    let {event, group, isShare} = this.props;
+    const {event, group, isShare} = this.props;
 
     return event.entries.map((entry, entryIdx) => {
       try {
-        let Component = this.interfaces[entry.type];
+        const Component = INTERFACES[entry.type];
         if (!Component) {
           /*eslint no-console:0*/
           window.console &&
@@ -136,15 +128,14 @@ const EventEntries = createReactClass({
         );
       }
     });
-  },
+  }
 
   render() {
-    let {group, isShare, project, event, orgId} = this.props;
+    const {organization, group, isShare, project, event, orgId} = this.props;
 
-    let organization = this.getOrganization();
-    let features = organization ? new Set(organization.features) : new Set();
+    const features = organization ? new Set(organization.features) : new Set();
 
-    let hasContext =
+    const hasContext =
       event && (!utils.objectIsEmpty(event.user) || !utils.objectIsEmpty(event.contexts));
 
     if (!event) {
@@ -173,7 +164,13 @@ const EventEntries = createReactClass({
           />
         )}
         {hasContext && <EventContextSummary group={group} event={event} />}
-        <EventTags group={group} event={event} orgId={orgId} projectId={project.slug} />
+        <EventTags
+          organization={organization}
+          group={group}
+          event={event}
+          orgId={orgId}
+          projectId={project.slug}
+        />
         {this.renderEntries()}
         {hasContext && <EventContexts group={group} event={event} />}
         {!utils.objectIsEmpty(event.context) && (
@@ -207,7 +204,7 @@ const EventEntries = createReactClass({
           )}{' '}
       </div>
     );
-  },
-});
+  }
+}
 
-export default EventEntries;
+export default withOrganization(EventEntries);

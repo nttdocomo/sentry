@@ -3,17 +3,18 @@ import React from 'react';
 import createReactClass from 'create-react-class';
 import {Link} from 'react-router';
 
+import SentryTypes from 'app/sentryTypes';
 import LoadingIndicator from 'app/components/loadingIndicator';
 import LoadingError from 'app/components/loadingError';
-
 import ApiMixin from 'app/mixins/apiMixin';
-
 import {t, tn} from 'app/locale';
+import withOrganization from 'app/utils/withOrganization';
 
 const ReleaseProjectStatSparkline = createReactClass({
   displayName: 'ReleaseProjectStatSparkline',
 
   propTypes: {
+    organization: SentryTypes.Organization,
     orgId: PropTypes.string,
     project: PropTypes.object,
     version: PropTypes.string,
@@ -53,9 +54,9 @@ const ReleaseProjectStatSparkline = createReactClass({
   },
 
   getStatReceived() {
-    let {orgId} = this.props;
-    let projectId = this.props.project.slug;
-    let path = `/projects/${orgId}/${projectId}/stats/`;
+    const {orgId} = this.props;
+    const projectId = this.props.project.slug;
+    const path = `/projects/${orgId}/${projectId}/stats/`;
     return this.api.requestPromise(path, {
       method: 'GET',
       data: 'stat=received',
@@ -74,9 +75,9 @@ const ReleaseProjectStatSparkline = createReactClass({
   },
 
   getNewIssuesCount() {
-    let {orgId, version} = this.props;
-    let projectId = this.props.project.slug;
-    let issuesPath = `/projects/${orgId}/${projectId}/releases/${encodeURIComponent(
+    const {orgId, version} = this.props;
+    const projectId = this.props.project.slug;
+    const issuesPath = `/projects/${orgId}/${projectId}/releases/${encodeURIComponent(
       version
     )}/`;
     return this.api.requestPromise(issuesPath, {
@@ -95,14 +96,34 @@ const ReleaseProjectStatSparkline = createReactClass({
     });
   },
 
+  renderProjectSummary() {
+    const {project} = this.props;
+    const {newIssueCount} = this.state;
+
+    return (
+      <React.Fragment>
+        <h6 className="m-b-0">{project.slug}</h6>
+        <p className="m-b-0 text-muted">
+          <small>
+            {newIssueCount > 0
+              ? tn('%s new issue', '%s new issues', newIssueCount)
+              : t('No new issues')}
+          </small>
+        </p>
+      </React.Fragment>
+    );
+  },
+
   render() {
-    let {orgId, project, version} = this.props;
+    const {organization, orgId, project, version} = this.props;
 
     if (this.state.loading) return <LoadingIndicator />;
     if (this.state.error) return <LoadingError />;
 
-    let {Sparklines, SparklinesLine, newIssueCount, stats} = this.state;
-    let values = stats.map(tuple => tuple[1]);
+    const {Sparklines, SparklinesLine, stats} = this.state;
+    const values = stats.map(tuple => tuple[1]);
+
+    const hasSentry10 = new Set(organization.features).has('sentry10');
 
     return (
       <li>
@@ -111,19 +132,16 @@ const ReleaseProjectStatSparkline = createReactClass({
             <SparklinesLine style={{stroke: '#8f85d4', fill: 'none', strokeWidth: 3}} />
           </Sparklines>
         </div>
-        <Link to={`/${orgId}/${project.slug}/releases/${encodeURIComponent(version)}/`}>
-          <h6 className="m-b-0">{project.slug}</h6>
-          <p className="m-b-0 text-muted">
-            <small>
-              {newIssueCount > 0
-                ? tn('%s new issue', '%s new issues', newIssueCount)
-                : t('No new issues')}
-            </small>
-          </p>
-        </Link>
+        {hasSentry10 ? (
+          <div>{this.renderProjectSummary()}</div>
+        ) : (
+          <Link to={`/${orgId}/${project.slug}/releases/${encodeURIComponent(version)}/`}>
+            {this.renderProjectSummary()}
+          </Link>
+        )}
       </li>
     );
   },
 });
 
-export default ReleaseProjectStatSparkline;
+export default withOrganization(ReleaseProjectStatSparkline);

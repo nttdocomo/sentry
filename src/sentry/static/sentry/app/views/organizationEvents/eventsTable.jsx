@@ -13,8 +13,6 @@ import SentryTypes from 'app/sentryTypes';
 import overflowEllipsis from 'app/styles/overflowEllipsis';
 import space from 'app/styles/space';
 
-import EventsContext from './utils/eventsContext';
-
 class EventsTableBody extends React.PureComponent {
   static propTypes = {
     events: PropTypes.array,
@@ -28,26 +26,37 @@ class EventsTableBody extends React.PureComponent {
 
     return events.map((event, eventIdx) => {
       const project = projectsMap.get(event.projectID);
-      const trimmedMessage = event.message.split('\n')[0].substr(0, 100);
+      const trimmedMessage = event.title || event.message.split('\n')[0].substr(0, 100);
+
+      const hasSentry10 = new Set(organization.features).has('sentry10');
+
+      const eventLink = hasSentry10
+        ? `/organizations/${organization.slug}/projects/${project.slug}/events/${event.eventID}/`
+        : `/${organization.slug}/${project.slug}/events/${event.eventID}/`;
+
+      const idBadge = (
+        <IdBadge
+          project={project}
+          avatarSize={16}
+          displayName={<span>{project.slug}</span>}
+          avatarProps={{consistentWidth: true}}
+        />
+      );
+
       return (
         <TableRow key={`${project.slug}-${event.eventID}`} first={eventIdx == 0}>
           <TableData>
             <EventTitle>
-              <Link to={`/${organization.slug}/${project.slug}/events/${event.eventID}/`}>
-                {trimmedMessage}
-              </Link>
+              <Link to={eventLink}>{trimmedMessage}</Link>
             </EventTitle>
           </TableData>
 
           <TableData>
-            <Project to={`/${organization.slug}/${project.slug}/`}>
-              <IdBadge
-                project={project}
-                avatarSize={16}
-                displayName={<span>{project.slug}</span>}
-                avatarProps={{consistentWidth: true}}
-              />
-            </Project>
+            {hasSentry10 ? (
+              idBadge
+            ) : (
+              <Project to={`/${organization.slug}/${project.slug}/`}>{idBadge}</Project>
+            )}
           </TableData>
 
           <TableData>
@@ -134,7 +143,12 @@ class EventsTable extends React.Component {
           </TableLayout>
         </PanelHeader>
         {loading && <LoadingIndicator />}
-        {!loading && !hasEvents && <EmptyStateWarning>No events</EmptyStateWarning>}
+        {!loading &&
+          !hasEvents && (
+            <EmptyStateWarning>
+              <p>No events</p>
+            </EmptyStateWarning>
+          )}
         {hasEvents && (
           <StyledPanelBody>
             {(reloading || zoomChanged) && <StyledLoadingIndicator overlay />}
@@ -151,16 +165,7 @@ class EventsTable extends React.Component {
   }
 }
 
-class EventsTableContainer extends React.Component {
-  render() {
-    return (
-      <EventsContext.Consumer>
-        {context => <EventsTable {...context} {...this.props} />}
-      </EventsContext.Consumer>
-    );
-  }
-}
-export default withRouter(EventsTableContainer);
+export default withRouter(EventsTable);
 export {EventsTable};
 
 const StyledPanelBody = styled(PanelBody)`

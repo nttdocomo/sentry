@@ -6,6 +6,7 @@ import ConfigStore from 'app/stores/configStore';
 import OrganizationContext from 'app/views/organizationContext';
 import ProjectsStore from 'app/stores/projectsStore';
 import TeamStore from 'app/stores/teamStore';
+import GlobalSelectionStore from 'app/stores/globalSelectionStore';
 
 jest.mock('app/stores/configStore', () => ({
   get: jest.fn(),
@@ -16,11 +17,12 @@ jest.mock('app/actionCreators/modal', () => ({
 
 describe('OrganizationContext', function() {
   let wrapper;
-  let org = TestStubs.Organization({
+  const org = TestStubs.Organization({
     teams: [TestStubs.Team()],
     projects: [TestStubs.Project()],
   });
   let getOrgMock;
+  let getEnvironmentsMock;
 
   beforeAll(function() {});
 
@@ -30,10 +32,18 @@ describe('OrganizationContext', function() {
       url: '/organizations/org-slug/',
       body: org,
     });
+    getEnvironmentsMock = MockApiClient.addMockResponse({
+      url: '/organizations/org-slug/environments/',
+      body: TestStubs.Environments(),
+    });
     jest.spyOn(TeamStore, 'loadInitialData');
     jest.spyOn(ProjectsStore, 'loadInitialData');
+    jest.spyOn(GlobalSelectionStore, 'loadInitialData');
+
     wrapper = mount(
-      <OrganizationContext params={{orgId: 'org-slug'}}>{<div />}</OrganizationContext>
+      <OrganizationContext params={{orgId: 'org-slug'}} location={{query: {}}}>
+        {<div />}
+      </OrganizationContext>
     );
   });
 
@@ -54,6 +64,7 @@ describe('OrganizationContext', function() {
 
     expect(TeamStore.loadInitialData).toHaveBeenCalledWith(org.teams);
     expect(ProjectsStore.loadInitialData).toHaveBeenCalledWith(org.projects);
+    expect(GlobalSelectionStore.loadInitialData).toHaveBeenCalledWith(org, {});
   });
 
   it('resets TeamStore when unmounting', function() {
@@ -64,7 +75,7 @@ describe('OrganizationContext', function() {
   });
 
   it('fetches new org when router params change', function() {
-    let mock = MockApiClient.addMockResponse({
+    const mock = MockApiClient.addMockResponse({
       url: '/organizations/new-slug/',
       body: org,
     });
@@ -83,21 +94,27 @@ describe('OrganizationContext', function() {
       '/organizations/org-slug/',
       expect.anything()
     );
+    expect(getEnvironmentsMock).toHaveBeenCalled();
   });
 
-  it('shows loading error for non-superusers on 403s', function() {
+  it('shows loading error for non-superusers on 403s', async function() {
     getOrgMock = MockApiClient.addMockResponse({
       url: '/organizations/org-slug/',
       statusCode: 403,
     });
     wrapper = mount(
-      <OrganizationContext params={{orgId: 'org-slug'}}>{<div />}</OrganizationContext>
+      <OrganizationContext params={{orgId: 'org-slug'}} location={{}}>
+        {<div />}
+      </OrganizationContext>
     );
+
+    await tick();
+    wrapper.update();
 
     expect(wrapper.find('LoadingError')).toHaveLength(1);
   });
 
-  it('opens sudo modal for superusers on 403s', function() {
+  it('opens sudo modal for superusers on 403s', async function() {
     ConfigStore.get.mockImplementation(() => ({
       isSuperuser: true,
     }));
@@ -106,8 +123,13 @@ describe('OrganizationContext', function() {
       statusCode: 403,
     });
     wrapper = mount(
-      <OrganizationContext params={{orgId: 'org-slug'}}>{<div />}</OrganizationContext>
+      <OrganizationContext params={{orgId: 'org-slug'}} location={{}}>
+        {<div />}
+      </OrganizationContext>
     );
+
+    await tick();
+    wrapper.update();
 
     expect(openSudo).toHaveBeenCalled();
   });

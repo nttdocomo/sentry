@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import six
+import pytest
 
 from datetime import datetime
 from django.core.urlresolvers import reverse
@@ -269,3 +270,42 @@ class EventDetailsTest(APITestCase):
         assert response.status_code == 200, response.content
         assert response.data['id'] == six.text_type(cur_event.id)
         assert response.data['userReport']['id'] == six.text_type(user_report.id)
+
+    @pytest.mark.xfail
+    def test_event_ordering(self):
+        # Test that a real "prev" event that happened at an earlier time is not
+        # masked by multiple subsequent events in the same second.
+        self.login_as(user=self.user)
+
+        group = self.create_group()
+
+        before = self.create_event(
+            event_id='a',
+            group=group,
+            datetime=datetime(2013, 8, 13, 3, 8, 23),
+        )
+
+        event = self.create_event(
+            event_id='b',
+            group=group,
+            datetime=datetime(2013, 8, 13, 3, 8, 24),
+        )
+
+        # Masking events: same time as event, but higher ids
+        for eid in 'cdefg':
+            self.create_event(
+                event_id=eid,
+                group=group,
+                datetime=datetime(2013, 8, 13, 3, 8, 24),
+            )
+
+        url = reverse(
+            'sentry-api-0-event-details', kwargs={
+                'event_id': event.id,
+            }
+        )
+        response = self.client.get(url, format='json')
+
+        assert response.status_code == 200, response.content
+        assert response.data['id'] == six.text_type(event.id)
+        assert response.data['previousEventID'] == six.text_type(before.id)

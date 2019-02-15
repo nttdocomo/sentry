@@ -1,21 +1,25 @@
+import {browserHistory} from 'react-router';
+import {isEqual} from 'lodash';
+import DocumentTitle from 'react-document-title';
 import PropTypes from 'prop-types';
 import React from 'react';
-import createReactClass from 'create-react-class';
 import Reflux from 'reflux';
-import {browserHistory} from 'react-router';
-import DocumentTitle from 'react-document-title';
 import * as Sentry from '@sentry/browser';
+import createReactClass from 'create-react-class';
 
+import {PageContent} from 'app/styles/organization';
+import {t} from 'app/locale';
 import ApiMixin from 'app/mixins/apiMixin';
+import Feature from 'app/components/acl/feature';
+import GlobalSelectionHeader from 'app/components/organizations/globalSelectionHeader';
 import GroupStore from 'app/stores/groupStore';
 import LoadingError from 'app/components/loadingError';
 import LoadingIndicator from 'app/components/loadingIndicator';
-import SentryTypes from 'app/sentryTypes';
-import {t} from 'app/locale';
 import ProjectsStore from 'app/stores/projectsStore';
+import SentryTypes from 'app/sentryTypes';
 
-import GroupHeader from '../shared/header';
 import {ERROR_TYPES} from '../shared/constants';
+import GroupHeader from '../shared/header';
 
 const GroupDetails = createReactClass({
   displayName: 'GroupDetails',
@@ -23,7 +27,11 @@ const GroupDetails = createReactClass({
   propTypes: {
     // Provided in the project version of group details
     project: SentryTypes.Project,
-    environment: SentryTypes.Environment,
+    organization: SentryTypes.Organization,
+
+    environments: PropTypes.arrayOf(PropTypes.string),
+    enableSnuba: PropTypes.bool,
+    showGlobalHeader: PropTypes.bool,
   },
 
   childContextTypes: {
@@ -32,6 +40,12 @@ const GroupDetails = createReactClass({
   },
 
   mixins: [ApiMixin, Reflux.listenTo(GroupStore, 'onGroupChange')],
+
+  getDefaultProps() {
+    return {
+      enableSnuba: false,
+    };
+  },
 
   getInitialState() {
     return {
@@ -62,7 +76,7 @@ const GroupDetails = createReactClass({
   componentDidUpdate(prevProps) {
     if (
       prevProps.params.groupId !== this.props.params.groupId ||
-      prevProps.environment !== this.props.environment
+      !isEqual(prevProps.environments, this.props.environments)
     ) {
       this.fetchData();
     }
@@ -75,8 +89,12 @@ const GroupDetails = createReactClass({
   fetchData() {
     const query = {};
 
-    if (this.props.environment) {
-      query.environment = this.props.environment.name;
+    if (this.props.environments) {
+      query.environment = this.props.environments;
+    }
+
+    if (this.props.enableSnuba) {
+      query.enable_snuba = '1';
     }
 
     this.api.request(this.getGroupDetailsEndpoint(), {
@@ -89,7 +107,7 @@ const GroupDetails = createReactClass({
         // `formatPattern` isn't actually exported until `react-router` 2.0.1:
         // https://github.com/reactjs/react-router/blob/v2.0.1/modules/index.js#L25
         if (this.props.params.groupId != data.id) {
-          let location = this.props.location;
+          const location = this.props.location;
           return void browserHistory.push(
             location.pathname.replace(
               `/issues/${this.props.params.groupId}/`,
@@ -100,7 +118,7 @@ const GroupDetails = createReactClass({
           );
         }
 
-        let project = this.props.project || ProjectsStore.getById(data.project.id);
+        const project = this.props.project || ProjectsStore.getById(data.project.id);
 
         if (!project) {
           Sentry.withScope(scope => {
@@ -135,9 +153,9 @@ const GroupDetails = createReactClass({
   },
 
   onGroupChange(itemIds) {
-    let id = this.props.params.groupId;
+    const id = this.props.params.groupId;
     if (itemIds.has(id)) {
-      let group = GroupStore.get(id);
+      const group = GroupStore.get(id);
       if (group) {
         if (group.stale) {
           this.fetchData();
@@ -151,13 +169,13 @@ const GroupDetails = createReactClass({
   },
 
   getGroupDetailsEndpoint() {
-    let id = this.props.params.groupId;
+    const id = this.props.params.groupId;
 
     return '/issues/' + id + '/';
   },
 
   getTitle() {
-    let group = this.state.group;
+    const group = this.state.group;
 
     if (!group) return 'Sentry';
 
@@ -179,9 +197,34 @@ const GroupDetails = createReactClass({
     }
   },
 
+  renderContent(shouldShowGlobalHeader) {
+    const {params} = this.props;
+    const {group, project} = this.state;
+
+    const Content = (
+      <DocumentTitle title={this.getTitle()}>
+        <div className={this.props.className}>
+          <GroupHeader params={params} project={project} group={group} />
+          {React.cloneElement(this.props.children, {
+            group,
+            project,
+          })}
+        </div>
+      </DocumentTitle>
+    );
+
+    // If we are showing global header (e.g. on Organization group details)
+    // We need `<PageContent>` for padding, otherwise render content as normal
+    if (shouldShowGlobalHeader) {
+      return <PageContent>{Content}</PageContent>;
+    }
+
+    return Content;
+  },
+
   render() {
-    let params = this.props.params;
-    let {group, project} = this.state;
+    const {organization, showGlobalHeader} = this.props;
+    const {group, project, loading} = this.state;
 
     if (this.state.error) {
       switch (this.state.errorType) {
@@ -194,17 +237,31 @@ const GroupDetails = createReactClass({
         default:
           return <LoadingError onRetry={this.remountComponent} />;
       }
-    } else if (this.state.loading || !group) return <LoadingIndicator />;
+    }
+
+    const isLoading = loading || !group;
 
     return (
-      <DocumentTitle title={this.getTitle()}>
-        <div className={this.props.className}>
-          <GroupHeader orgId={params.orgId} project={project} group={group} />
-          {React.cloneElement(this.props.children, {
-            group,
-          })}
-        </div>
-      </DocumentTitle>
+      <Feature features={['sentry10']}>
+        {({hasFeature: hasSentry10}) => {
+          const shouldShowGlobalHeader = hasSentry10 && showGlobalHeader;
+          return (
+            <React.Fragment>
+              {shouldShowGlobalHeader && (
+                <GlobalSelectionHeader
+                  organization={organization}
+                  forceProject={project}
+                />
+              )}
+              {isLoading ? (
+                <LoadingIndicator />
+              ) : (
+                this.renderContent(shouldShowGlobalHeader)
+              )}
+            </React.Fragment>
+          );
+        }}
+      </Feature>
     );
   },
 });

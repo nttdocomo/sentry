@@ -1,19 +1,22 @@
 from __future__ import absolute_import
 
 import datetime
+from datetime import timedelta
 
 from django.utils import timezone
+from freezegun import freeze_time
 from parsimonious.exceptions import IncompleteParseError
 
 from sentry.api.event_search import (
-    convert_endpoint_params, get_snuba_query_args, parse_search_query,
-    InvalidSearchQuery, SearchFilter, SearchKey, SearchValue
+    convert_endpoint_params, event_search_grammar, get_snuba_query_args,
+    parse_search_query, InvalidSearchQuery, SearchFilter, SearchKey,
+    SearchValue, SearchVisitor,
 )
 from sentry.testutils import TestCase
 
 
-class EventSearchTest(TestCase):
-    def test_parse_search_query(self):
+class ParseSearchQueryTest(TestCase):
+    def test_simple(self):
         # test with raw search query at the end
         assert parse_search_query('user.email:foo@example.com release:1.2.1 hello') == [
             SearchFilter(
@@ -42,7 +45,7 @@ class EventSearchTest(TestCase):
             ),
         ]
 
-    def test_parse_search_query_timestamp(self):
+    def test_timestamp(self):
         # test date format
         assert parse_search_query('timestamp>2015-05-18') == [
             SearchFilter(
@@ -96,7 +99,101 @@ class EventSearchTest(TestCase):
             ),
         ]
 
-    def test_parse_search_query_quoted_val(self):
+    def test_other_dates(self):
+        # test date format with other name
+        assert parse_search_query('some_date>2015-05-18') == [
+            SearchFilter(
+                key=SearchKey(name='some_date'),
+                operator=">",
+                value=SearchValue(
+                    raw_value=datetime.datetime(
+                        2015,
+                        5,
+                        18,
+                        0,
+                        0,
+                        tzinfo=timezone.utc,
+                    ),
+                ),
+            ),
+        ]
+
+        # test colon format
+        assert parse_search_query('some_date:>2015-05-18') == [
+            SearchFilter(
+                key=SearchKey(name='some_date'),
+                operator=">",
+                value=SearchValue(
+                    raw_value=datetime.datetime(
+                        2015,
+                        5,
+                        18,
+                        0,
+                        0,
+                        tzinfo=timezone.utc,
+                    ),
+                ),
+            ),
+        ]
+
+    def test_rel_time_filter(self):
+        now = timezone.now()
+        with freeze_time(now):
+            assert parse_search_query('some_rel_date:+7d') == [
+                SearchFilter(
+                    key=SearchKey(name='some_rel_date'),
+                    operator="<=",
+                    value=SearchValue(
+                        raw_value=now - timedelta(days=7),
+                    ),
+                ),
+            ]
+            assert parse_search_query('some_rel_date:-2w') == [
+                SearchFilter(
+                    key=SearchKey(name='some_rel_date'),
+                    operator=">=",
+                    value=SearchValue(
+                        raw_value=now - timedelta(days=14),
+                    ),
+                ),
+            ]
+
+    def test_specific_time_filter(self):
+        assert parse_search_query('some_rel_date:2018-01-01') == [
+            SearchFilter(
+                key=SearchKey(name='some_rel_date'),
+                operator=">=",
+                value=SearchValue(
+                    raw_value=datetime.datetime(2018, 1, 1, tzinfo=timezone.utc),
+                ),
+            ),
+            SearchFilter(
+                key=SearchKey(name='some_rel_date'),
+                operator="<",
+                value=SearchValue(
+                    raw_value=datetime.datetime(2018, 1, 2, tzinfo=timezone.utc),
+                ),
+            ),
+        ]
+
+        assert parse_search_query('some_rel_date:2018-01-01T05:06:07') == [
+            SearchFilter(
+                key=SearchKey(name='some_rel_date'),
+                operator=">=",
+                value=SearchValue(
+                    raw_value=datetime.datetime(2018, 1, 1, 5, 1, 7, tzinfo=timezone.utc),
+                ),
+            ),
+            SearchFilter(
+                key=SearchKey(name='some_rel_date'),
+                operator="<",
+                value=SearchValue(
+                    raw_value=datetime.datetime(2018, 1, 1, 5, 12, 7, tzinfo=timezone.utc),
+                ),
+            ),
+        ]
+
+    def test_quoted_val(self):
         assert parse_search_query('release:"a release"') == [
             SearchFilter(
                 key=SearchKey(name='release'),
@@ -112,7 +209,7 @@ class EventSearchTest(TestCase):
             ),
         ]
 
-    def test_parse_search_query_quoted_key(self):
+    def test_quoted_key(self):
         assert parse_search_query('"hi:there":value') == [
             SearchFilter(
                 key=SearchKey(name='hi:there'),
@@ -128,17 +225,7 @@ class EventSearchTest(TestCase):
             ),
         ]
 
-    def test_parse_search_query_weird_values(self):
-        # quotes within quotes
-        assert parse_search_query('release:"a"thing""') == [
-            SearchFilter(
-                key=SearchKey(name='release'),
-                operator='=',
-                value=SearchValue(raw_value='a"thing"'),
-            ),
-        ]
-
-        # newline within quote
+    def test_newline_within_quote(self):
         assert parse_search_query('release:"a\nrelease"') == [
             SearchFilter(
                 key=SearchKey(name='release'),
@@ -146,11 +233,12 @@ class EventSearchTest(TestCase):
                 value=SearchValue(raw_value='a\nrelease')
             ),
         ]
-        # newline outside quote
+
+    def test_newline_outside_quote(self):
         with self.assertRaises(IncompleteParseError):
             parse_search_query('release:a\nrelease')
 
-        # tab within quote
+    def test_tab_within_quote(self):
         assert parse_search_query('release:"a\trelease"') == [
             SearchFilter(
                 key=SearchKey(name='release'),
@@ -158,6 +246,8 @@ class EventSearchTest(TestCase):
                 value=SearchValue(raw_value='a\trelease')
             ),
         ]
+
+    def test_tab_outside_quote(self):
         # tab outside quote
         assert parse_search_query('release:a\trelease') == [
             SearchFilter(
@@ -172,15 +262,15 @@ class EventSearchTest(TestCase):
             ),
         ]
 
-        # escaped quotes
-        assert parse_search_query('release:"a\"thing\""') == [
+    def test_escaped_quotes(self):
+        assert parse_search_query('release:"a\\"thing\\""') == [
             SearchFilter(
                 key=SearchKey(name='release'),
                 operator='=',
                 value=SearchValue(raw_value='a"thing"')
             ),
         ]
-        assert parse_search_query('release:"a\"\"release"') == [
+        assert parse_search_query('release:"a\\"\\"release"') == [
             SearchFilter(
                 key=SearchKey(name='release'),
                 operator='=',
@@ -188,23 +278,52 @@ class EventSearchTest(TestCase):
             ),
         ]
 
-        # poorly escaped quotes
-        assert parse_search_query('release:"a release\"') == [
+    def test_multiple_quotes(self):
+        assert parse_search_query('device.family:"" browser.name:"Chrome"') == [
             SearchFilter(
-                key=SearchKey(name='release'),
+                key=SearchKey(name='device.family'),
                 operator='=',
-                value=SearchValue(raw_value='a release')
+                value=SearchValue(raw_value=''),
             ),
-        ]
-        assert parse_search_query('release:\"a release "') == [
             SearchFilter(
-                key=SearchKey(name='release'),
+                key=SearchKey(name='browser.name'),
                 operator='=',
-                value=SearchValue(raw_value='a release ')
+                value=SearchValue(raw_value='Chrome'),
             ),
         ]
 
-    def test_parse_search_query_custom_tag(self):
+        assert parse_search_query('device.family:"\\"" browser.name:"Chrome"') == [
+            SearchFilter(
+                key=SearchKey(name='device.family'),
+                operator='=',
+                value=SearchValue(raw_value='"'),
+            ),
+            SearchFilter(
+                key=SearchKey(name='browser.name'),
+                operator='=',
+                value=SearchValue(raw_value='Chrome'),
+            ),
+        ]
+
+    def test_sooo_many_quotes(self):
+        assert parse_search_query('device.family:"\\"\\"\\"\\"\\"\\"\\"\\"\\"\\""') == [
+            SearchFilter(
+                key=SearchKey(name='device.family'),
+                operator='=',
+                value=SearchValue(raw_value='""""""""""'),
+            ),
+        ]
+
+    def test_empty_string(self):
+        assert parse_search_query('device.family:""') == [
+            SearchFilter(
+                key=SearchKey(name='device.family'),
+                operator='=',
+                value=SearchValue(raw_value=''),
+            ),
+        ]
+
+    def test_custom_tag(self):
         assert parse_search_query('fruit:apple release:1.2.1') == [
             SearchFilter(
                 key=SearchKey(name='fruit'),
@@ -218,7 +337,7 @@ class EventSearchTest(TestCase):
             ),
         ]
 
-    def test_parse_search_query_has_tag(self):
+    def test_has_tag(self):
         # unquoted key
         assert parse_search_query('has:release') == [
             SearchFilter(
@@ -241,7 +360,7 @@ class EventSearchTest(TestCase):
         with self.assertRaises(InvalidSearchQuery):
             parse_search_query('has:"hi there"')
 
-    def test_parse_search_query_not_has_tag(self):
+    def test_not_has_tag(self):
         # unquoted key
         assert parse_search_query('!has:release') == [
             SearchFilter(
@@ -260,7 +379,77 @@ class EventSearchTest(TestCase):
             ),
         ]
 
-    def test_get_snuba_query_args(self):
+    def test_is_query_unsupported(self):
+        with self.assertRaises(InvalidSearchQuery):
+            parse_search_query('is:unassigned')
+
+    def test_key_remapping(self):
+        class RemapVisitor(SearchVisitor):
+            key_mappings = {
+                'target_value': ['someValue', 'legacy-value'],
+            }
+
+        tree = event_search_grammar.parse('someValue:123 legacy-value:456 normal_value:hello')
+        assert RemapVisitor().visit(tree) == [
+            SearchFilter(
+                key=SearchKey(name='target_value'),
+                operator='=',
+                value=SearchValue('123'),
+            ),
+            SearchFilter(
+                key=SearchKey(name='target_value'),
+                operator='=',
+                value=SearchValue('456'),
+            ),
+            SearchFilter(
+                key=SearchKey(name='normal_value'),
+                operator='=',
+                value=SearchValue('hello'),
+            ),
+        ]
+
+    def test_numeric_filter(self):
+        # test numeric format
+        assert parse_search_query('times_seen:500') == [
+            SearchFilter(
+                key=SearchKey(name='times_seen'),
+                operator="=",
+                value=SearchValue(raw_value=500),
+            ),
+        ]
+        assert parse_search_query('times_seen:>500') == [
+            SearchFilter(
+                key=SearchKey(name='times_seen'),
+                operator=">",
+                value=SearchValue(raw_value=500),
+            ),
+        ]
+        assert parse_search_query('times_seen:<500') == [
+            SearchFilter(
+                key=SearchKey(name='times_seen'),
+                operator="<",
+                value=SearchValue(raw_value=500),
+            ),
+        ]
+        # Non numeric shouldn't match
+        assert parse_search_query('times_seen:<hello') == [
+            SearchFilter(
+                key=SearchKey(name='times_seen'),
+                operator="=",
+                value=SearchValue(raw_value="<hello"),
+            ),
+        ]
+        assert parse_search_query('times_seen:<512.1.0') == [
+            SearchFilter(
+                key=SearchKey(name='times_seen'),
+                operator="=",
+                value=SearchValue(raw_value="<512.1.0"),
+            ),
+        ]
+
+
+class GetSnubaQueryArgsTest(TestCase):
+    def test_simple(self):
         assert get_snuba_query_args('user.email:foo@example.com release:1.2.1 fruit:apple hello', {
             'project_id': [1, 2, 3],
             'start': datetime.datetime(2015, 5, 18, 10, 15, 1, tzinfo=timezone.utc),
@@ -277,7 +466,7 @@ class EventSearchTest(TestCase):
             'end': datetime.datetime(2015, 5, 19, 10, 15, 1, tzinfo=timezone.utc),
         }
 
-    def test_negation_get_snuba_query_args(self):
+    def test_negation(self):
         assert get_snuba_query_args('!user.email:foo@example.com') == {
             'conditions': [
                 [['ifNull', ['email', "''"]], '!=', 'foo@example.com'],
@@ -285,7 +474,7 @@ class EventSearchTest(TestCase):
             'filter_keys': {},
         }
 
-    def test_get_snuba_query_args_no_search(self):
+    def test_no_search(self):
         assert get_snuba_query_args(params={
             'project_id': [1, 2, 3],
             'start': datetime.datetime(2015, 5, 18, 10, 15, 1, tzinfo=timezone.utc),
@@ -297,7 +486,7 @@ class EventSearchTest(TestCase):
             'end': datetime.datetime(2015, 5, 19, 10, 15, 1, tzinfo=timezone.utc),
         }
 
-    def test_get_snuba_query_args_wildcard(self):
+    def test_wildcard(self):
         assert get_snuba_query_args('release:3.1.* user.email:*@example.com') == {
             'conditions': [
                 [['match', ['tags[sentry:release]', "'^3\\.1\\..*$'"]], '=', 1],
@@ -306,7 +495,7 @@ class EventSearchTest(TestCase):
             'filter_keys': {},
         }
 
-    def test_get_snuba_query_args_negated_wildcard(self):
+    def test_negated_wildcard(self):
         assert get_snuba_query_args('!release:3.1.* user.email:*@example.com') == {
             'conditions': [
                 [['match', [['ifNull', ['tags[sentry:release]', "''"]], "'^3\\.1\\..*$'"]], '!=', 1],
@@ -315,19 +504,31 @@ class EventSearchTest(TestCase):
             'filter_keys': {},
         }
 
-    def test_get_snuba_query_args_has(self):
+    def test_has(self):
         assert get_snuba_query_args('has:release') == {
             'filter_keys': {},
             'conditions': [[['ifNull', ['tags[sentry:release]', "''"]], '!=', '']]
         }
 
-    def test_get_snuba_query_args_not_has(self):
+    def test_not_has(self):
         assert get_snuba_query_args('!has:release') == {
             'filter_keys': {},
             'conditions': [[['ifNull', ['tags[sentry:release]', "''"]], '=', '']]
         }
 
-    def test_convert_endpoint_params(self):
+    def test_message_negative(self):
+        assert get_snuba_query_args('!message:"post_process.process_error HTTPError 403"') == {
+            'filter_keys': {},
+            'conditions': [[
+                ['positionCaseInsensitive', ['message', "'post_process.process_error HTTPError 403'"]],
+                '=',
+                0,
+            ]]
+        }
+
+
+class ConvertEndpointParamsTests(TestCase):
+    def test_simple(self):
         assert convert_endpoint_params({
             'project_id': [1, 2, 3],
             'start': datetime.datetime(2015, 5, 18, 10, 15, 1, tzinfo=timezone.utc),

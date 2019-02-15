@@ -6,6 +6,7 @@ import {t} from 'app/locale';
 import BetaTag from 'app/components/betaTag';
 import Feature from 'app/components/acl/feature';
 import PageHeading from 'app/components/pageHeading';
+import NoProjectMessage from 'app/components/noProjectMessage';
 import GlobalSelectionHeader from 'app/components/organizations/globalSelectionHeader';
 import SentryTypes from 'app/sentryTypes';
 import withOrganization from 'app/utils/withOrganization';
@@ -19,17 +20,19 @@ class OrganizationDashboardContainer extends React.Component {
     const {organization, children} = this.props;
 
     return (
-      <Feature features={['sentry10']} renderDisabled>
+      <Feature features={['sentry10', 'discover']} renderDisabled>
         <GlobalSelectionHeader organization={organization} />
 
         <PageContent>
-          <PageHeader>
-            <PageHeading withMargins>
-              {t('Dashboard')} <BetaTag />
-            </PageHeading>
-          </PageHeader>
+          <NoProjectMessage organization={organization}>
+            <PageHeader>
+              <PageHeading withMargins>
+                {t('Dashboard')} <BetaTag />
+              </PageHeading>
+            </PageHeader>
 
-          {children}
+            {children}
+          </NoProjectMessage>
         </PageContent>
       </Feature>
     );

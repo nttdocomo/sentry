@@ -34,12 +34,28 @@ class EventSerializerTest(TestCase):
         assert result['errors'][0]['type'] == EventError.INVALID_DATA
         assert result['errors'][0]['data'] == {'name': u'ü'}
 
+    def test_hidden_eventerror(self):
+        event = self.create_event(
+            data={
+                'errors': [{
+                    'type': EventError.INVALID_DATA,
+                    'name': u'breadcrumbs.values.42.data',
+                }, {
+                    'type': EventError.INVALID_DATA,
+                    'name': u'exception.values.0.stacktrace.frames.42.vars',
+                }],
+            }
+        )
+
+        result = serialize(event)
+        assert result['errors'] == []
+
     def test_renamed_attributes(self):
         # Only includes meta for simple top-level attributes
         event = self.create_event(
             data={
                 'extra': {'extra': True},
-                'modules': {'modules': True},
+                'modules': {'modules': 'foobar'},
                 '_meta': {
                     'extra': {'': {'err': ['extra error']}},
                     'modules': {'': {'err': ['modules error']}},
@@ -50,7 +66,7 @@ class EventSerializerTest(TestCase):
         result = serialize(event)
         assert result['context'] == {'extra': True}
         assert result['_meta']['context'] == {'': {'err': ['extra error']}}
-        assert result['packages'] == {'modules': True}
+        assert result['packages'] == {'modules': 'foobar'}
         assert result['_meta']['packages'] == {'': {'err': ['modules error']}}
 
     def test_message_interface(self):
@@ -121,12 +137,11 @@ class EventSerializerTest(TestCase):
     def test_tags_dict(self):
         event = self.create_event(
             data={
-                # Sentry normalizes this internally, it is actually passed in as
-                # object {"foo": "foo", "bar": "bar"}
-                'tags': [
-                    ['foo', 'foo'],
-                    ['bar', 'bar'],
-                ],
+                # Sentry normalizes this internally
+                'tags': {
+                    'foo': 'foo',
+                    'bar': 'bar',
+                },
                 '_meta': {
                     'tags': {
                         'foo': {'': {'err': ['foo error']}},

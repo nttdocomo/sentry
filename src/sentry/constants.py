@@ -100,7 +100,7 @@ RESERVED_PROJECT_SLUGS = frozenset((
     'api-keys', 'audit-log', 'auth', 'members', 'projects',
     'rate-limits', 'repos', 'settings', 'teams', 'billing',
     'payments', 'legal', 'subscription', 'support', 'integrations',
-    'developer-settings',
+    'developer-settings', 'usage',
 ))
 
 LOG_LEVELS = {
@@ -123,9 +123,10 @@ DEFAULT_ALERT_GROUP_THRESHOLD = (1000, 25)  # 1000%, 25 events
 DEFAULT_SORT_OPTION = 'date'
 
 # Setup languages for only available locales
-LANGUAGE_MAP = dict(settings.LANGUAGES)
-LANGUAGES = [(k, LANGUAGE_MAP[k])
-             for k in get_all_languages() if k in LANGUAGE_MAP]
+_language_map = dict(settings.LANGUAGES)
+LANGUAGES = [(k, _language_map[k])
+             for k in get_all_languages() if k in _language_map]
+del _language_map
 
 # TODO(dcramer): We eventually want to make this user-editable
 TAG_LABELS = {
@@ -162,13 +163,6 @@ SENTRY_RULES = (
 # methods as defined by http://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html + PATCH
 HTTP_METHODS = ('GET', 'POST', 'PUT', 'OPTIONS', 'HEAD',
                 'DELETE', 'TRACE', 'CONNECT', 'PATCH')
-
-CLIENT_RESERVED_ATTRS = (
-    'project', 'errors', 'event_id', 'message', 'checksum', 'culprit', 'fingerprint', 'level',
-    'time_spent', 'logger', 'server_name', 'site', 'received', 'timestamp', 'extra', 'modules',
-    'tags', 'platform', 'release', 'dist', 'environment', 'transaction', 'key_id', '_meta',
-    'applecrashreport', 'device', 'repos', 'query', 'type', 'hashes',
-)
 
 # XXX: Must be all lowercase
 DEFAULT_SCRUBBED_FIELDS = (

@@ -1,10 +1,10 @@
-import $ from 'jquery';
 import {Box, Flex} from 'grid-emotion';
 import PropTypes from 'prop-types';
 import React from 'react';
 import createReactClass from 'create-react-class';
 import styled from 'react-emotion';
 
+import SentryTypes from 'app/sentryTypes';
 import {Panel, PanelBody, PanelHeader} from 'app/components/panels';
 import {t, tct} from 'app/locale';
 import ApiMixin from 'app/mixins/apiMixin';
@@ -14,11 +14,13 @@ import LoadingError from 'app/components/loadingError';
 import LoadingIndicator from 'app/components/loadingIndicator';
 import NotFound from 'app/components/errors/notFound';
 import TextBlock from 'app/views/settings/components/text/textBlock';
+import withOrganization from 'app/utils/withOrganization';
 
 const ProjectInstallPlatform = createReactClass({
   displayName: 'ProjectInstallPlatform',
 
   propTypes: {
+    organization: SentryTypes.Organization.isRequired,
     // eslint-disable-next-line react/no-unused-prop-types
     platformData: PropTypes.object.isRequired,
     linkPath: PropTypes.func,
@@ -35,8 +37,8 @@ const ProjectInstallPlatform = createReactClass({
 
   getInitialState(props) {
     props = props || this.props;
-    let params = props.params;
-    let key = params.platform;
+    const params = props.params;
+    const key = params.platform;
     let integration;
     let platform;
 
@@ -63,13 +65,13 @@ const ProjectInstallPlatform = createReactClass({
 
   componentDidMount() {
     this.fetchData();
-    $(window).scrollTop(0);
+    window.scrollTo(0, 0);
   },
 
   componentWillReceiveProps(nextProps) {
     if (nextProps.params.platform !== this.props.params.platform) {
       this.setState(this.getInitialState(nextProps), this.fetchData);
-      $(window).scrollTop(0);
+      window.scrollTo(0, 0);
     }
   },
 
@@ -78,7 +80,7 @@ const ProjectInstallPlatform = createReactClass({
   },
 
   fetchData() {
-    let {orgId, projectId, platform} = this.props.params;
+    const {orgId, projectId, platform} = this.props.params;
     this.api.request(`/projects/${orgId}/${projectId}/docs/${platform}/`, {
       success: data => {
         this.setState({
@@ -97,8 +99,8 @@ const ProjectInstallPlatform = createReactClass({
   },
 
   getPlatformLink(platform, display) {
-    let {orgId, projectId} = this.props.params;
-    let path = this.props.linkPath(orgId, projectId, platform);
+    const {orgId, projectId} = this.props.params;
+    const path = this.props.linkPath(orgId, projectId, platform);
     return (
       <Link key={platform} to={path} className="list-group-item">
         {display || platform}
@@ -107,12 +109,22 @@ const ProjectInstallPlatform = createReactClass({
   },
 
   render() {
-    let {integration, platform} = this.state;
-    let {orgId, projectId} = this.props.params;
+    const {integration, platform} = this.state;
+    const {organization, params: {orgId, projectId}} = this.props;
 
     if (!integration || !platform) {
       return <NotFound />;
     }
+
+    const hasSentry10 = new Set(organization.features).has('sentry10');
+
+    const issueStreamLink = hasSentry10
+      ? `/organizations/${orgId}/issues/#welcome`
+      : `/${orgId}/${projectId}/#welcome`;
+
+    const gettingStartedLink = hasSentry10
+      ? `/organizations/${orgId}/projects/${projectId}/getting-started/`
+      : `/${orgId}/${projectId}/getting-started/`;
 
     return (
       <Panel>
@@ -120,7 +132,7 @@ const ProjectInstallPlatform = createReactClass({
           {t('Configure %(integration)s', {integration: integration.name})}
           <Flex>
             <Box ml={1}>
-              <Button size="small" href={`/${orgId}/${projectId}/getting-started/`}>
+              <Button size="small" href={gettingStartedLink}>
                 {t('< Back')}
               </Button>
             </Box>
@@ -159,7 +171,7 @@ const ProjectInstallPlatform = createReactClass({
             <Button
               priority="primary"
               size="large"
-              to={`/${orgId}/${projectId}/#welcome`}
+              to={issueStreamLink}
               style={{marginTop: 20}}
             >
               {t('Got it! Take me to the Issue Stream.')}
@@ -171,7 +183,8 @@ const ProjectInstallPlatform = createReactClass({
   },
 });
 
-export default ProjectInstallPlatform;
+export {ProjectInstallPlatform};
+export default withOrganization(ProjectInstallPlatform);
 
 const DocumentationWrapper = styled('div')`
   p {

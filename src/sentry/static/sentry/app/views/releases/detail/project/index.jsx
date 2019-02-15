@@ -2,6 +2,7 @@ import DocumentTitle from 'react-document-title';
 import PropTypes from 'prop-types';
 import React from 'react';
 import createReactClass from 'create-react-class';
+import {browserHistory} from 'react-router';
 
 import ApiMixin from 'app/mixins/apiMixin';
 
@@ -20,6 +21,10 @@ const ProjectReleaseDetails = createReactClass({
   propTypes: {
     setProjectNavSection: PropTypes.func,
     environment: SentryTypes.Environment,
+  },
+
+  contextTypes: {
+    organization: SentryTypes.Organization,
   },
 
   childContextTypes: {
@@ -43,6 +48,15 @@ const ProjectReleaseDetails = createReactClass({
   },
 
   componentWillMount() {
+    // Redirect any Sentry 10 user that has followed an old link and ended up here
+    const {location, params: {orgId, version}} = this.props;
+    const hasSentry10 = new Set(this.context.organization.features).has('sentry10');
+    if (hasSentry10) {
+      browserHistory.replace(
+        `/organizations/${orgId}/releases/${version}/${location.search}`
+      );
+    }
+
     this.props.setProjectNavSection('releases');
     this.fetchData();
   },
@@ -54,8 +68,8 @@ const ProjectReleaseDetails = createReactClass({
   },
 
   getTitle() {
-    let project = this.getProject();
-    let params = this.props.params;
+    const project = this.getProject();
+    const params = this.props.params;
     return 'Release ' + params.version + ' | ' + project.slug;
   },
 
@@ -86,10 +100,10 @@ const ProjectReleaseDetails = createReactClass({
   },
 
   getReleaseDetailsEndpoint() {
-    let params = this.props.params;
-    let orgId = params.orgId;
-    let projectId = params.projectId;
-    let version = encodeURIComponent(params.version);
+    const params = this.props.params;
+    const orgId = params.orgId;
+    const projectId = params.projectId;
+    const version = encodeURIComponent(params.version);
 
     return `/projects/${orgId}/${projectId}/releases/${version}/`;
   },
@@ -98,8 +112,8 @@ const ProjectReleaseDetails = createReactClass({
     if (this.state.loading) return <LoadingIndicator />;
     else if (this.state.error) return <LoadingError onRetry={this.fetchData} />;
 
-    let release = this.state.release;
-    let {orgId, projectId} = this.props.params;
+    const release = this.state.release;
+    const {orgId, projectId} = this.props.params;
 
     return (
       <DocumentTitle title={this.getTitle()}>

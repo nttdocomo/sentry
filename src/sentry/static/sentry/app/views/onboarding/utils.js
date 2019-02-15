@@ -108,11 +108,11 @@ const onboardingSteps = {organization: 0, project: 1, configure: 2};
 const stepDescriptions = {
   organization: t('Create an organization in Sentry'),
   project: t('Tell us about your project'),
-  configure: t('Configure your application and send an event'),
+  configure: t('Send an event from your application'),
 };
 
 function getPlatformName(platform) {
-  let platformData = flattenedPlatforms.find(({id}) => platform == id);
+  const platformData = flattenedPlatforms.find(({id}) => platform == id);
   return platformData && platformData.name;
 }
 

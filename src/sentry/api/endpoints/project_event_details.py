@@ -9,7 +9,6 @@ from sentry.api.bases.project import ProjectEndpoint
 from sentry.api.serializers import DetailedEventSerializer, serialize
 from sentry.models import Event
 from sentry.utils.apidocs import scenario, attach_scenarios
-from sentry.utils.validators import is_event_id
 
 
 @scenario('RetrieveEventForProject')
@@ -42,63 +41,19 @@ class ProjectEventDetailsEndpoint(ProjectEndpoint):
         :auth: required
         """
 
-        event = None
-        # If its a numeric string, check if it's an event Primary Key first
-        if event_id.isdigit():
-            try:
-                event = Event.objects.get(
-                    id=event_id,
-                    project_id=project.id,
-                )
-            except Event.DoesNotExist:
-                pass
-        # If it was not found as a PK, and its a possible event_id, search by that instead.
-        if event is None and is_event_id(event_id):
-            try:
-                event = Event.objects.get(
-                    event_id=event_id,
-                    project_id=project.id,
-                )
-            except Event.DoesNotExist:
-                pass
-
+        event = Event.objects.from_event_id(event_id, project.id)
         if event is None:
             return Response({'detail': 'Event not found'}, status=404)
 
         Event.objects.bind_nodes([event], 'data')
 
-        # HACK(dcramer): work around lack of unique sorting on datetime
-        base_qs = Event.objects.filter(
-            group_id=event.group_id,
-        ).exclude(id=event.id)
-        try:
-            next_event = sorted(
-                base_qs.filter(datetime__gte=event.datetime).order_by('datetime')[0:5],
-                key=lambda x: (x.datetime, x.id)
-            )[0]
-        except IndexError:
-            next_event = None
-
-        try:
-            prev_event = sorted(
-                base_qs.filter(
-                    datetime__lte=event.datetime,
-                ).order_by('-datetime')[0:5],
-                key=lambda x: (x.datetime, x.id),
-                reverse=True
-            )[0]
-        except IndexError:
-            prev_event = None
-
         data = serialize(event, request.user, DetailedEventSerializer())
 
-        if next_event:
-            data['nextEventID'] = six.text_type(next_event.event_id)
-        else:
-            data['nextEventID'] = None
-        if prev_event:
-            data['previousEventID'] = six.text_type(prev_event.event_id)
-        else:
-            data['previousEventID'] = None
+        next_event = event.next_event
+        prev_event = event.prev_event
+        # TODO this is inconsistent with the event_details API which uses the
+        # `id` instead of the `event_id`
+        data['nextEventID'] = next_event and six.text_type(next_event.event_id)
+        data['previousEventID'] = prev_event and six.text_type(prev_event.event_id)
 
         return Response(data)

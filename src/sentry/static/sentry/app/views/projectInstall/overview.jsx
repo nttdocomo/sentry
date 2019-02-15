@@ -2,22 +2,25 @@ import {browserHistory, Link} from 'react-router';
 import PropTypes from 'prop-types';
 import React from 'react';
 
+import SentryTypes from 'app/sentryTypes';
 import {t, tct} from 'app/locale';
 import AutoSelectText from 'app/components/autoSelectText';
 import PlatformPicker from 'app/views/onboarding/project/platformpicker';
 import SettingsPageHeader from 'app/views/settings/components/settingsPageHeader';
 import TextBlock from 'app/views/settings/components/text/textBlock';
 import recreateRoute from 'app/utils/recreateRoute';
+import withOrganization from 'app/utils/withOrganization';
 
 class ProjectInstallOverview extends React.Component {
   static propTypes = {
+    organization: SentryTypes.Organization.isRequired,
     platformData: PropTypes.object,
   };
 
-  constructor(...args) {
-    super(...args);
+  constructor(props) {
+    super(props);
     this.state = {
-      data: this.props.platformData,
+      data: props.platformData,
     };
   }
 
@@ -25,13 +28,19 @@ class ProjectInstallOverview extends React.Component {
     return location.href.indexOf('getting-started') > 0;
   };
 
+  hasSentry10 = () => {
+    return new Set(this.props.organization.features).has('sentry10');
+  };
+
   redirectToDocs = platform => {
-    let {orgId, projectId} = this.props.params;
-    let prefix = recreateRoute('', {...this.props, stepBack: -3});
+    const {orgId, projectId} = this.props.params;
+    const prefix = recreateRoute('', {...this.props, stepBack: -3});
     let rootUrl = `${prefix}install`;
 
     if (this.isGettingStarted()) {
-      rootUrl = `/${orgId}/${projectId}/getting-started`;
+      rootUrl = this.hasSentry10()
+        ? `/organizations/${orgId}/projects/${projectId}/getting-started`
+        : `/${orgId}/${projectId}/getting-started`;
     }
 
     browserHistory.push(`${rootUrl}/${platform}/`);
@@ -42,8 +51,12 @@ class ProjectInstallOverview extends React.Component {
   };
 
   render() {
-    let {data} = this.state;
-    let {orgId, projectId} = this.props.params;
+    const {data} = this.state;
+    const {orgId, projectId} = this.props.params;
+
+    const issueStreamLink = this.hasSentry10()
+      ? `/organizations/${orgId}/issues/#welcome`
+      : `/${orgId}/${projectId}/#welcome`;
 
     return (
       <div>
@@ -72,10 +85,7 @@ class ProjectInstallOverview extends React.Component {
               <div className="help-block m-b-1">
                 {t('The public DSN should be used with JavaScript.')}
               </div>
-              <Link
-                to={`/${orgId}/${projectId}/#welcome`}
-                className="btn btn-primary m-b-1"
-              >
+              <Link to={issueStreamLink} className="btn btn-primary m-b-1">
                 {t('Got it! Take me to the Issue Stream.')}
               </Link>
             </div>
@@ -106,4 +116,4 @@ class ProjectInstallOverview extends React.Component {
   }
 }
 
-export default ProjectInstallOverview;
+export default withOrganization(ProjectInstallOverview);

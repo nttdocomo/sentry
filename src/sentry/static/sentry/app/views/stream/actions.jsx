@@ -46,7 +46,7 @@ const getBulkConfirmMessage = (action, queryCount) => {
 
 const getConfirm = (numIssues, allInQuerySelected, query, queryCount) => {
   return function(action, canBeUndone, append = '') {
-    let question = allInQuerySelected
+    const question = allInQuerySelected
       ? getBulkConfirmMessage(`${action}${append}`, queryCount)
       : tn(
           `Are you sure you want to ${action} this %s issue${append}?`,
@@ -54,7 +54,7 @@ const getConfirm = (numIssues, allInQuerySelected, query, queryCount) => {
           numIssues
         );
 
-    let message =
+    const message =
       action == 'delete'
         ? tct(
             'Bulk deletion is only recommended for junk data. To clear your stream, consider resolving or ignoring. [link:When should I delete events?]',
@@ -84,8 +84,8 @@ const getConfirm = (numIssues, allInQuerySelected, query, queryCount) => {
 
 const getLabel = (numIssues, allInQuerySelected) => {
   return function(action, append = '') {
-    let capitalized = capitalize(action);
-    let text = allInQuerySelected
+    const capitalized = capitalize(action);
+    const text = allInQuerySelected
       ? t(`Bulk ${action} issues`)
       : tn(
           `${capitalized} %s selected issue`,
@@ -138,7 +138,7 @@ const StreamActions = createReactClass({
   propTypes: {
     allResultsVisible: PropTypes.bool,
     orgId: PropTypes.string.isRequired,
-    projectId: PropTypes.string.isRequired,
+    projectId: PropTypes.string,
     groupIds: PropTypes.instanceOf(Array).isRequired,
     onRealtimeChange: PropTypes.func.isRequired,
     onSelectStatsPeriod: PropTypes.func.isRequired,
@@ -154,7 +154,11 @@ const StreamActions = createReactClass({
   mixins: [ApiMixin, Reflux.listenTo(SelectedGroupStore, 'onSelectedGroupChange')],
 
   getDefaultProps() {
-    return {hasReleases: false, latestRelease: null};
+    return {
+      projectId: '',
+      hasReleases: false,
+      latestRelease: null,
+    };
   },
 
   getInitialState() {
@@ -184,7 +188,7 @@ const StreamActions = createReactClass({
     if (this.state.allInQuerySelected) {
       selectedIds = undefined; // undefined means "all"
     } else {
-      let itemIdSet = SelectedGroupStore.getSelectedIds();
+      const itemIdSet = SelectedGroupStore.getSelectedIds();
       selectedIds = this.props.groupIds.filter(itemId => itemIdSet.has(itemId));
     }
 
@@ -200,8 +204,7 @@ const StreamActions = createReactClass({
 
   onUpdate(data) {
     this.actionSelectedGroups(itemIds => {
-      let loadingIndicator = IndicatorStore.add(t('Saving changes..'));
-
+      const loadingIndicator = IndicatorStore.add(t('Saving changes..'));
       this.api.bulkUpdate(
         {
           orgId: this.props.orgId,
@@ -221,7 +224,7 @@ const StreamActions = createReactClass({
   },
 
   onDelete(event) {
-    let loadingIndicator = IndicatorStore.add(t('Removing events..'));
+    const loadingIndicator = IndicatorStore.add(t('Removing events..'));
 
     this.actionSelectedGroups(itemIds => {
       this.api.bulkDelete(
@@ -242,7 +245,7 @@ const StreamActions = createReactClass({
   },
 
   onMerge(event) {
-    let loadingIndicator = IndicatorStore.add(t('Merging events..'));
+    const loadingIndicator = IndicatorStore.add(t('Merging events..'));
 
     this.actionSelectedGroups(itemIds => {
       this.api.merge(
@@ -281,7 +284,7 @@ const StreamActions = createReactClass({
   },
 
   shouldConfirm(action) {
-    let selectedItems = SelectedGroupStore.getSelectedIds();
+    const selectedItems = SelectedGroupStore.getSelectedIds();
     switch (action) {
       case 'resolve':
       case 'unresolve':
@@ -299,7 +302,7 @@ const StreamActions = createReactClass({
 
   render() {
     // TODO(mitsuhiko): very unclear how to translate this
-    let {
+    const {
       allResultsVisible,
       hasReleases,
       latestRelease,
@@ -310,11 +313,17 @@ const StreamActions = createReactClass({
       realtimeActive,
       statsPeriod,
     } = this.props;
-    let issues = this.state.selectedIds;
-    let numIssues = issues.size;
-    let {allInQuerySelected, anySelected, multiSelected, pageSelected} = this.state;
-    let confirm = getConfirm(numIssues, allInQuerySelected, query, queryCount);
-    let label = getLabel(numIssues, allInQuerySelected);
+    const issues = this.state.selectedIds;
+    const numIssues = issues.size;
+    const {allInQuerySelected, anySelected, multiSelected, pageSelected} = this.state;
+    const confirm = getConfirm(numIssues, allInQuerySelected, query, queryCount);
+    const label = getLabel(numIssues, allInQuerySelected);
+
+    // resolve and merge require a single project to be active
+    // in an org context projectId is null when 0 or >1 projects are selected.
+    const resolveDisabled = !anySelected;
+    const resolveDropdownDisabled = !(anySelected && projectId);
+    const mergeDisabled = !(multiSelected && projectId);
 
     return (
       <Sticky>
@@ -332,7 +341,8 @@ const StreamActions = createReactClass({
               shouldConfirm={this.shouldConfirm('resolve')}
               confirmMessage={confirm('resolve', true)}
               confirmLabel={label('resolve')}
-              disabled={!anySelected}
+              disabled={resolveDisabled}
+              disableDropdown={resolveDropdownDisabled}
             />
             <IgnoreActions
               onUpdate={this.onUpdate}
@@ -344,7 +354,7 @@ const StreamActions = createReactClass({
             <div className="btn-group hidden-sm hidden-xs">
               <ActionLink
                 className={'btn btn-default btn-sm action-merge'}
-                disabled={!multiSelected}
+                disabled={mergeDisabled}
                 onAction={this.onMerge}
                 shouldConfirm={this.shouldConfirm('merge')}
                 message={confirm('merge', false)}
@@ -378,7 +388,7 @@ const StreamActions = createReactClass({
                 <MenuItem noAnchor={true}>
                   <ActionLink
                     className={'action-merge hidden-md hidden-lg hidden-xl'}
-                    disabled={!multiSelected}
+                    disabled={mergeDisabled}
                     onAction={this.onMerge}
                     shouldConfirm={this.shouldConfirm('merge')}
                     message={confirm('merge', false)}

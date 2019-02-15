@@ -3,6 +3,7 @@ import React from 'react';
 import createReactClass from 'create-react-class';
 import {Link} from 'react-router';
 import ApiMixin from 'app/mixins/apiMixin';
+import {fetchProjectMembers} from 'app/actionCreators/members';
 import AssigneeSelector from 'app/components/assigneeSelector';
 import Count from 'app/components/count';
 import IndicatorStore from 'app/stores/indicatorStore';
@@ -17,7 +18,7 @@ import {t} from 'app/locale';
 import SentryTypes from 'app/sentryTypes';
 
 import GroupActions from './actions';
-import GroupSeenBy from '../project/seenBy';
+import GroupSeenBy from './seenBy';
 
 const GroupHeader = createReactClass({
   displayName: 'GroupHeader',
@@ -25,6 +26,7 @@ const GroupHeader = createReactClass({
   propTypes: {
     group: SentryTypes.Group.isRequired,
     project: SentryTypes.Project,
+    params: PropTypes.object,
   },
 
   contextTypes: {
@@ -34,10 +36,24 @@ const GroupHeader = createReactClass({
 
   mixins: [ApiMixin, OrganizationState],
 
+  getInitialState() {
+    return {memberList: null};
+  },
+
+  componentDidMount() {
+    const {organization} = this.context;
+    const {group} = this.props;
+    fetchProjectMembers(
+      this.api,
+      organization.slug,
+      group.project.slug
+    ).then(memberList => this.setState({memberList}));
+  },
+
   onToggleMute() {
-    let group = this.props.group;
-    let org = this.context.organization;
-    let loadingIndicator = IndicatorStore.add(t('Saving changes..'));
+    const group = this.props.group;
+    const org = this.context.organization;
+    const loadingIndicator = IndicatorStore.add(t('Saving changes..'));
 
     this.api.bulkUpdate(
       {
@@ -57,8 +73,8 @@ const GroupHeader = createReactClass({
   },
 
   getMessage() {
-    let data = this.props.group;
-    let metadata = data.metadata;
+    const data = this.props.group;
+    const metadata = data.metadata;
     switch (data.type) {
       case 'error':
         return metadata.value;
@@ -70,9 +86,9 @@ const GroupHeader = createReactClass({
   },
 
   render() {
-    let {project, group} = this.props;
-    let projectFeatures = new Set(project ? project.features : []);
-    let userCount = group.userCount;
+    const {project, group, params} = this.props;
+    const projectFeatures = new Set(project ? project.features : []);
+    const userCount = group.userCount;
 
     let className = 'group-detail';
 
@@ -89,12 +105,16 @@ const GroupHeader = createReactClass({
       className += ' isResolved';
     }
 
-    let groupId = group.id;
-    let projectId = group.project.slug;
-    let orgId = this.context.organization.slug;
-    let message = this.getMessage();
+    const {memberList} = this.state;
+    const groupId = group.id;
+    const orgId = this.context.organization.slug;
+    const message = this.getMessage();
 
-    let hasSimilarView = projectFeatures.has('similarity-view');
+    const hasSimilarView = projectFeatures.has('similarity-view');
+
+    const baseUrl = params.projectId
+      ? `/${orgId}/${params.projectId}/issues/`
+      : `/organizations/${orgId}/issues/`;
 
     return (
       <div className={className}>
@@ -110,7 +130,7 @@ const GroupHeader = createReactClass({
                 <span className="event-annotation">
                   <Link
                     to={{
-                      pathname: `/${orgId}/${projectId}/`,
+                      pathname: baseUrl,
                       query: {query: 'logger:' + group.logger},
                     }}
                   >
@@ -139,6 +159,7 @@ const GroupHeader = createReactClass({
                       title={t(
                         'This identifier is unique across your organization, and can be used to reference an issue in various places, like commit messages.'
                       )}
+                      tooltipOptions={{placement: 'bottom'}}
                     >
                       <a
                         className="help-link"
@@ -151,37 +172,37 @@ const GroupHeader = createReactClass({
                   <ShortId shortId={group.shortId} />
                 </div>
               )}
-              <div className="count align-right">
+              <div className="count align-right m-l-1">
                 <h6 className="nav-header">{t('Events')}</h6>
-                <Link to={`/${orgId}/${projectId}/issues/${groupId}/events/`}>
+                <Link to={`${baseUrl}${groupId}/events/`}>
                   <Count className="count" value={group.count} />
                 </Link>
               </div>
-              <div className="count align-right">
+              <div className="count align-right m-l-1">
                 <h6 className="nav-header">{t('Users')}</h6>
                 {userCount !== 0 ? (
-                  <Link to={`/${orgId}/${projectId}/issues/${groupId}/tags/user/`}>
+                  <Link to={`${baseUrl}${groupId}/tags/user/`}>
                     <Count className="count" value={userCount} />
                   </Link>
                 ) : (
                   <span>0</span>
                 )}
               </div>
-              <div className="assigned-to">
+              <div className="assigned-to m-l-1">
                 <h6 className="nav-header">{t('Assignee')}</h6>
-                <AssigneeSelector id={group.id} />
+                <AssigneeSelector id={group.id} memberList={memberList} />
               </div>
             </div>
           </div>
         </div>
-        <GroupSeenBy />
+        <GroupSeenBy group={group} />
         <GroupActions group={group} project={project} />
         <NavTabs>
           <ListLink
-            to={`/${orgId}/${projectId}/issues/${groupId}/`}
+            to={`${baseUrl}${groupId}/`}
             isActive={() => {
-              let rootGroupPath = `/${orgId}/${projectId}/issues/${groupId}/`;
-              let pathname = this.context.location.pathname;
+              const rootGroupPath = `${baseUrl}${groupId}/`;
+              const pathname = this.context.location.pathname;
 
               // Because react-router 1.0 removes router.isActive(route)
               return pathname === rootGroupPath || /events\/\w+\/$/.test(pathname);
@@ -189,24 +210,18 @@ const GroupHeader = createReactClass({
           >
             {t('Details')}
           </ListLink>
-          <ListLink to={`/${orgId}/${projectId}/issues/${groupId}/activity/`}>
+          <ListLink to={`${baseUrl}${groupId}/activity/`}>
             {t('Comments')} <span className="badge animated">{group.numComments}</span>
           </ListLink>
-          <ListLink to={`/${orgId}/${projectId}/issues/${groupId}/feedback/`}>
+          <ListLink to={`${baseUrl}${groupId}/feedback/`}>
             {t('User Feedback')}{' '}
             <span className="badge animated">{group.userReportCount}</span>
           </ListLink>
-          <ListLink to={`/${orgId}/${projectId}/issues/${groupId}/tags/`}>
-            {t('Tags')}
-          </ListLink>
-          <ListLink to={`/${orgId}/${projectId}/issues/${groupId}/events/`}>
-            {t('Events')}
-          </ListLink>
-          <ListLink to={`/${orgId}/${projectId}/issues/${groupId}/merged/`}>
-            {t('Merged')}
-          </ListLink>
+          <ListLink to={`${baseUrl}${groupId}/tags/`}>{t('Tags')}</ListLink>
+          <ListLink to={`${baseUrl}${groupId}/events/`}>{t('Events')}</ListLink>
+          <ListLink to={`${baseUrl}${groupId}/merged/`}>{t('Merged')}</ListLink>
           {hasSimilarView && (
-            <ListLink to={`/${orgId}/${projectId}/issues/${groupId}/similar/`}>
+            <ListLink to={`${baseUrl}${groupId}/similar/`}>
               {t('Similar Issues')}
             </ListLink>
           )}

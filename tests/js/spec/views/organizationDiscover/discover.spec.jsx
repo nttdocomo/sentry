@@ -31,20 +31,25 @@ describe('Discover', function() {
       queryBuilder.fetch = jest.fn(() => Promise.resolve(mockResponse));
     });
 
-    it('auto-runs saved query', async function() {
+    it('auto-runs saved query after tags are loaded', async function() {
       const savedQuery = TestStubs.DiscoverSavedQuery();
       wrapper = mount(
         <Discover
+          location={{}}
           queryBuilder={queryBuilder}
           organization={organization}
           savedQuery={savedQuery}
           params={{savedQueryId: savedQuery.id}}
           updateSavedQueryData={jest.fn()}
           toggleEditMode={jest.fn()}
-          isLoading={false}
+          isLoading={true}
         />,
         TestStubs.routerContext([{organization}])
       );
+      await tick();
+      expect(wrapper.state().data.baseQuery.query).toBe(null);
+      expect(wrapper.state().data.baseQuery.data).toBe(null);
+      wrapper.setProps({isLoading: false});
       await tick();
       expect(wrapper.state().data.baseQuery.query).toEqual(queryBuilder.getExternal());
       expect(wrapper.state().data.baseQuery.data).toEqual(
@@ -52,7 +57,7 @@ describe('Discover', function() {
       );
     });
 
-    it('auto-runs when there is a query string', async function() {
+    it('auto-runs when there is a query string after tags are loaded', async function() {
       wrapper = mount(
         <Discover
           location={{
@@ -63,10 +68,14 @@ describe('Discover', function() {
           organization={organization}
           updateSavedQueryData={jest.fn()}
           toggleEditMode={jest.fn()}
-          isLoading={false}
+          isLoading={true}
         />,
         TestStubs.routerContext([{organization}])
       );
+      await tick();
+      expect(wrapper.state().data.baseQuery.query).toBe(null);
+      expect(wrapper.state().data.baseQuery.data).toBe(null);
+      wrapper.setProps({isLoading: false});
       await tick();
       expect(wrapper.state().data.baseQuery.query).toEqual(queryBuilder.getExternal());
       expect(wrapper.state().data.baseQuery.data).toEqual(
@@ -346,7 +355,11 @@ describe('Discover', function() {
           <Discover
             queryBuilder={queryBuilder}
             organization={organization}
-            location={{location: '?fields=something'}}
+            location={{
+              location: '?fields=something',
+              query: {fields: 'something'},
+              search: '?fields=something',
+            }}
             params={{}}
             updateSavedQueryData={jest.fn()}
             toggleEditMode={jest.fn()}
@@ -581,6 +594,16 @@ describe('Discover', function() {
     let query;
 
     beforeEach(function() {
+      const config = ConfigStore.getConfig();
+      ConfigStore.loadInitialData({
+        ...config,
+        user: {
+          ...config.user,
+          options: {...config.user.options, timezone: 'America/New_York'},
+        },
+      });
+      GlobalSelectionStore.reset();
+
       query = MockApiClient.addMockResponse({
         url: '/organizations/org-slug/discover/query/?per_page=1000&cursor=0:0:1',
         method: 'POST',
@@ -623,22 +646,19 @@ describe('Discover', function() {
       await tick();
 
       // Should make request for the last 14 days as an absolute date range
+      // Current time in EST is '2017-10-16T22:41:20'
       expect(query).toHaveBeenLastCalledWith(
         expect.anything(),
         expect.objectContaining({
           data: expect.objectContaining({
-            start: '2017-10-03T02:41:20',
-            end: '2017-10-17T02:41:20',
+            start: '2017-10-02T22:41:20',
+            end: '2017-10-16T22:41:20',
           }),
         })
       );
     });
 
     it('switches between UTC and local dates', async function() {
-      ConfigStore.loadInitialData({
-        user: {options: {timezone: 'America/New_York'}},
-      });
-
       // Select absolute date
       wrapper.find('TimeRangeSelector HeaderItem').simulate('click');
       wrapper.find('SelectorItem[value="absolute"]').simulate('click');
@@ -655,7 +675,7 @@ describe('Discover', function() {
       await tick();
       wrapper.update();
 
-      // Should make request for the last 14 days as an absolute date range
+      // Should make request for the last day an absolute date range
       expect(query).toHaveBeenLastCalledWith(
         expect.anything(),
         expect.objectContaining({

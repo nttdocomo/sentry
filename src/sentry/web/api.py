@@ -37,7 +37,7 @@ from sentry.coreapi import (
 from sentry.event_manager import EventManager
 from sentry.interfaces import schemas
 from sentry.interfaces.base import get_interface
-from sentry.lang.native.unreal import process_unreal_crash, unreal_attachment_type, merge_unreal_context_event, merge_unreal_logs_event
+from sentry.lang.native.unreal import process_unreal_crash, merge_apple_crash_report, unreal_attachment_type, merge_unreal_context_event, merge_unreal_logs_event
 from sentry.lang.native.minidump import merge_process_state_event, process_minidump, MINIDUMP_ATTACHMENT_TYPE
 from sentry.models import Project, OrganizationOption, Organization
 from sentry.signals import (
@@ -506,23 +506,20 @@ class StoreView(APIView):
             # bubble up as an APIError.
             data = None
 
-        response_or_event_id = self.process(request, data=data, **kwargs)
-        if isinstance(response_or_event_id, HttpResponse):
-            return response_or_event_id
+        event_id = self.process(request, data=data, **kwargs)
         return HttpResponse(
             json.dumps({
-                'id': response_or_event_id,
+                'id': event_id,
             }), content_type='application/json'
         )
 
     def get(self, request, **kwargs):
         data = request.GET.get('sentry_data', '')
-        response_or_event_id = self.process(request, data=data, **kwargs)
+        event_id = self.process(request, data=data, **kwargs)
 
         # Return a simple 1x1 gif for browser so they don't throw a warning
         response = HttpResponse(PIXEL, 'image/gif')
-        if not isinstance(response_or_event_id, HttpResponse):
-            response['X-Sentry-ID'] = response_or_event_id
+        response['X-Sentry-ID'] = event_id
         return response
 
     def pre_normalize(self, data, helper):
@@ -552,50 +549,6 @@ class StoreView(APIView):
         self.pre_normalize(event_manager, helper)
         event_manager.normalize()
 
-        agent = request.META.get('HTTP_USER_AGENT')
-
-        # TODO: Some form of coordination between the Kafka consumer
-        # and this method (the 'relay') to decide whether a 429 should
-        # be returned here.
-
-        # Everything before this will eventually be done in the relay.
-        if (kafka_publisher is not None
-                and not attachments
-                and random.random() < options.get('store.kafka-sample-rate')):
-
-            process_in_kafka = options.get('store.process-in-kafka')
-
-            try:
-                kafka_publisher.publish(
-                    channel=getattr(settings, 'KAFKA_EVENTS_PUBLISHER_TOPIC', 'store-events'),
-                    # Relay will (eventually) need to produce a Kafka message
-                    # with this JSON format.
-                    value=json.dumps({
-                        'data': event_manager.get_data(),
-                        'project_id': project.id,
-                        'auth': {
-                            'sentry_client': auth.client,
-                            'sentry_version': auth.version,
-                            'sentry_secret': auth.secret_key,
-                            'sentry_key': auth.public_key,
-                            'is_public': auth.is_public,
-                        },
-                        'remote_addr': remote_addr,
-                        'agent': agent,
-                        # Whether or not the Kafka consumer is in charge
-                        # of actually processing this event.
-                        'should_process': process_in_kafka,
-                    })
-                )
-            except Exception as e:
-                logger.exception("Cannot publish event to Kafka: {}".format(e.message))
-            else:
-                if process_in_kafka:
-                    # This event will be processed by the Kafka consumer, so we
-                    # shouldn't double process it here.
-                    return event_manager.get_data()['event_id']
-
-        # Everything after this will eventually be done in a Kafka consumer.
         return process_event(event_manager, project,
                              key, remote_addr, helper, attachments)
 
@@ -747,21 +700,18 @@ class MinidumpView(StoreView):
             minidumps_logger.exception(e)
             raise APIError(e.message.split('\n', 1)[0])
 
-        response_or_event_id = self.process(
+        event_id = self.process(
             request,
             attachments=attachments,
             data=data,
             project=project,
             **kwargs)
 
-        if isinstance(response_or_event_id, HttpResponse):
-            return response_or_event_id
-
         # Return the formatted UUID of the generated event. This is
         # expected by the Electron http uploader on Linux and doesn't
         # break the default Breakpad client library.
         return HttpResponse(
-            six.text_type(uuid.UUID(response_or_event_id)),
+            six.text_type(uuid.UUID(event_id)),
             content_type='text/plain'
         )
 
@@ -799,34 +749,28 @@ class UnrealView(StoreView):
         attachments_enabled = features.has('organizations:event-attachments',
                                            project.organization, actor=request.user)
 
-        event_id = uuid.uuid4().hex
-        data = {
-            'event_id': event_id,
-            'environment': request.GET.get('AppEnvironment'),
-        }
-        user_id = request.GET.get('UserID')
-        if user_id:
-            data['user'] = {
-                'id': user_id
-            }
-
         attachments = []
         try:
-            unreal = process_unreal_crash(request.body)
+            event = {}
+            unreal = process_unreal_crash(request.body, request.GET.get(
+                'UserID'), request.GET.get('AppEnvironment'), event)
             process_state = unreal.process_minidump()
+            if process_state:
+                merge_process_state_event(event, process_state)
+            else:
+                apple_crash_report = unreal.get_apple_crash_report()
+                if apple_crash_report:
+                    merge_apple_crash_report(apple_crash_report, event)
+                else:
+                    raise APIError("missing minidump in unreal crash report")
         except (ProcessMinidumpError, Unreal4Error) as e:
             minidumps_logger.exception(e)
             raise APIError(e.message.split('\n', 1)[0])
 
-        if process_state:
-            merge_process_state_event(data, process_state)
-        else:
-            raise APIError("missing minidump in unreal crash report")
-
         try:
             unreal_context = unreal.get_context()
             if unreal_context is not None:
-                merge_unreal_context_event(unreal_context, data, project)
+                merge_unreal_context_event(unreal_context, event, project)
         except Unreal4Error as e:
             # we'll continue without the context data
             minidumps_logger.exception(e)
@@ -834,7 +778,7 @@ class UnrealView(StoreView):
         try:
             unreal_logs = unreal.get_logs()
             if unreal_logs is not None:
-                merge_unreal_logs_event(unreal_logs, data)
+                merge_unreal_logs_event(unreal_logs, event)
         except Unreal4Error as e:
             # we'll continue without the breadcrumbs
             minidumps_logger.exception(e)
@@ -850,20 +794,17 @@ class UnrealView(StoreView):
                     type=unreal_attachment_type(file),
                 ))
 
-        response_or_event_id = self.process(
+        event_id = self.process(
             request,
             attachments=attachments,
-            data=data,
+            data=event,
             project=project,
             **kwargs)
 
         # The return here is only useful for consistency
         # because the UE4 crash reporter doesn't care about it.
-        if isinstance(response_or_event_id, HttpResponse):
-            return response_or_event_id
-
         return HttpResponse(
-            six.text_type(uuid.UUID(response_or_event_id)),
+            six.text_type(uuid.UUID(event_id)),
             content_type='text/plain'
         )
 
@@ -942,11 +883,7 @@ class SecurityReportView(StoreView):
             'environment': request.GET.get('sentry_environment'),
         }
 
-        response_or_event_id = self.process(
-            request, project=project, helper=helper, data=data, **kwargs
-        )
-        if isinstance(response_or_event_id, HttpResponse):
-            return response_or_event_id
+        self.process(request, project=project, helper=helper, data=data, **kwargs)
         return HttpResponse(content_type='application/javascript', status=201)
 
     def security_report_type(self, body):

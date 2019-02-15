@@ -69,9 +69,6 @@ class ThreadsTest(TestCase):
         sink = {"values": [{
             "crashed": False,
             "current": False,
-            "id": None,
-            "name": None,
-            "stacktrace": None
         }]}
 
         assert Threads.to_python({"values": [{}]}).to_json() == sink
@@ -79,9 +76,9 @@ class ThreadsTest(TestCase):
         assert Threads.to_python({"values": [{"name": None}]}).to_json() == sink
         assert Threads.to_python({"values": [{"stacktrace": None}]}).to_json() == sink
 
-    def test_get_hash(self):
-        result = self.interface.get_hash()
-        self.assertEquals(result, [['foo/baz.c', 'main']])
+    def test_compute_hashes(self):
+        result = self.interface.compute_hashes()
+        self.assertEquals(result, [[['foo/baz.c', 'main']]])
 
     def test_no_hash(self):
         interface = Threads.to_python(
@@ -141,5 +138,4 @@ class ThreadsTest(TestCase):
                 ]
             )
         )
-        result = interface.get_hash()
-        assert not result
+        assert interface.compute_hashes() == []

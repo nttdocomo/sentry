@@ -1,7 +1,6 @@
 import DocumentTitle from 'react-document-title';
 import React from 'react';
 import createReactClass from 'create-react-class';
-import jQuery from 'jquery';
 
 import {t} from 'app/locale';
 import ApiMixin from 'app/mixins/apiMixin';
@@ -38,11 +37,11 @@ const SharedGroupDetails = createReactClass({
 
   componentWillMount() {
     this.fetchData();
-    jQuery(document.body).addClass('shared-group');
+    document.body.classList.add('shared-group');
   },
 
   componentWillUnmount() {
-    jQuery(document.body).removeClass('shared-group');
+    document.body.classList.remove('shared-group');
   },
 
   getTitle() {
@@ -73,13 +72,13 @@ const SharedGroupDetails = createReactClass({
   },
 
   getGroupDetailsEndpoint() {
-    let id = this.props.params.shareId;
+    const id = this.props.params.shareId;
 
     return '/shared/issues/' + id + '/';
   },
 
   render() {
-    let group = this.state.group;
+    const group = this.state.group;
 
     if (this.state.loading) {
       return <LoadingIndicator />;
@@ -89,7 +88,7 @@ const SharedGroupDetails = createReactClass({
       return <LoadingError onRetry={this.fetchData} />;
     }
 
-    let evt = this.state.group.latestEvent;
+    const evt = this.state.group.latestEvent;
 
     return (
       <DocumentTitle title={this.getTitle()}>

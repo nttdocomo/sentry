@@ -2,6 +2,9 @@ import PropTypes from 'prop-types';
 import React from 'react';
 import styled, {css} from 'react-emotion';
 
+import SentryTypes from 'app/sentryTypes';
+import {analytics} from 'app/utils/analytics';
+import getRouteStringFromRoutes from 'app/utils/getRouteStringFromRoutes';
 import {t} from 'app/locale';
 import ProjectSelector from 'app/components/projectSelector';
 import InlineSvg from 'app/components/inlineSvg';
@@ -14,10 +17,21 @@ const rootContainerStyles = css`
 
 export default class MultipleProjectSelector extends React.PureComponent {
   static propTypes = {
+    organization: SentryTypes.Organization.isRequired,
     value: PropTypes.array,
     projects: PropTypes.array,
     onChange: PropTypes.func,
     onUpdate: PropTypes.func,
+    multi: PropTypes.bool,
+    forceProject: SentryTypes.Project,
+  };
+
+  static defaultProps = {
+    multi: true,
+  };
+
+  static contextTypes = {
+    router: PropTypes.object,
   };
 
   constructor() {
@@ -49,6 +63,11 @@ export default class MultipleProjectSelector extends React.PureComponent {
    * Should perform an "update" callback
    */
   handleQuickSelect = (selected, checked, e) => {
+    analytics('projectselector.direct_selection', {
+      path: getRouteStringFromRoutes(this.context.router.routes),
+      org_id: parseInt(this.props.organization.id, 10),
+    });
+
     this.props.onChange([parseInt(selected.id, 10)]);
     this.doUpdate();
   };
@@ -61,6 +80,15 @@ export default class MultipleProjectSelector extends React.PureComponent {
   handleClose = props => {
     // Only update if there are changes
     if (!this.state.hasChanges) return;
+
+    const {value, multi} = this.props;
+    analytics('projectselector.update', {
+      count: value.length,
+      path: getRouteStringFromRoutes(this.context.router.routes),
+      org_id: parseInt(this.props.organization.id, 10),
+      multi,
+    });
+
     this.doUpdate();
   };
 
@@ -70,6 +98,11 @@ export default class MultipleProjectSelector extends React.PureComponent {
    * Should perform an "update" callback
    */
   handleClear = () => {
+    analytics('projectselector.clear', {
+      path: getRouteStringFromRoutes(this.context.router.routes),
+      org_id: parseInt(this.props.organization.id, 10),
+    });
+
     this.props.onChange([]);
 
     // Update on clear
@@ -80,23 +113,37 @@ export default class MultipleProjectSelector extends React.PureComponent {
    * Handler for selecting multiple items, should NOT call update
    */
   handleMultiSelect = (selected, checked, e) => {
-    const {onChange} = this.props;
+    const {onChange, value} = this.props;
+
+    analytics('projectselector.toggle', {
+      action: selected.length > value.length ? 'added' : 'removed',
+      path: getRouteStringFromRoutes(this.context.router.routes),
+      org_id: parseInt(this.props.organization.id, 10),
+    });
     onChange(selected.map(({id}) => parseInt(id, 10)));
     this.setState({hasChanges: true});
   };
 
   render() {
-    const {value, projects} = this.props;
+    const {value, projects, multi, forceProject} = this.props;
     const selectedProjectIds = new Set(value);
 
     const selected = projects.filter(project =>
       selectedProjectIds.has(parseInt(project.id, 10))
     );
 
-    return (
+    return forceProject ? (
+      <StyledHeaderItem
+        icon={<StyledInlineSvg src="icon-project" />}
+        locked={true}
+        lockedMessage={t(`This issue is unique to the ${forceProject.slug} project`)}
+      >
+        {forceProject.slug}
+      </StyledHeaderItem>
+    ) : (
       <StyledProjectSelector
         {...this.props}
-        multi
+        multi={multi}
         selectedProjects={selected}
         projects={projects}
         onSelect={this.handleQuickSelect}
@@ -126,6 +173,7 @@ export default class MultipleProjectSelector extends React.PureComponent {
               isOpen={isOpen}
               onSubmit={() => this.handleUpdate(actions)}
               onClear={this.handleClear}
+              allowClear={multi}
               {...getActorProps()}
             >
               {title}
@@ -145,6 +193,8 @@ const StyledProjectSelector = styled(ProjectSelector)`
 
 const StyledHeaderItem = styled(HeaderItem)`
   height: 100%;
+  width: 100%;
+  ${p => p.locked && 'cursor: default'};
 `;
 
 const StyledInlineSvg = styled(InlineSvg)`

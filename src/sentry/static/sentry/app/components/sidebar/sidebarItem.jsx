@@ -39,7 +39,7 @@ class SidebarItem extends React.Component {
   };
 
   handleClick = e => {
-    let {id, onClick} = this.props;
+    const {id, onClick} = this.props;
 
     if (typeof onClick !== 'function') return;
 
@@ -47,10 +47,9 @@ class SidebarItem extends React.Component {
   };
 
   render() {
-    let {
+    const {
       router,
       href,
-      index,
       to,
       icon,
       label,
@@ -63,18 +62,13 @@ class SidebarItem extends React.Component {
     } = this.props;
 
     // If there is no active panel open and if path is active according to react-router
-    let isActiveRouter =
-      !hasPanel &&
-      router &&
-      to &&
-      router.isActive(
-        {
-          pathname: to,
-        },
-        index
-      );
-    let isTop = orientation === 'top';
-    let placement = isTop ? 'bottom' : 'right';
+    const isActiveRouter =
+      (!hasPanel && router && to && location.pathname.startsWith(to)) ||
+      // TODO: this won't be necessary once we remove settingsHome
+      (label === 'Settings' && location.pathname.startsWith('/settings/'));
+
+    const isTop = orientation === 'top';
+    const placement = isTop ? 'bottom' : 'right';
 
     return (
       <Tooltip
@@ -143,9 +137,9 @@ const StyledSidebarItem = styled(({active, ...props}) => <Link {...props} />)`
     display: block;
     content: '';
     position: absolute;
-    top: 5px;
+    top: 4px;
     left: -20px;
-    bottom: 5px;
+    bottom: 6px;
     width: 5px;
     border-radius: 0 3px 3px 0;
     background-color: transparent;

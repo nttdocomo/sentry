@@ -74,6 +74,17 @@ exports[`GroupReleaseStats renders 1`] = `
       "query": Object {},
     }
   }
+  project={
+    Object {
+      "hasAccess": true,
+      "id": "2",
+      "isBookmarked": false,
+      "isMember": true,
+      "name": "Project Name",
+      "slug": "project-slug",
+      "teams": Array [],
+    }
+  }
 >
   <div
     className="env-stats"
@@ -705,7 +716,7 @@ exports[`GroupReleaseStats renders 1`] = `
                 }
               >
                 <a
-                  href="/org-slug/project-slug/settings/release-tracking/"
+                  href="/settings/org-slug/projects/project-slug/release-tracking/"
                 >
                   not configured
                 </a>
@@ -758,7 +769,7 @@ exports[`GroupReleaseStats renders 1`] = `
                 }
               >
                 <a
-                  href="/org-slug/project-slug/settings/release-tracking/"
+                  href="/settings/org-slug/projects/project-slug/release-tracking/"
                 >
                   not configured
                 </a>

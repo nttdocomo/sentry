@@ -1,7 +1,6 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import styled from 'react-emotion';
-import {Link} from 'react-router';
 
 import {sortArray} from 'app/utils';
 import {t} from 'app/locale';
@@ -31,10 +30,6 @@ class ProjectSelector extends React.Component {
 
     // Allow selecting multiple projects?
     multi: PropTypes.bool,
-
-    // Disable selecting a single project, every action should trigger multi select
-    // XXX(billy): This is unused as of 11/1/2018, could be due for a cleanup
-    multiOnly: PropTypes.bool,
 
     // Use this if the component should be a controlled component
     selectedProjects: PropTypes.arrayOf(SentryTypes.Project),
@@ -72,12 +67,20 @@ class ProjectSelector extends React.Component {
 
   getActiveProject() {
     const {projectId} = this.props;
-    return this.getProjects().find(({slug}) => slug === projectId);
+
+    const projects = this.getProjects();
+
+    return projects.find(({slug}) => slug === projectId);
   }
 
   getProjects() {
     const {organization, projects} = this.props;
-    return projects || organization.projects.filter(project => project.isMember);
+    const projectList =
+      projects || organization.projects.filter(project => project.isMember);
+
+    return sortArray(projectList, project => {
+      return [!project.isBookmarked, project.name];
+    });
   }
 
   isControlled = () => typeof this.props.selectedProjects !== 'undefined';
@@ -108,14 +111,10 @@ class ProjectSelector extends React.Component {
   }
 
   handleSelect = ({value: project}) => {
-    const {multiOnly, onSelect} = this.props;
+    const {onSelect} = this.props;
 
-    if (!multiOnly) {
-      this.setState({activeProject: project});
-      onSelect(project);
-    } else {
-      this.handleMultiSelect(project);
-    }
+    this.setState({activeProject: project});
+    onSelect(project);
   };
 
   handleMultiSelect = (project, e) => {
@@ -154,7 +153,6 @@ class ProjectSelector extends React.Component {
       organization: org,
       menuFooter,
       multi,
-      multiOnly,
       className,
       rootClassName,
       onClose,
@@ -173,7 +171,8 @@ class ProjectSelector extends React.Component {
     return (
       <DropdownAutoComplete
         alignMenu="left"
-        closeOnSelect={!multiOnly}
+        allowActorToggle={true}
+        closeOnSelect={true}
         blendCorner={false}
         searchPlaceholder={t('Filter projects')}
         onSelect={this.handleSelect}
@@ -188,6 +187,13 @@ class ProjectSelector extends React.Component {
         noResultsMessage={t('No projects found')}
         virtualizedHeight={40}
         emptyHidesInput
+        inputActions={() => (
+          <div>
+            <ManageButton to={`/settings/${org.slug}/projects/`} size="xsmall">
+              {t('Manage')}
+            </ManageButton>
+          </div>
+        )}
         menuFooter={renderProps => {
           const renderedFooter =
             typeof menuFooter === 'function' ? menuFooter(renderProps) : menuFooter;
@@ -216,7 +222,7 @@ class ProjectSelector extends React.Component {
           label: ({inputValue}) => (
             <ProjectSelectorItem
               project={project}
-              organization={this.props.organization}
+              organization={org}
               multi={multi}
               inputValue={inputValue}
               isChecked={
@@ -245,7 +251,6 @@ class ProjectSelector extends React.Component {
 class ProjectSelectorItem extends React.PureComponent {
   static propTypes = {
     project: SentryTypes.Project,
-    organization: PropTypes.object.isRequired,
     multi: PropTypes.bool,
     inputValue: PropTypes.string,
     isChecked: PropTypes.bool,
@@ -263,7 +268,7 @@ class ProjectSelectorItem extends React.PureComponent {
   };
 
   render() {
-    const {project, multi, inputValue, isChecked, organization} = this.props;
+    const {project, multi, inputValue, isChecked} = this.props;
 
     return (
       <ProjectRow>
@@ -277,14 +282,6 @@ class ProjectSelectorItem extends React.PureComponent {
             />
           </BadgeWrapper>
           {project.isBookmarked && <BookmarkIcon src="icon-star-small-filled" />}
-          {multi && (
-            <SettingsIconLink
-              to={`/settings/${organization.slug}/${project.slug}/`}
-              onClick={e => e.stopPropagation()}
-            >
-              <InlineSvg src="icon-settings" />
-            </SettingsIconLink>
-          )}
         </BadgeAndBookmark>
 
         {multi && (
@@ -303,19 +300,6 @@ const BookmarkIcon = styled(InlineSvg)`
   margin-top: -2px; /* trivial alignment bump */
 `;
 
-const SettingsIconLink = styled(Link)`
-  color: ${p => p.theme.gray2};
-  display: flex;
-  padding: ${space(0.5)};
-  opacity: 0;
-  transform: translateX(-${space(0.5)});
-  transition: 0.2s all;
-
-  &:hover {
-    color: ${p => p.theme.gray4};
-  }
-`;
-
 const ProjectRow = styled('div')`
   display: flex;
   align-items: center;
@@ -327,11 +311,6 @@ const ProjectRow = styled('div')`
   /* thanks bootstrap? */
   input[type='checkbox'] {
     margin: 0;
-  }
-
-  &:hover ${SettingsIconLink} {
-    opacity: 1;
-    transform: translateX(0);
   }
 `;
 
@@ -367,6 +346,22 @@ const MultiSelectWrapper = styled('div')`
 
 const MultiSelect = styled(CheckboxFancy)`
   flex-shrink: 0;
+`;
+
+const ManageButton = styled(Button)`
+  display: block;
+  margin: 0 ${space(1)};
+  box-shadow: none;
+  border: 0;
+  background: ${p => p.theme.offWhite2};
+
+  &:hover,
+  &:active,
+  &:focus {
+    box-shadow: none;
+    border: 0;
+    background: ${p => p.theme.gray1};
+  }
 `;
 
 export default ProjectSelector;

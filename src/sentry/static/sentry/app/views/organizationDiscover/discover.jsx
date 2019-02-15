@@ -26,6 +26,7 @@ import {
   getQueryFromQueryString,
   deleteSavedQuery,
   updateSavedQuery,
+  queryHasChanged,
 } from './utils';
 import {isValidAggregation} from './aggregations/utils';
 import {isValidCondition} from './conditions/utils';
@@ -50,6 +51,11 @@ export default class OrganizationDiscover extends React.Component {
     view: PropTypes.oneOf(['query', 'saved']),
     toggleEditMode: PropTypes.func.isRequired,
     isLoading: PropTypes.bool.isRequired,
+    utc: PropTypes.bool,
+  };
+
+  static defaultProps = {
+    utc: true,
   };
 
   constructor(props) {
@@ -65,15 +71,6 @@ export default class OrganizationDiscover extends React.Component {
     };
   }
 
-  componentDidMount() {
-    const {savedQuery, location} = this.props;
-
-    // Run query if there is *any* querystring
-    if (savedQuery || (location && !!location.search)) {
-      this.runQuery();
-    }
-  }
-
   componentWillReceiveProps(nextProps) {
     const {
       queryBuilder,
@@ -81,9 +78,16 @@ export default class OrganizationDiscover extends React.Component {
       savedQuery,
       isEditingSavedQuery,
       params,
+      isLoading,
     } = nextProps;
-    const currentSearch = this.props.location.search;
     const {resultManager} = this.state;
+
+    // Run query on isLoading change if there is a querystring or saved search
+    const loadingStatusChanged = isLoading !== this.props.isLoading;
+    if (loadingStatusChanged && (savedQuery || !!search)) {
+      this.runQuery();
+      return;
+    }
 
     if (savedQuery && savedQuery !== this.props.savedQuery) {
       this.setState({view: 'saved'});
@@ -95,7 +99,7 @@ export default class OrganizationDiscover extends React.Component {
       return;
     }
 
-    if (currentSearch === search) {
+    if (!queryHasChanged(this.props.location.search, nextProps.location.search)) {
       return;
     }
 
@@ -110,7 +114,7 @@ export default class OrganizationDiscover extends React.Component {
     } else if (search) {
       // This indicates navigation changes (e.g. back button on browser)
       // We need to update our search store and probably runQuery
-      const {projects, range, start, end} = newQuery;
+      const {projects, range, start, end, utc} = newQuery;
       let hasChange = false;
 
       if (projects) {
@@ -123,6 +127,15 @@ export default class OrganizationDiscover extends React.Component {
           period: range || null,
           start: start || null,
           end: end || null,
+          utc: typeof utc !== 'undefined' ? utc : null,
+        });
+
+        // These props come from URL string, so will always be in UTC
+        updateDateTime({
+          start: start && new Date(moment.utc(start).local()),
+          end: end && new Date(moment.utc(end).local()),
+          period: range,
+          utc,
         });
         hasChange = true;
       }
@@ -138,8 +151,9 @@ export default class OrganizationDiscover extends React.Component {
     updateProjects(val);
   };
 
-  getDateTimeFields = ({period, start, end}) => ({
+  getDateTimeFields = ({period, start, end, utc}) => ({
     range: period || null,
+    utc,
     start: (start && getUtcDateString(start)) || null,
     end: (end && getUtcDateString(end)) || null,
   });
@@ -149,16 +163,12 @@ export default class OrganizationDiscover extends React.Component {
   };
 
   updateDateTime = datetime => {
-    const {start, end, range} = this.getDateTimeFields(datetime);
+    const {start, end, range, utc} = this.getDateTimeFields(datetime);
 
-    this.updateFields({start, end, range});
-    updateDateTime({
-      start,
-      end,
-      period: range,
-    });
+    this.updateFields({start, end, range, utc});
   };
 
+  // Called when global selection header changes dates
   updateDateTimeAndRun = datetime => {
     this.updateDateTime(datetime);
     this.runQuery();
@@ -181,7 +191,7 @@ export default class OrganizationDiscover extends React.Component {
   };
 
   runQuery = () => {
-    const {queryBuilder, organization} = this.props;
+    const {queryBuilder, organization, location} = this.props;
     const {resultManager} = this.state;
 
     // Track query for analytics
@@ -215,7 +225,12 @@ export default class OrganizationDiscover extends React.Component {
         if (shouldRedirect) {
           browserHistory.push({
             pathname: `/organizations/${organization.slug}/discover/`,
-            search: getQueryStringFromQuery(queryBuilder.getInternal()),
+            // Don't drop "visualization" from querystring
+            search: getQueryStringFromQuery(queryBuilder.getInternal(), {
+              ...(location.query.visualization && {
+                visualization: location.query.visualization,
+              }),
+            }),
           });
         }
 
@@ -342,6 +357,7 @@ export default class OrganizationDiscover extends React.Component {
       savedQuery,
       toggleEditMode,
       isLoading,
+      utc,
     } = this.props;
 
     const currentQuery = queryBuilder.getInternal();
@@ -349,10 +365,17 @@ export default class OrganizationDiscover extends React.Component {
     const shouldDisplayResult = resultManager.shouldDisplayResult();
 
     const start =
-      (currentQuery.start && moment.utc(currentQuery.start).toDate()) ||
+      (currentQuery.start &&
+        moment(currentQuery.start)
+          .local()
+          .toDate()) ||
       currentQuery.start;
     const end =
-      (currentQuery.end && moment.utc(currentQuery.end).toDate()) || currentQuery.end;
+      (currentQuery.end &&
+        moment(currentQuery.end)
+          .local()
+          .toDate()) ||
+      currentQuery.end;
 
     return (
       <DiscoverContainer>
@@ -399,7 +422,7 @@ export default class OrganizationDiscover extends React.Component {
           relative={currentQuery.range}
           start={start}
           end={end}
-          utc={true}
+          utc={utc}
           showEnvironmentSelector={false}
           onChangeProjects={this.updateProjects}
           onUpdateProjects={this.runQuery}
@@ -411,6 +434,7 @@ export default class OrganizationDiscover extends React.Component {
           <BodyContent>
             {shouldDisplayResult && (
               <Result
+                utc={utc}
                 data={data}
                 savedQuery={savedQuery}
                 onToggleEdit={toggleEditMode}

@@ -31,7 +31,6 @@ def make_event(**kwargs):
     result = {
         'event_id': 'a' * 32,
         'message': 'foo',
-        'timestamp': 1403007314.570599,
         'level': logging.ERROR,
         'logger': 'default',
         'tags': [],
@@ -46,13 +45,6 @@ class EventManagerTest(TransactionTestCase):
         manager.normalize()
         event = manager.save(project_id)
         return event
-
-    def test_key_id_remains_in_data(self):
-        manager = EventManager(make_event(key_id=12345))
-        manager.normalize()
-        assert manager.get_data()['key_id'] == 12345
-        event = manager.save(1)
-        assert event.data['key_id'] == 12345
 
     def test_similar_message_prefix_doesnt_group(self):
         # we had a regression which caused the default hash to just be
@@ -619,8 +611,13 @@ class EventManagerTest(TransactionTestCase):
         assert event.group_id == event2.group_id
 
         group = Group.objects.get(id=event.group.id)
-        assert group.active_at == event2.datetime
-        assert group.active_at != event.datetime
+        # MySQL removes sub-second portion
+        assert group.active_at.replace(
+            second=0, microsecond=0) == event2.datetime.replace(
+            second=0, microsecond=0)
+        assert group.active_at.replace(
+            second=0, microsecond=0) != event.datetime.replace(
+            second=0, microsecond=0)
 
     def test_invalid_transaction(self):
         dict_input = {'messages': 'foo'}
@@ -906,6 +903,17 @@ class EventManagerTest(TransactionTestCase):
         event = manager.save(self.project.id)
         assert dict(event.tags).get('environment') is None
 
+    def test_invalid_tags(self):
+        manager = EventManager(make_event(**{
+            'tags': [42],
+        }))
+        manager.normalize()
+        assert None in manager.get_data().get('tags', [])
+        assert 42 not in manager.get_data().get('tags', [])
+        event = manager.save(self.project.id)
+        assert 42 not in event.tags
+        assert None not in event.tags
+
     @mock.patch('sentry.event_manager.eventstream.insert')
     def test_group_environment(self, eventstream_insert):
         release_version = '1.0'
@@ -975,24 +983,25 @@ class EventManagerTest(TransactionTestCase):
             name='production',
         )
         environment.add_project(project)
+
         event_id = 'a' * 32
 
-        group = self.create_group(project=project)
         UserReport.objects.create(
-            group=group,
             project=project,
             event_id=event_id,
             name='foo',
             email='bar@example.com',
             comments='It Broke!!!',
         )
-        manager = EventManager(
-            make_event(
+
+        self.store_event(
+            data=make_event(
                 environment=environment.name,
-                event_id=event_id,
-                group=group))
-        manager.normalize()
-        manager.save(project.id)
+                event_id=event_id
+            ),
+            project_id=project.id
+        )
+
         assert UserReport.objects.get(event_id=event_id).environment == environment
 
     def test_default_event_type(self):
@@ -1130,8 +1139,8 @@ class EventManagerTest(TransactionTestCase):
         manager.normalize()
         event = manager.save(self.project.id)
 
-        assert event.message == '<unlabeled event>'
-        assert 'logentry' not in event.data
+        assert event.message == '["asdf"]'
+        assert 'logentry' in event.data
 
     def test_message_attribute_goes_to_interface(self):
         manager = EventManager(make_event(**{

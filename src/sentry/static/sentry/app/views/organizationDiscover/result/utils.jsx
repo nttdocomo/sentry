@@ -1,8 +1,8 @@
 /*eslint no-use-before-define: ["error", { "functions": false }]*/
-import React from 'react';
-import styled from 'react-emotion';
 import {orderBy} from 'lodash';
 import Papa from 'papaparse';
+import React from 'react';
+import styled from 'react-emotion';
 
 import {NUMBER_OF_SERIES_BY_DAY} from '../data';
 
@@ -66,7 +66,8 @@ export function getChartDataForWidget(data, query, options = {}) {
       data: data.map(res => {
         const obj = {
           value: res[aggregation[2]],
-          name: fields.map(field => `${res[field]}`).join(' '),
+          name: fields.map(field => `${res[field]}`).join(', '),
+          fieldValues: fields.map(field => res[field]),
         };
 
         if (options.includePercentages && total) {
@@ -128,6 +129,28 @@ export function getChartDataByDay(rawData, query, options = {}) {
       data: series,
     };
   });
+}
+
+/**
+ * Given result data and the location query, return the correct visualization
+ * @param {Object} data data object for result
+ * @param {String} current visualization from querystring
+ * @returns {String}
+ */
+export function getVisualization(data, current = 'table') {
+  const {baseQuery, byDayQuery} = data;
+
+  if (!byDayQuery.data && ['line-by-day', 'bar-by-day'].includes(current)) {
+    return 'table';
+  }
+
+  if (!baseQuery.query.aggregations.length && ['line', 'bar'].includes(current)) {
+    return 'table';
+  }
+
+  return ['table', 'line', 'bar', 'line-by-day', 'bar-by-day'].includes(current)
+    ? current
+    : 'table';
 }
 
 /**

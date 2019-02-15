@@ -67,7 +67,8 @@ class JiraCloud(object):
 
 
 class JiraApiClient(ApiClient):
-    COMMENT_URL = '/rest/api/2/issue/%s/comment'
+    COMMENTS_URL = '/rest/api/2/issue/%s/comment'
+    COMMENT_URL = '/rest/api/2/issue/%s/comment/%s'
     STATUS_URL = '/rest/api/2/status'
     CREATE_URL = '/rest/api/2/issue'
     ISSUE_URL = '/rest/api/2/issue/%s'
@@ -126,7 +127,10 @@ class JiraApiClient(ApiClient):
         return self.get(self.SEARCH_URL, params={'jql': jql})
 
     def create_comment(self, issue_key, comment):
-        return self.post(self.COMMENT_URL % issue_key, data={'body': comment})
+        return self.post(self.COMMENTS_URL % issue_key, data={'body': comment})
+
+    def update_comment(self, issue_key, comment_id, comment):
+        return self.put(self.COMMENT_URL % (issue_key, comment_id), data={'body': comment})
 
     def get_projects_list(self):
         return self.get_cached(self.PROJECT_URL)
@@ -140,17 +144,15 @@ class JiraApiClient(ApiClient):
                 return project['key'].encode('utf-8')
         return ''
 
-    def get_create_meta(self, project=None):
-        params = {'expand': 'projects.issuetypes.fields'}
-        if project is not None:
-            params['projectIds'] = project
-        return self.get_cached(
+    def get_create_meta_for_project(self, project):
+        params = {
+            'expand': 'projects.issuetypes.fields',
+            'projectIds': project
+        }
+        metas = self.get_cached(
             self.META_URL,
             params=params,
         )
-
-    def get_create_meta_for_project(self, project):
-        metas = self.get_create_meta(project)
         # We saw an empty JSON response come back from the API :(
         if not metas:
             return None

@@ -9,8 +9,7 @@ from uuid import uuid4
 from confluent_kafka import OFFSET_INVALID, Producer, TopicPartition
 from django.utils.functional import cached_property
 
-from sentry import options, quotas
-from sentry.models import Organization
+from sentry import quotas
 from sentry.eventstream.base import EventStream
 from sentry.eventstream.kafka.consumer import SynchronizedConsumer
 from sentry.eventstream.kafka.protocol import get_task_kwargs_for_message
@@ -62,6 +61,12 @@ EVENT_PROTOCOL_VERSION = 2
 #       'previous_group_id': id,
 #       'new_group_id': id,
 #       'hashes': [hash2, hash2]
+#       'datetime': timestamp,
+#   })
+#   Delete Tag: (2, '(start_delete_tag|end_delete_tag)', {
+#       'transaction_id': uuid,
+#       'project_id': id,
+#       'tag': 'foo',
 #       'datetime': timestamp,
 #   })
 
@@ -117,16 +122,9 @@ class KafkaEventStream(EventStream):
 
     def insert(self, group, event, is_new, is_sample, is_regression,
                is_new_group_environment, primary_hash, skip_consume=False):
-        if options.get('eventstream.kafka.send-post_process-task'):
-            super(KafkaEventStream, self).insert(
-                group, event, is_new, is_sample,
-                is_regression, is_new_group_environment,
-                primary_hash, skip_consume
-            )
-
         project = event.project
         retention_days = quotas.get_event_retention(
-            organization=Organization(project.organization_id)
+            organization=project.organization,
         )
 
         self._send(project.id, 'insert', extra_data=({
@@ -139,7 +137,7 @@ class KafkaEventStream(EventStream):
             'message': event.message,
             'platform': event.platform,
             'datetime': event.datetime,
-            'data': dict(event.data.items()),
+            'data': event.get_raw_data(),
             'primary_hash': primary_hash,
             'retention_days': retention_days,
         }, {
@@ -239,6 +237,36 @@ class KafkaEventStream(EventStream):
         self._send(
             state['project_id'],
             'end_unmerge',
+            extra_data=(state,),
+            asynchronous=False
+        )
+
+    def start_delete_tag(self, project_id, tag):
+        if not tag:
+            return
+
+        state = {
+            'transaction_id': uuid4().hex,
+            'project_id': project_id,
+            'tag': tag,
+            'datetime': datetime.now(tz=pytz.utc),
+        }
+
+        self._send(
+            project_id,
+            'start_delete_tag',
+            extra_data=(state,),
+            asynchronous=False
+        )
+
+        return state
+
+    def end_delete_tag(self, state):
+        state = state.copy()
+        state['datetime'] = datetime.now(tz=pytz.utc)
+        self._send(
+            state['project_id'],
+            'end_delete_tag',
             extra_data=(state,),
             asynchronous=False
         )

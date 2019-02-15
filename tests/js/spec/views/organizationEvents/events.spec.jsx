@@ -1,11 +1,10 @@
+import {withRouter} from 'react-router';
 import React from 'react';
 
-import {EventsChart} from 'app/views/organizationEvents/eventsChart';
-import {EventsTable} from 'app/views/organizationEvents/eventsTable';
 import OrganizationEvents, {parseRowFromLinks} from 'app/views/organizationEvents/events';
 import {chart, doZoom} from 'app-test/helpers/charts';
 import {initializeOrg} from 'app-test/helpers/initializeOrg';
-import {getLocalDateObject} from 'app/utils/dates';
+import {getUtcToLocalDateObject} from 'app/utils/dates';
 import {mockRouterPush} from 'app-test/helpers/mockRouterPush';
 import {mount} from 'enzyme';
 import OrganizationEventsContainer from 'app/views/organizationEvents';
@@ -20,11 +19,13 @@ const pageTwoLinks =
   '<https://sentry.io/api/0/organizations/sentry/events/?statsPeriod=14d&cursor=0:0:1>; rel="previous"; results="true"; cursor="0:0:1", ' +
   '<https://sentry.io/api/0/organizations/sentry/events/?statsPeriod=14d&cursor=0:200:0>; rel="next"; results="false"; cursor="0:200:0"';
 
+const OrganizationEventsWithRouter = withRouter(OrganizationEvents);
+
 describe('OrganizationEventsErrors', function() {
   const {organization, router, routerContext} = initializeOrg({
     projects: [{isMember: true}, {isMember: true, slug: 'new-project', id: 3}],
     organization: {
-      features: ['global-views'],
+      features: ['events'],
     },
     router: {
       location: {
@@ -33,7 +34,6 @@ describe('OrganizationEventsErrors', function() {
       },
     },
   });
-  const org = organization;
 
   let eventsMock;
   let eventsStatsMock;
@@ -41,7 +41,7 @@ describe('OrganizationEventsErrors', function() {
 
   beforeAll(function() {
     MockApiClient.addMockResponse({
-      url: `/organizations/${org.slug}/environments/`,
+      url: `/organizations/${organization.slug}/environments/`,
       body: TestStubs.Environments(),
     });
   });
@@ -60,7 +60,7 @@ describe('OrganizationEventsErrors', function() {
     eventsStatsMock = MockApiClient.addMockResponse({
       url: '/organizations/org-slug/events-stats/',
       body: (url, opts) => {
-        return TestStubs.HealthGraph(opts.query);
+        return TestStubs.EventsStats(opts.query);
       },
     });
     eventsMetaMock = MockApiClient.addMockResponse({
@@ -71,17 +71,17 @@ describe('OrganizationEventsErrors', function() {
 
   it('renders with errors', async function() {
     MockApiClient.addMockResponse({
-      url: `/organizations/${org.slug}/events/`,
+      url: `/organizations/${organization.slug}/events/`,
       statusCode: 500,
       body: {details: 'Error'},
     });
     MockApiClient.addMockResponse({
-      url: `/organizations/${org.slug}/events-stats/`,
+      url: `/organizations/${organization.slug}/events-stats/`,
       statusCode: 500,
       body: {details: 'Error'},
     });
-    let wrapper = mount(
-      <OrganizationEvents organization={org} location={{query: {}}} />,
+    const wrapper = mount(
+      <OrganizationEvents organization={organization} location={{query: {}}} />,
       routerContext
     );
     await tick();
@@ -93,24 +93,39 @@ describe('OrganizationEventsErrors', function() {
   });
 
   it('renders events table', async function() {
-    let wrapper = mount(
-      <OrganizationEvents organization={org} location={{query: {}}} />,
+    const wrapper = mount(
+      <OrganizationEvents organization={organization} location={{query: {}}} />,
       routerContext
     );
     await tick();
     wrapper.update();
     expect(eventsStatsMock).toHaveBeenCalled();
-    expect(eventsMetaMock).toHaveBeenCalled();
+    expect(eventsMetaMock).not.toHaveBeenCalled();
     expect(wrapper.find('LoadingIndicator')).toHaveLength(0);
     expect(wrapper.find('IdBadge')).toHaveLength(2);
+  });
+
+  it('renders TotalEventCount with internal flag', async function() {
+    const newOrg = TestStubs.Organization({
+      ...organization,
+      features: [...organization.features, 'internal-catchall'],
+    });
+    const wrapper = mount(
+      <OrganizationEvents organization={newOrg} location={{query: {}}} />,
+      {...routerContext, context: {...routerContext.context, organization: newOrg}}
+    );
+    await tick();
+    wrapper.update();
+    expect(eventsMetaMock).toHaveBeenCalled();
+    expect(wrapper.find('Feature').text()).toEqual(' of 5 (estimated)');
   });
 
   // This tests the component's `shouldComponentUpdate`
   // Use `search` to compare instead of `query` because that's what we check in `AsyncComponent`
   it('location.query changes updates events table', async function() {
-    let wrapper = mount(
-      <OrganizationEvents
-        organization={org}
+    const wrapper = mount(
+      <OrganizationEventsWithRouter
+        organization={organization}
         location={{
           search: '?statsPeriod=14d',
           query: {
@@ -165,19 +180,11 @@ describe('OrganizationEventsErrors', function() {
     let wrapper;
     let newParams;
 
-    beforeAll(function() {
-      chartRender = jest.spyOn(EventsChart.prototype, 'render');
-      tableRender = jest.spyOn(EventsTable.prototype, 'render');
-    });
-
     beforeEach(function() {
-      chartRender.mockClear();
-      tableRender.mockClear();
       const newLocation = {
         ...router.location,
         query: {
           ...router.location.query,
-          zoom: '1',
         },
       };
 
@@ -196,36 +203,49 @@ describe('OrganizationEventsErrors', function() {
       };
 
       wrapper = mount(
-        <OrganizationEventsContainer organization={org}>
-          <OrganizationEvents organization={org} />
+        <OrganizationEventsContainer
+          router={newRouter}
+          organization={organization}
+          location={newRouter.location}
+        >
+          <OrganizationEventsWithRouter
+            location={newRouter.location}
+            organization={organization}
+          />
         </OrganizationEventsContainer>,
         newRouterContext
       );
       mockRouterPush(wrapper, router);
+
+      // XXX: Note this spy happens AFTER initial render!
+      tableRender = jest.spyOn(wrapper.find('EventsTable').instance(), 'render');
     });
 
     afterAll(function() {
-      chartRender.mockRestore();
+      if (chartRender) {
+        chartRender.mockRestore();
+      }
+
       tableRender.mockRestore();
     });
 
     it('zooms using chart', async function() {
-      expect(tableRender).toHaveBeenCalledTimes(1);
-      expect(chartRender).toHaveBeenCalledTimes(1);
+      expect(tableRender).toHaveBeenCalledTimes(0);
 
       await tick();
       wrapper.update();
+
+      chartRender = jest.spyOn(wrapper.find('LineChart').instance(), 'render');
 
       doZoom(wrapper.find('EventsChart').first(), chart);
       await tick();
       wrapper.update();
 
-      // After zooming, chart should not re-render, but table does
+      // After zooming, line chart should re-render once, but table does
       expect(chartRender).toHaveBeenCalledTimes(1);
-      expect(tableRender).toHaveBeenCalledTimes(4);
+      expect(tableRender).toHaveBeenCalledTimes(3);
 
       newParams = {
-        zoom: '1',
         start: '2018-11-29T00:00:00',
         end: '2018-12-02T00:00:00',
       };
@@ -239,73 +259,142 @@ describe('OrganizationEventsErrors', function() {
       wrapper.update();
 
       expect(wrapper.find('TimeRangeSelector').prop('start')).toEqual(
-        getLocalDateObject('2018-11-29T00:00:00')
+        getUtcToLocalDateObject('2018-11-29T00:00:00')
       );
       expect(wrapper.find('TimeRangeSelector').prop('end')).toEqual(
-        getLocalDateObject('2018-12-02T00:00:00')
+        getUtcToLocalDateObject('2018-12-02T00:00:00')
       );
     });
   });
+});
 
-  describe('OrganizationEventsContainer', function() {
-    let wrapper;
+describe('OrganizationEventsContainer', function() {
+  let wrapper;
+  let eventsMock;
+  let eventsStatsMock;
+  let eventsMetaMock;
 
-    beforeEach(function() {
-      // GlobalSelectionStore.reset();
-
-      router.location = {
+  const {organization, router, routerContext} = initializeOrg({
+    projects: [{isMember: true}, {isMember: true, slug: 'new-project', id: 3}],
+    organization: {
+      features: ['events', 'internal-catchall'],
+    },
+    router: {
+      location: {
         pathname: '/organizations/org-slug/events/',
         query: {},
-      };
-      wrapper = mount(
-        <OrganizationEventsContainer
-          router={router}
-          organization={organization}
+      },
+    },
+  });
+
+  beforeAll(function() {
+    MockApiClient.addMockResponse({
+      url: `/organizations/${organization.slug}/environments/`,
+      body: TestStubs.Environments(),
+    });
+  });
+
+  beforeEach(function() {
+    // Search bar makes this request when mounted
+    MockApiClient.addMockResponse({
+      url: '/organizations/org-slug/tags/',
+      body: [{count: 1, tag: 'transaction'}, {count: 2, tag: 'mechanism'}],
+    });
+    eventsMock = MockApiClient.addMockResponse({
+      url: '/organizations/org-slug/events/',
+      body: (url, opts) => [TestStubs.OrganizationEvent(opts.query)],
+      headers: {Link: pageOneLinks},
+    });
+    eventsStatsMock = MockApiClient.addMockResponse({
+      url: '/organizations/org-slug/events-stats/',
+      body: (url, opts) => {
+        return TestStubs.EventsStats(opts.query);
+      },
+    });
+    eventsMetaMock = MockApiClient.addMockResponse({
+      url: '/organizations/org-slug/events-meta/',
+      body: {count: 5},
+    });
+
+    wrapper = mount(
+      <OrganizationEventsContainer
+        router={router}
+        organization={organization}
+        location={router.location}
+      >
+        <OrganizationEventsWithRouter
           location={router.location}
-        >
-          <OrganizationEvents location={router.location} organization={org} />
-        </OrganizationEventsContainer>,
-        routerContext
-      );
+          organization={organization}
+        />
+      </OrganizationEventsContainer>,
+      routerContext
+    );
 
-      mockRouterPush(wrapper, router);
+    mockRouterPush(wrapper, router);
+  });
+
+  it('performs the correct queries when there is a search query', async function() {
+    wrapper.find('SmartSearchBar input').simulate('change', {target: {value: 'http'}});
+    wrapper.find('SmartSearchBar input').simulate('submit');
+
+    expect(router.push).toHaveBeenLastCalledWith({
+      pathname: '/organizations/org-slug/events/',
+      query: {query: 'http', statsPeriod: '14d'},
     });
 
-    it('performs the correct queries when there is a search query', async function() {
-      wrapper.find('SmartSearchBar input').simulate('change', {target: {value: 'http'}});
-      wrapper.find('SmartSearchBar input').simulate('submit');
+    await tick();
+    await tick();
+    wrapper.update();
 
-      expect(router.push).toHaveBeenLastCalledWith({
-        pathname: '/organizations/org-slug/events/',
+    expect(eventsMock).toHaveBeenLastCalledWith(
+      '/organizations/org-slug/events/',
+      expect.objectContaining({
         query: {query: 'http', statsPeriod: '14d'},
-      });
+      })
+    );
 
-      await tick();
-      await tick();
-      wrapper.update();
+    // 28d because of previous period
+    expect(eventsStatsMock).toHaveBeenLastCalledWith(
+      '/organizations/org-slug/events-stats/',
+      expect.objectContaining({
+        query: expect.objectContaining({query: 'http', statsPeriod: '28d'}),
+      })
+    );
 
-      expect(eventsMock).toHaveBeenLastCalledWith(
-        '/organizations/org-slug/events/',
-        expect.objectContaining({
-          query: {query: 'http', statsPeriod: '14d'},
-        })
-      );
+    expect(eventsMetaMock).toHaveBeenLastCalledWith(
+      '/organizations/org-slug/events-meta/',
+      expect.objectContaining({
+        query: {query: 'http', statsPeriod: '14d'},
+      })
+    );
+  });
 
-      // 28d because of previous period
-      expect(eventsStatsMock).toHaveBeenLastCalledWith(
-        '/organizations/org-slug/events-stats/',
-        expect.objectContaining({
-          query: expect.objectContaining({query: 'http', statsPeriod: '28d'}),
-        })
-      );
+  it('updates when changing projects', async function() {
+    expect(wrapper.find('MultipleProjectSelector').prop('value')).toEqual([]);
 
-      expect(eventsMetaMock).toHaveBeenLastCalledWith(
-        '/organizations/org-slug/events-meta/',
-        expect.objectContaining({
-          query: {query: 'http', statsPeriod: '14d'},
-        })
-      );
-    });
+    wrapper.find('MultipleProjectSelector HeaderItem').simulate('click');
+
+    wrapper
+      .find('MultipleProjectSelector AutoCompleteItem')
+      .at(0)
+      .simulate('click');
+
+    await tick();
+    wrapper.update();
+
+    expect(eventsStatsMock).toHaveBeenLastCalledWith(
+      '/organizations/org-slug/events-stats/',
+      expect.objectContaining({
+        query: expect.objectContaining({project: [2], statsPeriod: '28d'}),
+      })
+    );
+
+    expect(eventsMock).toHaveBeenLastCalledWith(
+      '/organizations/org-slug/events/',
+      expect.objectContaining({
+        query: {project: [2], statsPeriod: '14d'},
+      })
+    );
   });
 });
 

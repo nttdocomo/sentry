@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 
 import {shallow} from 'enzyme';
 
-import GroupMergedView from 'app/views/groupDetails/project/groupMerged';
+import GroupMergedView from 'app/views/groupDetails/shared/groupMerged';
 import {Client} from 'app/api';
 import events from 'app-test/mocks/events';
 
@@ -30,7 +30,7 @@ const mockData = {
 };
 
 describe('Issues -> Merged View', function() {
-  let context = {
+  const context = {
     group: {
       id: 'id',
       tags: [],
@@ -44,7 +44,7 @@ describe('Issues -> Merged View', function() {
   });
 
   it('renders initially with loading component', function() {
-    let wrapper = shallow(
+    const wrapper = shallow(
       <GroupMergedView
         params={{orgId: 'orgId', projectId: 'projectId', groupId: 'groupId'}}
         location={{query: {}}}
@@ -56,7 +56,7 @@ describe('Issues -> Merged View', function() {
   });
 
   it('renders with mocked data', async function() {
-    let wrapper = shallow(
+    const wrapper = shallow(
       <GroupMergedView
         params={{orgId: 'orgId', projectId: 'projectId', groupId: 'groupId'}}
         location={{query: {}}}

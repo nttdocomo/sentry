@@ -34,8 +34,8 @@ const ProjectItem = createReactClass({
   },
 
   handleToggleBookmark() {
-    let {project, organization} = this.props;
-    let {isBookmarked} = this.state;
+    const {project, organization} = this.props;
+    const {isBookmarked} = this.state;
 
     this.setState({isBookmarked: !isBookmarked}, () =>
       update(this.api, {
@@ -51,8 +51,10 @@ const ProjectItem = createReactClass({
   },
 
   render() {
-    let {project, organization} = this.props;
-    let {isBookmarked} = this.state;
+    const {project, organization} = this.props;
+    const {isBookmarked} = this.state;
+
+    const hasNewRoutes = new Set(organization.features).has('sentry10');
 
     return (
       <div key={project.id} className={isBookmarked ? 'isBookmarked' : null}>
@@ -65,7 +67,13 @@ const ProjectItem = createReactClass({
             )}
           </InlineButton>
         </Tooltip>
-        <Link to={`/${organization.slug}/${project.slug}/`}>
+        <Link
+          to={
+            hasNewRoutes
+              ? `/settings/${organization.slug}/projects/${project.slug}/`
+              : `/${organization.slug}/${project.slug}/`
+          }
+        >
           <ProjectLabel project={project} />
         </Link>
       </div>

@@ -6,8 +6,7 @@ from datetime import timedelta
 
 import six
 from django.conf import settings
-from django.core.urlresolvers import reverse
-from django.db.models import Q
+from django.db.models import Min, Q
 from django.utils import timezone
 
 from sentry import tagstore, tsdb
@@ -16,14 +15,13 @@ from sentry.api.serializers.models.actor import ActorSerializer
 from sentry.api.fields.actor import Actor
 from sentry.constants import LOG_LEVELS, StatsPeriod
 from sentry.models import (
-    Commit, Environment, Group, GroupAssignee, GroupBookmark, GroupLink, GroupMeta, GroupResolution, GroupSeen, GroupSnooze,
-    GroupShare, GroupStatus, GroupSubscription, GroupSubscriptionReason, Integration, User, UserOption,
-    UserOptionValue
+    Commit, Environment, Group, GroupAssignee, GroupBookmark, GroupEnvironment, GroupLink, GroupMeta,
+    GroupResolution, GroupSeen, GroupSnooze, GroupShare, GroupStatus, GroupSubscription,
+    GroupSubscriptionReason, Integration, User, UserOption, UserOptionValue
 )
 from sentry.tagstore.snuba.backend import SnubaTagStorage
 from sentry.tsdb.snuba import SnubaTSDB
 from sentry.utils.db import attach_foreignkey
-from sentry.utils.http import absolute_uri
 from sentry.utils.safe import safe_execute
 
 SUBSCRIPTION_REASON_MAP = {
@@ -335,9 +333,7 @@ class GroupSerializerBase(Serializer):
         # If user is not logged in and member of the organization,
         # do not return the permalink which contains private information i.e. org name.
         if user.is_authenticated() and user.get_orgs().filter(id=obj.organization.id).exists():
-            permalink = absolute_uri(
-                reverse('sentry-group', args=[obj.organization.slug, obj.project.slug, obj.id])
-            )
+            permalink = obj.get_absolute_url()
         else:
             permalink = None
 
@@ -564,7 +560,7 @@ class GroupSerializerSnuba(GroupSerializerBase):
         first_seen = {}
         last_seen = {}
         times_seen = {}
-        if self.environment_ids is None:
+        if not self.environment_ids:
             # use issue fields
             for item in item_list:
                 first_seen[item.id] = item.first_seen
@@ -576,8 +572,16 @@ class GroupSerializerSnuba(GroupSerializerBase):
                 group_ids,
                 self.environment_ids,
             )
+
+            first_seen_data = {
+                ge['group_id']: ge['first_seen__min'] for ge in GroupEnvironment.objects.filter(
+                    group_id__in=[item.id for item in item_list],
+                    environment_id__in=self.environment_ids,
+                ).values('group_id').annotate(Min('first_seen'))
+            }
+
             for item_id, value in seen_data.items():
-                first_seen[item_id] = value['first_seen']
+                first_seen[item_id] = first_seen_data.get(item_id)
                 last_seen[item_id] = value['last_seen']
                 times_seen[item_id] = value['times_seen']
 
@@ -594,13 +598,15 @@ class GroupSerializerSnuba(GroupSerializerBase):
 
 
 class StreamGroupSerializerSnuba(GroupSerializerSnuba, GroupStatsMixin):
-    def __init__(self, environment_ids=None, stats_period=None):
+    def __init__(self, environment_ids=None, stats_period=None,
+                 matching_event_id=None):
         super(StreamGroupSerializerSnuba, self).__init__(environment_ids)
 
         if stats_period is not None:
             assert stats_period in self.STATS_PERIOD_CHOICES
 
         self.stats_period = stats_period
+        self.matching_event_id = matching_event_id
 
     def query_tsdb(self, group_ids, query_params):
         return snuba_tsdb.get_range(
@@ -629,5 +635,8 @@ class StreamGroupSerializerSnuba(GroupSerializerSnuba, GroupStatsMixin):
             result['stats'] = {
                 self.stats_period: attrs['stats'],
             }
+
+        if self.matching_event_id:
+            result['matchingEventId'] = self.matching_event_id
 
         return result

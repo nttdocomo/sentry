@@ -10,13 +10,17 @@ class HttpRenderer extends React.Component {
   };
 
   renderUrl = url => {
-    return url.match(/^https?:\/\//) ? <a href={url}>{url}</a> : <em>{url}</em>;
+    return typeof url === 'string' && url.match(/^https?:\/\//) ? (
+      <a href={url}>{url}</a>
+    ) : (
+      <em>{url}</em>
+    );
   };
 
   render() {
-    let {crumb} = this.props;
-    let {method, status_code, url, ...extra} = crumb.data || {};
-    let summary = (
+    const {crumb} = this.props;
+    const {method, status_code, url, ...extra} = crumb.data || {};
+    const summary = (
       <SummaryLine crumb={crumb}>
         <pre>
           <code>

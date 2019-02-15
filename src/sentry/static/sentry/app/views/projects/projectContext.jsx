@@ -6,6 +6,7 @@ import Reflux from 'reflux';
 import createReactClass from 'create-react-class';
 
 import {loadEnvironments} from 'app/actionCreators/environments';
+import {fetchProjectMembers} from 'app/actionCreators/members';
 import {setActiveProject} from 'app/actionCreators/projects';
 import {t} from 'app/locale';
 import ApiMixin from 'app/mixins/apiMixin';
@@ -104,7 +105,7 @@ const ProjectContext = createReactClass({
       prevState.organization !== this.state.organization
     ) {
       if (!this.docTitle) return;
-      let docTitle = this.docTitleRef.docTitle;
+      const docTitle = this.docTitleRef.docTitle;
       if (docTitle) docTitle.forceUpdate();
     }
   },
@@ -128,16 +129,16 @@ const ProjectContext = createReactClass({
   },
 
   identifyProject() {
-    let {projects, projectId} = this.props;
-    let projectSlug = projectId;
+    const {projects, projectId} = this.props;
+    const projectSlug = projectId;
     return projects.find(({slug}) => slug === projectSlug) || null;
   },
 
   fetchData() {
-    let {orgId, projectId, location, skipReload} = this.props;
+    const {orgId, projectId, location, skipReload} = this.props;
     // we fetch core access/information from the global organization data
-    let activeProject = this.identifyProject();
-    let hasAccess = activeProject && activeProject.hasAccess;
+    const activeProject = this.identifyProject();
+    const hasAccess = activeProject && activeProject.hasAccess;
 
     this.setState(state => ({
       // if `skipReload` is true, then don't change loading state
@@ -182,12 +183,7 @@ const ProjectContext = createReactClass({
         }
       );
 
-      // TODO(dcramer): move member list to organization level
-      this.api.request(this.getMemberListEndpoint(), {
-        success: data => {
-          MemberListStore.loadInitialData(data.filter(m => m.user).map(m => m.user));
-        },
-      });
+      fetchProjectMembers(this.api, orgId, projectId);
     } else if (activeProject && !activeProject.isMember) {
       this.setState({
         loading: false,
@@ -209,13 +205,8 @@ const ProjectContext = createReactClass({
   },
 
   getEnvironmentListEndpoint() {
-    let {orgId, projectId} = this.props;
+    const {orgId, projectId} = this.props;
     return `/projects/${orgId}/${projectId}/environments/`;
-  },
-
-  getMemberListEndpoint() {
-    let {orgId, projectId} = this.props;
-    return `/projects/${orgId}/${projectId}/members/`;
   },
 
   setProjectNavSection(section) {

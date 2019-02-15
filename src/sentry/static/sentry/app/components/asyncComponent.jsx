@@ -112,8 +112,8 @@ export default class AsyncComponent extends React.Component {
 
   // XXX: cant call this getInitialState as React whines
   getDefaultState() {
-    let endpoints = this.getEndpoints();
-    let state = {
+    const endpoints = this.getEndpoints();
+    const state = {
       // has all data finished requesting?
       loading: true,
       // is the component reload
@@ -150,7 +150,7 @@ export default class AsyncComponent extends React.Component {
   reloadData = () => this.fetchData({reloading: true});
 
   fetchData = extraState => {
-    let endpoints = this.getEndpoints();
+    const endpoints = this.getEndpoints();
 
     if (!endpoints.length) {
       this.setState({loading: false, error: false});
@@ -169,7 +169,7 @@ export default class AsyncComponent extends React.Component {
       options = options || {};
       // If you're using nested async components/views make sure to pass the
       // props through so that the child component has access to props.location
-      let locationQuery = (this.props.location && this.props.location.query) || {};
+      const locationQuery = (this.props.location && this.props.location.query) || {};
       let query = (params && params.query) || {};
       // If paginate option then pass entire `query` object to API call
       // It should only be expecting `query.cursor` for pagination
@@ -200,9 +200,13 @@ export default class AsyncComponent extends React.Component {
     // Allow children to implement this
   }
 
+  onRequestError(resp, args) {
+    // Allow children to implement this
+  }
+
   handleRequestSuccess = ({stateKey, data, jqXHR}, initialRequest) => {
     this.setState(prevState => {
-      let state = {
+      const state = {
         [stateKey]: data,
         // TODO(billy): This currently fails if this request is retried by SudoModal
         [`${stateKey}PageLinks`]: jqXHR && jqXHR.getResponseHeader('Link'),
@@ -219,7 +223,8 @@ export default class AsyncComponent extends React.Component {
     this.onRequestSuccess({stateKey, data, jqXHR});
   };
 
-  handleError(error, [stateKey]) {
+  handleError(error, args) {
+    const [stateKey] = args;
     if (error && error.responseText) {
       Sentry.addBreadcrumb({
         message: error.responseText,
@@ -228,7 +233,7 @@ export default class AsyncComponent extends React.Component {
       });
     }
     this.setState(prevState => {
-      let state = {
+      const state = {
         [stateKey]: null,
         errors: {
           ...prevState.errors,
@@ -243,6 +248,7 @@ export default class AsyncComponent extends React.Component {
 
       return state;
     });
+    this.onRequestError(error, args);
   }
 
   // DEPRECATED: use getEndpoints()
@@ -267,7 +273,7 @@ export default class AsyncComponent extends React.Component {
    * ]
    */
   getEndpoints() {
-    let endpoint = this.getEndpoint();
+    const endpoint = this.getEndpoint();
     if (!endpoint) return [];
     return [['data', endpoint, this.getEndpointParams()]];
   }
@@ -298,20 +304,20 @@ export default class AsyncComponent extends React.Component {
     return <LoadingIndicator />;
   }
 
-  renderError(error, disableLog = false) {
+  renderError(error, disableLog = false, disableReport = false) {
     // 401s are captured by SudaModal, but may be passed back to AsyncComponent if they close the modal without identifying
-    let unauthorizedErrors = Object.values(this.state.errors).find(
+    const unauthorizedErrors = Object.values(this.state.errors).find(
       resp => resp && resp.status === 401
     );
 
     // Look through endpoint results to see if we had any 403s, means their role can not access resource
-    let permissionErrors = Object.values(this.state.errors).find(
+    const permissionErrors = Object.values(this.state.errors).find(
       resp => resp && resp.status === 403
     );
 
     // If all error responses have status code === 0, then show error message but don't
     // log it to sentry
-    let shouldLogSentry =
+    const shouldLogSentry =
       !!Object.values(this.state.errors).find(resp => resp && resp.status !== 0) ||
       disableLog;
 
@@ -326,7 +332,7 @@ export default class AsyncComponent extends React.Component {
     }
 
     if (this.shouldRenderBadRequests) {
-      let badRequests = Object.values(this.state.errors)
+      const badRequests = Object.values(this.state.errors)
         .filter(
           resp =>
             resp && resp.status === 400 && resp.responseJSON && resp.responseJSON.detail
@@ -343,6 +349,7 @@ export default class AsyncComponent extends React.Component {
         error={error}
         component={this}
         disableLogSentry={!shouldLogSentry}
+        disableReport={disableReport}
         onRetry={this.remountComponent}
       />
     );

@@ -17,14 +17,12 @@ import {t, tct} from 'app/locale';
 import {Panel, PanelBody} from 'app/components/panels';
 import EmptyStateWarning from 'app/components/emptyStateWarning';
 import withEnvironmentInQueryString from 'app/utils/withEnvironmentInQueryString';
-
-import ReleaseLanding from 'app/views/releases/list/projectReleases/releaseLanding';
-import ReleaseProgress from 'app/views/releases/list/projectReleases/releaseProgress';
 import PageHeading from 'app/components/pageHeading';
-
+import ReleaseLanding from '../shared/releaseLanding';
 import ReleaseEmptyState from './releaseEmptyState';
 import ReleaseList from '../shared/releaseList';
 import ReleaseListHeader from '../shared/releaseListHeader';
+import ReleaseProgress from '../shared/releaseProgress';
 
 const DEFAULT_QUERY = '';
 
@@ -44,7 +42,7 @@ const ProjectReleases = createReactClass({
   mixins: [ApiMixin],
 
   getInitialState() {
-    let queryParams = this.props.location.query;
+    const queryParams = this.props.location.query;
 
     return {
       releaseList: [],
@@ -57,12 +55,19 @@ const ProjectReleases = createReactClass({
   },
 
   componentWillMount() {
+    // Redirect any Sentry 10 user that has followed an old link and ended up here
+    const {location, params: {orgId}} = this.props;
+    const hasSentry10 = new Set(this.context.organization.features).has('sentry10');
+    if (hasSentry10) {
+      browserHistory.replace(`/organizations/${orgId}/releases/${location.search}`);
+    }
+
     this.props.setProjectNavSection('releases');
     this.fetchData();
   },
 
   componentDidMount() {
-    let {organization, project} = this.context;
+    const {organization, project} = this.context;
 
     analytics('releases.tab_viewed', {
       org_id: parseInt(organization.id, 10),
@@ -77,7 +82,7 @@ const ProjectReleases = createReactClass({
     );
 
     if (searchHasChanged) {
-      let queryParams = nextProps.location.query;
+      const queryParams = nextProps.location.query;
       this.setState(
         {
           query: queryParams.query,
@@ -92,10 +97,10 @@ const ProjectReleases = createReactClass({
   },
 
   onSearch(query) {
-    let targetQueryParams = {};
+    const targetQueryParams = {};
     if (query !== '') targetQueryParams.query = query;
 
-    let {orgId, projectId} = this.props.params;
+    const {orgId, projectId} = this.props.params;
     browserHistory.push({
       pathname: `/${orgId}/${projectId}/releases/`,
       query: targetQueryParams,
@@ -145,14 +150,14 @@ const ProjectReleases = createReactClass({
 
   renderStreamBody() {
     let body;
-    let {params} = this.props;
+    const {params} = this.props;
 
     if (this.state.loading) body = this.renderLoading();
     else if (this.state.error) body = <LoadingError onRetry={this.fetchData} />;
     else if (this.state.releaseList.length > 0)
       body = (
         <div>
-          <ReleaseProgress />
+          <ReleaseProgress project={this.context.project} />
           <ReleaseList
             orgId={params.orgId}
             projectId={params.projectId}
@@ -182,7 +187,7 @@ const ProjectReleases = createReactClass({
   renderEmpty() {
     const {environment} = this.state;
     const {project} = this.context;
-    let anyProjectReleases = project.latestRelease;
+    const anyProjectReleases = project.latestRelease;
 
     const message = environment
       ? tct("There don't seem to be any releases in your [env] environment yet", {
@@ -194,7 +199,7 @@ const ProjectReleases = createReactClass({
       <ReleaseLanding />
     ) : (
       <div>
-        <ReleaseProgress />
+        <ReleaseProgress project={project} />
         <ReleaseEmptyState message={message} />
       </div>
     );

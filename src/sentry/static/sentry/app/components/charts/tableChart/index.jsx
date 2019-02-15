@@ -17,6 +17,8 @@ export const TableChart = styled(
        */
       dataStartIndex: PropTypes.number,
       widths: PropTypes.arrayOf(PropTypes.number),
+      // Height of body
+      bodyHeight: PropTypes.string,
       getValue: PropTypes.func,
       renderTableHeader: PropTypes.func,
       renderBody: PropTypes.func,
@@ -27,12 +29,15 @@ export const TableChart = styled(
       showColumnTotal: PropTypes.bool,
       rowTotalLabel: PropTypes.string,
       columnTotalLabel: PropTypes.string,
+      // props to pass to PanelHeader
+      headerProps: PropTypes.object,
     };
 
     static get defaultProps() {
       // Default renderer for Table Header
       const defaultRenderTableHeader = ({
         headers,
+        headerProps,
         renderRow,
         rowTotalLabel,
         showRowTotal,
@@ -44,7 +49,7 @@ export const TableChart = styled(
         ];
 
         return (
-          <PanelHeader>
+          <PanelHeader {...headerProps}>
             {renderRow({
               isTableHeader: true,
               items: headersWithTotalColumn,
@@ -65,39 +70,43 @@ export const TableChart = styled(
         renderRow,
         shadeRowPercentage,
         showRowTotal,
+        bodyHeight,
         ...props
-      }) =>
-        dataMaybeWithTotals.map((row, rowIndex) => {
-          let lastRowIndex = dataMaybeWithTotals.length - 1;
-          let isLastRow = rowIndex === lastRowIndex;
-          let showBar = !isLastRow && shadeRowPercentage;
+      }) => (
+        <TableBody height={bodyHeight}>
+          {dataMaybeWithTotals.map((row, rowIndex) => {
+            const lastRowIndex = dataMaybeWithTotals.length - 1;
+            const isLastRow = rowIndex === lastRowIndex;
+            const showBar = !isLastRow && shadeRowPercentage;
 
-          // rowTotals does not include the grand total of data
-          let rowTotal =
-            showRowTotal && rowIndex < data.length
-              ? [dataTotals.rowTotals[rowIndex]]
-              : [];
+            // rowTotals does not include the grand total of data
+            const rowTotal =
+              showRowTotal && rowIndex < data.length
+                ? [dataTotals.rowTotals[rowIndex]]
+                : [];
 
-          return (
-            <TableChartRow
-              key={rowIndex}
-              showBar={showBar}
-              value={dataTotals.rowTotals[rowIndex]}
-              total={dataTotals.total}
-              widths={widths}
-            >
-              {renderRow({
-                css: {zIndex: showBar ? '2' : undefined},
-                ...props,
-                data,
-                widths,
-                items: [...row, ...rowTotal],
-                rowIndex,
-                showRowTotal,
-              })}
-            </TableChartRow>
-          );
-        });
+            return (
+              <TableChartRow
+                key={rowIndex}
+                showBar={showBar}
+                value={dataTotals.rowTotals[rowIndex]}
+                total={dataTotals.total}
+                widths={widths}
+              >
+                {renderRow({
+                  css: {zIndex: showBar ? '2' : undefined},
+                  ...props,
+                  data,
+                  widths,
+                  items: [...row, ...rowTotal],
+                  rowIndex,
+                  showRowTotal,
+                })}
+              </TableChartRow>
+            );
+          })}
+        </TableBody>
+      );
 
       // Default renderer for ALL rows (including header + body so that both can share the same DOM structure + styles)
       const defaultRenderRow = ({
@@ -136,8 +145,8 @@ export const TableChart = styled(
             <DataGroup>
               {items &&
                 items.slice(dataStartIndex).map((rowDataValue, columnIndex) => {
-                  let index = columnIndex + dataStartIndex;
-                  let renderCellProps = {
+                  const index = columnIndex + dataStartIndex;
+                  const renderCellProps = {
                     isTableHeader,
                     value: rowDataValue,
                     columnIndex: index,
@@ -160,7 +169,7 @@ export const TableChart = styled(
 
       // Default renderer for ALL cells
       const defaultRenderCell = p => {
-        let {
+        const {
           isTableHeader,
           isHeader,
           justify,
@@ -240,7 +249,7 @@ export const TableChart = styled(
     }
 
     getDataWithTotals(dataTotals) {
-      let {
+      const {
         data,
         dataStartIndex,
         showRowTotal,
@@ -250,7 +259,7 @@ export const TableChart = styled(
 
       if (!data) return [];
 
-      let totalRow = showColumnTotal
+      const totalRow = showColumnTotal
         ? [
             [
               // Label for Total Row
@@ -272,7 +281,7 @@ export const TableChart = styled(
     }
 
     render() {
-      let {
+      const {
         className,
         children,
         data,
@@ -288,18 +297,18 @@ export const TableChart = styled(
       } = this.props;
 
       // If we need to calculate totals...
-      let dataTotals =
+      const dataTotals =
         showRowTotal || showColumnTotal || shadeRowPercentage
           ? this.getTotals(data)
           : {
               rowTotals: [],
               columnTotals: [],
             };
-      let dataMaybeWithTotals = this.getDataWithTotals(dataTotals);
+      const dataMaybeWithTotals = this.getDataWithTotals(dataTotals);
 
       // For better render customization
-      let isRenderProp = typeof children === 'function';
-      let renderProps = {
+      const isRenderProp = typeof children === 'function';
+      const renderProps = {
         data,
         dataTotals,
         dataMaybeWithTotals,
@@ -309,19 +318,19 @@ export const TableChart = styled(
         showColumnTotal,
         shadeRowPercentage,
         widths,
+        renderBody,
+        renderTableHeader,
         ...props,
       };
 
+      if (isRenderProp) {
+        return children(renderProps);
+      }
+
       return (
         <Panel className={className}>
-          {isRenderProp ? (
-            children(renderProps)
-          ) : (
-            <React.Fragment>
-              {renderTableHeader(renderProps)}
-              {renderBody(renderProps)}
-            </React.Fragment>
-          )}
+          {renderTableHeader(renderProps)}
+          {renderBody(renderProps)}
         </Panel>
       );
     }
@@ -350,8 +359,8 @@ export const TableChartRow = styled(
     };
 
     render() {
-      let {className, showBar, total, value, children} = this.props;
-      let barWidth =
+      const {className, showBar, total, value, children} = this.props;
+      const barWidth =
         total > 0 && typeof value === 'number' ? Math.round(value / total * 100) : 0;
 
       return (
@@ -396,4 +405,10 @@ const DataGroup = styled(Flex)`
 const Row = styled(Flex)`
   flex: 1;
   overflow: hidden;
+`;
+
+const TableBody = styled('div')`
+  height: ${p => p.height};
+  flex-grow: 1;
+  overflow-y: auto;
 `;

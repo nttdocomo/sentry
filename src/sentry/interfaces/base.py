@@ -37,14 +37,16 @@ def get_interface(name):
 def get_interfaces(data):
     result = []
     for key, data in six.iteritems(data):
+        # Skip invalid interfaces that were nulled out during normalization
+        if data is None:
+            continue
+
         try:
             cls = get_interface(key)
         except ValueError:
             continue
 
-        value = safe_execute(
-            cls.to_python, data, _with_transaction=False
-        )
+        value = safe_execute(cls.to_python, data, _with_transaction=False)
         if not value:
             continue
 
@@ -176,7 +178,7 @@ class Interface(object):
             # exceptions indicate a programming error and need to be reported.
             if not isinstance(e, InterfaceValidationError):
                 interface_logger.error('Discarded invalid value for interface: %s (%r)',
-                             cls.path, data, exc_info=True)
+                                       cls.path, data, exc_info=True)
 
             meta.add_error(EventError.INVALID_DATA, data, {
                 'reason': six.text_type(e)
@@ -196,11 +198,11 @@ class Interface(object):
     def to_json(self):
         return prune_empty_keys(self._data)
 
-    def get_hash(self):
+    def get_hash(self, platform=None):
         return []
 
-    def compute_hashes(self, platform):
-        result = self.get_hash()
+    def compute_hashes(self, platform=None):
+        result = self.get_hash(platform)
         if not result:
             return []
         return [result]

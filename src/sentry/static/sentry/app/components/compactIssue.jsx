@@ -14,17 +14,19 @@ import Link from 'app/components/link';
 import ProjectLink from 'app/components/projectLink';
 import {t} from 'app/locale';
 import {PanelItem} from 'app/components/panels';
+import SentryTypes from 'app/sentryTypes';
+import withOrganization from 'app/utils/withOrganization';
 
 class CompactIssueHeader extends React.Component {
   static propTypes = {
+    organization: SentryTypes.Organization.isRequired,
+    projectId: PropTypes.string,
     data: PropTypes.object.isRequired,
-    orgId: PropTypes.string.isRequired,
-    projectId: PropTypes.string.isRequired,
   };
 
   getTitle = () => {
-    let data = this.props.data;
-    let metadata = data.metadata;
+    const data = this.props.data;
+    const metadata = data.metadata;
     switch (data.type) {
       case 'error':
         return (
@@ -50,8 +52,8 @@ class CompactIssueHeader extends React.Component {
   };
 
   getMessage = () => {
-    let data = this.props.data;
-    let metadata = data.metadata;
+    const data = this.props.data;
+    const metadata = data.metadata;
     switch (data.type) {
       case 'error':
         return metadata.value;
@@ -63,12 +65,20 @@ class CompactIssueHeader extends React.Component {
   };
 
   render() {
-    let {orgId, projectId, data} = this.props;
+    const {data, organization, projectId} = this.props;
+
+    const hasNewRoutes = new Set(organization.features).has('sentry10');
 
     let styles = {};
+
+    const basePath = hasNewRoutes
+      ? `/organizations/${organization.slug}/issues/`
+      : `/${organization.slug}/${projectId}/issues/`;
+
     if (data.subscriptionDetails && data.subscriptionDetails.reason === 'mentioned') {
       styles = {color: '#57be8c'};
     }
+
     return (
       <React.Fragment>
         <Flex align="center">
@@ -76,7 +86,7 @@ class CompactIssueHeader extends React.Component {
             <span className="error-level truncate" title={data.level} />
           </Box>
           <h3 className="truncate">
-            <ProjectLink to={`/${orgId}/${projectId}/issues/${data.id}/`}>
+            <ProjectLink to={`${basePath}${data.id}/`}>
               <span className="icon icon-soundoff" />
               <span className="icon icon-star-solid" />
               {this.getTitle()}
@@ -85,14 +95,17 @@ class CompactIssueHeader extends React.Component {
         </Flex>
         <div className="event-extra">
           <span className="project-name">
-            <ProjectLink to={`/${orgId}/${projectId}/`}>{data.project.slug}</ProjectLink>
+            {hasNewRoutes ? (
+              <strong>{data.project.slug}</strong>
+            ) : (
+              <ProjectLink to={`/${organization.slug}/${projectId}/`}>
+                {data.project.slug}
+              </ProjectLink>
+            )}
           </span>
           {data.numComments !== 0 && (
             <span>
-              <Link
-                to={`/${orgId}/${projectId}/issues/${data.id}/activity/`}
-                className="comments"
-              >
+              <Link to={`${basePath}${data.id}/activity/`} className="comments">
                 <span className="icon icon-comments" style={styles} />
                 <span className="tag-count">{data.numComments}</span>
               </Link>
@@ -111,9 +124,9 @@ const CompactIssue = createReactClass({
   propTypes: {
     data: PropTypes.object,
     id: PropTypes.string,
-    orgId: PropTypes.string,
     statsPeriod: PropTypes.string,
     showActions: PropTypes.bool,
+    organization: SentryTypes.Organization.isRequired,
   },
 
   mixins: [ApiMixin, Reflux.listenTo(GroupStore, 'onGroupChange')],
@@ -136,15 +149,15 @@ const CompactIssue = createReactClass({
     if (!itemIds.has(this.props.id)) {
       return;
     }
-    let id = this.props.id;
-    let issue = GroupStore.get(id);
+    const id = this.props.id;
+    const issue = GroupStore.get(id);
     this.setState({
       issue,
     });
   },
 
   onSnooze(duration) {
-    let data = {
+    const data = {
       status: 'ignored',
     };
 
@@ -154,12 +167,12 @@ const CompactIssue = createReactClass({
   },
 
   onUpdate(data) {
-    let issue = this.state.issue;
-    let loadingIndicator = IndicatorStore.add(t('Saving changes..'));
+    const issue = this.state.issue;
+    const loadingIndicator = IndicatorStore.add(t('Saving changes..'));
 
     this.api.bulkUpdate(
       {
-        orgId: this.props.orgId,
+        orgId: this.props.organization.slug,
         projectId: issue.project.slug,
         itemIds: [issue.id],
         data,
@@ -173,7 +186,8 @@ const CompactIssue = createReactClass({
   },
 
   render() {
-    let issue = this.state.issue;
+    const issue = this.state.issue;
+    const {id, organization} = this.props;
 
     let className = 'issue';
     if (issue.isBookmarked) {
@@ -195,9 +209,7 @@ const CompactIssue = createReactClass({
       className += ' with-graph';
     }
 
-    let {id, orgId} = this.props;
-    let projectId = issue.project.slug;
-    let title = <span className="icon-more" />;
+    const title = <span className="icon-more" />;
 
     return (
       <PanelItem
@@ -206,7 +218,11 @@ const CompactIssue = createReactClass({
         direction="column"
         style={{paddingTop: '12px', paddingBottom: '6px'}}
       >
-        <CompactIssueHeader data={issue} orgId={orgId} projectId={projectId} />
+        <CompactIssueHeader
+          data={issue}
+          organization={organization}
+          projectId={issue.project.slug}
+        />
         {this.props.statsPeriod && (
           <div className="event-graph">
             <GroupChart
@@ -242,19 +258,11 @@ const CompactIssue = createReactClass({
               </li>
               <li>
                 <SnoozeAction
-                  orgId={orgId}
-                  projectId={projectId}
+                  orgId={organization.slug}
                   groupId={id}
                   onSnooze={this.onSnooze}
                 />
               </li>
-              {false && (
-                <li>
-                  <a href="#">
-                    <span className="icon-user" />
-                  </a>
-                </li>
-              )}
             </DropdownLink>
           </div>
         )}
@@ -264,4 +272,5 @@ const CompactIssue = createReactClass({
   },
 });
 
-export default CompactIssue;
+export {CompactIssue};
+export default withOrganization(CompactIssue);

@@ -3,8 +3,11 @@ from __future__ import absolute_import
 import logging
 import six
 
+from cryptography.hazmat.primitives.serialization import load_pem_private_key
+from cryptography.hazmat.backends import default_backend
 from django import forms
 from django.core.urlresolvers import reverse
+from django.core.validators import URLValidator
 from django.utils.translation import ugettext as _
 from django.views.decorators.csrf import csrf_exempt
 from six.moves.urllib.parse import urlparse
@@ -57,6 +60,15 @@ FEATURE_DESCRIPTIONS = [
     ),
 ]
 
+setup_alert = {
+    'type': 'warning',
+    'icon': 'icon-warning-sm',
+    'text': 'Your Jira instance must be able to communicate with Sentry.'
+            ' Sentry makes outbound requests from a [static set of IP'
+            ' addresses](https://docs.sentry.io/ip-ranges/) that you may wish'
+            ' to whitelist to support this integration.',
+}
+
 
 metadata = IntegrationMetadata(
     description=_(DESCRIPTION.strip()),
@@ -65,7 +77,9 @@ metadata = IntegrationMetadata(
     noun=_('Installation'),
     issue_url='https://github.com/getsentry/sentry/issues/new?title=Jira%20Server%20Integration:%20&labels=Component%3A%20Integrations',
     source_url='https://github.com/getsentry/sentry/tree/master/src/sentry/integrations/jira_server',
-    aspects={},
+    aspects={
+        'alerts': [setup_alert],
+    },
 )
 
 
@@ -76,6 +90,7 @@ class InstallationForm(forms.Form):
         widget=forms.TextInput(
             attrs={'placeholder': 'https://jira.example.com'}
         ),
+        validators=[URLValidator()]
     )
     verify_ssl = forms.BooleanField(
         label=_('Verify SSL'),
@@ -95,13 +110,24 @@ class InstallationForm(forms.Form):
     private_key = forms.CharField(
         label=_('Jira Consumer Private Key'),
         widget=forms.Textarea(
-            attrs={'placeholder': _('--PRIVATE KEY--')}
+            attrs={'placeholder': _(
+                '-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----')}
         )
     )
 
     def clean_url(self):
         """Strip off trailing / as they cause invalid URLs downstream"""
         return self.cleaned_data['url'].rstrip('/')
+
+    def clean_private_key(self):
+        data = self.cleaned_data['private_key']
+
+        try:
+            load_pem_private_key(data.encode('utf-8'), None, default_backend())
+        except Exception:
+            raise forms.ValidationError(
+                'Private key must be a valid SSH private key encoded in a PEM format.')
+        return data
 
 
 class InstallationConfigView(PipelineView):
