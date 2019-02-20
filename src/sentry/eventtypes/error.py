@@ -23,12 +23,12 @@ def get_crash_file(stacktrace):
 class ErrorEvent(BaseEvent):
     key = 'error'
 
-    def has_metadata(self):
-        exception = get_path(self.data, 'exception', 'values', -1)
+    def has_metadata(self, data):
+        exception = get_path(data, 'exception', 'values', -1)
         return exception and any(v is not None for v in six.itervalues(exception))
 
-    def get_metadata(self):
-        exception = get_path(self.data, 'exception', 'values', -1)
+    def get_metadata(self, data):
+        exception = get_path(data, 'exception', 'values', -1)
 
         # in some situations clients are submitting non-string data for these
         rv = {
@@ -46,7 +46,7 @@ class ErrorEvent(BaseEvent):
 
         return rv
 
-    def to_string(self, metadata):
+    def get_title(self, metadata):
         if not metadata['value']:
             return metadata['type']
         return u'{}: {}'.format(
