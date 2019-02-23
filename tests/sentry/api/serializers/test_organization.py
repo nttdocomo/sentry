@@ -19,6 +19,7 @@ class OrganizationSerializerTest(TestCase):
 
         assert result['id'] == six.text_type(organization.id)
         assert result['features'] == set([
+            'advanced-search',
             'new-teams',
             'shared-issues',
             'repos',
