@@ -27,6 +27,7 @@ from .endpoints.event_attachments import EventAttachmentsEndpoint
 from .endpoints.event_details import EventDetailsEndpoint
 from .endpoints.event_owners import EventOwnersEndpoint
 from .endpoints.event_apple_crash_report import EventAppleCrashReportEndpoint
+from .endpoints.event_grouping_info import EventGroupingInfoEndpoint
 from .endpoints.group_details import GroupDetailsEndpoint
 from .endpoints.group_events import GroupEventsEndpoint
 from .endpoints.group_events_latest import GroupEventsLatestEndpoint
@@ -112,6 +113,7 @@ from .endpoints.organization_user_reports import OrganizationUserReportsEndpoint
 from .endpoints.organization_users import OrganizationUsersEndpoint
 from .endpoints.sentry_app_installations import SentryAppInstallationsEndpoint
 from .endpoints.sentry_app_installation_details import SentryAppInstallationDetailsEndpoint
+from .endpoints.sentry_app_installation_external_requests import SentryAppInstallationExternalRequestsEndpoint
 from .endpoints.organization_stats import OrganizationStatsEndpoint
 from .endpoints.organization_teams import OrganizationTeamsEndpoint
 from .endpoints.organization_user_issues import OrganizationUserIssuesEndpoint
@@ -174,6 +176,8 @@ from .endpoints.release_deploys import ReleaseDeploysEndpoint
 from .endpoints.debug_files import DebugFilesEndpoint, DifAssembleEndpoint, \
     UnknownDebugFilesEndpoint, AssociateDSymFilesEndpoint
 from .endpoints.sentry_apps import SentryAppsEndpoint
+from .endpoints.sentry_app_components import SentryAppComponentsEndpoint, \
+    OrganizationSentryAppComponentsEndpoint
 from .endpoints.sentry_app_details import SentryAppDetailsEndpoint
 from .endpoints.sentry_app_authorizations import SentryAppAuthorizationsEndpoint
 from .endpoints.shared_group_details import SharedGroupDetailsEndpoint
@@ -715,6 +719,11 @@ urlpatterns = patterns(
         name='sentry-api-0-sentry-app-installation-details'
     ),
     url(
+        r'^sentry-app-installations/(?P<uuid>[^\/]+)/external-requests/$',
+        SentryAppInstallationExternalRequestsEndpoint.as_view(),
+        name='sentry-api-0-sentry-app-installation-external-requests'
+    ),
+    url(
         r'^organizations/(?P<organization_slug>[^\/]+)/sentry-apps/$',
         OrganizationSentryAppsEndpoint.as_view(),
         name='sentry-api-0-organization-sentry-apps'
@@ -1208,6 +1217,11 @@ urlpatterns = patterns(
         EventAppleCrashReportEndpoint.as_view(),
         name='sentry-api-0-event-apple-crash-report'
     ),
+    url(
+        r'^events/(?P<event_id>\d+)/grouping-info/$',
+        EventGroupingInfoEndpoint.as_view(),
+        name='sentry-api-0-event-grouping-info'
+    ),
 
     # Sentry Apps
     url(
@@ -1220,7 +1234,16 @@ urlpatterns = patterns(
         SentryAppDetailsEndpoint.as_view(),
         name='sentry-api-0-sentry-app-details'
     ),
-
+    url(
+        r'^sentry-apps/(?P<sentry_app_slug>[^\/]+)/components/$',
+        SentryAppComponentsEndpoint.as_view(),
+        name='sentry-api-0-sentry-app-components'
+    ),
+    url(
+        r'^organizations/(?P<organization_slug>[^\/]+)/sentry-app-components/$',
+        OrganizationSentryAppComponentsEndpoint.as_view(),
+        name='sentry-api-0-org-sentry-app-components'
+    ),
     url(
         r'^sentry-app-installations/(?P<uuid>[^\/]+)/authorizations/$',
         SentryAppAuthorizationsEndpoint.as_view(),

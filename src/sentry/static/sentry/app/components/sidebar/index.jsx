@@ -15,6 +15,7 @@ import {load as loadIncidents} from 'app/actionCreators/incidents';
 import {t} from 'app/locale';
 import ConfigStore from 'app/stores/configStore';
 import Feature from 'app/components/acl/feature';
+import HookStore from 'app/stores/hookStore';
 import InlineSvg from 'app/components/inlineSvg';
 import PreferencesStore from 'app/stores/preferencesStore';
 import SentryTypes from 'app/sentryTypes';
@@ -200,10 +201,12 @@ class Sidebar extends React.Component {
 
   documentClickHandler = evt => {
     // If click occurs outside of sidebar, close any active panel
-    if (this.sidebar && !this.sidebar.contains(evt.target)) {
+    if (this.sidebarRef.current && !this.sidebarRef.current.contains(evt.target)) {
       this.hidePanel();
     }
   };
+
+  sidebarRef = React.createRef();
 
   render() {
     const {organization, collapsed} = this.props;
@@ -222,7 +225,7 @@ class Sidebar extends React.Component {
     const hasSentry10 = hasOrganization && new Set(organization.features).has('sentry10');
 
     return (
-      <StyledSidebar innerRef={ref => (this.sidebar = ref)} collapsed={collapsed}>
+      <StyledSidebar innerRef={this.sidebarRef} collapsed={collapsed}>
         <SidebarSectionGroup>
           <SidebarSection>
             <SidebarDropdown
@@ -261,6 +264,7 @@ class Sidebar extends React.Component {
                     icon={<InlineSvg src="icon-issues" />}
                     label={t('Issues')}
                     to={`/organizations/${organization.slug}/issues/`}
+                    id="issues"
                   />
                 </Feature>
 
@@ -275,6 +279,7 @@ class Sidebar extends React.Component {
                     icon={<InlineSvg src="icon-stack" />}
                     label={t('Events')}
                     to={`/organizations/${organization.slug}/events/`}
+                    id="events"
                   />
                 </Feature>
 
@@ -290,6 +295,7 @@ class Sidebar extends React.Component {
                       icon={<InlineSvg src="icon-releases" />}
                       label={t('Releases')}
                       to={`/organizations/${organization.slug}/releases/`}
+                      id="releases"
                     />
                     <SidebarItem
                       {...sidebarItemProps}
@@ -301,6 +307,7 @@ class Sidebar extends React.Component {
                       icon={<InlineSvg src="icon-support" />}
                       label={t('User Feedback')}
                       to={`/organizations/${organization.slug}/user-feedback/`}
+                      id="user-feedback"
                     />
                   </React.Fragment>
                 )}
@@ -313,6 +320,7 @@ class Sidebar extends React.Component {
                       icon={<InlineSvg src="icon-discover" />}
                       label={t('Discover')}
                       to={`/organizations/${organization.slug}/discover/`}
+                      id="discover"
                     />
                   </Feature>
                 )}
@@ -327,6 +335,7 @@ class Sidebar extends React.Component {
                     icon={<InlineSvg src="icon-health" />}
                     label={t('Dashboards')}
                     to={`/organizations/${organization.slug}/dashboards/`}
+                    id="customizable-dashboards"
                   />
                   <SidebarItem
                     {...sidebarItemProps}
@@ -334,6 +343,7 @@ class Sidebar extends React.Component {
                     icon={<InlineSvg src="icon-discover" />}
                     label={t('Discover')}
                     to={`/organizations/${organization.slug}/discover/`}
+                    id="discover"
                   />
                 </SidebarSection>
               </Feature>
@@ -349,6 +359,7 @@ class Sidebar extends React.Component {
                   icon={<InlineSvg src="icon-labs" />}
                   label={t('Monitors')}
                   to={`/organizations/${organization.slug}/monitors/`}
+                  id="monitors"
                 />
               </Feature>
 
@@ -360,6 +371,7 @@ class Sidebar extends React.Component {
                     icon={<InlineSvg src="icon-user" />}
                     label={t('Assigned to me')}
                     to={`/organizations/${organization.slug}/issues/assigned/`}
+                    id="assigned"
                   />
                   <SidebarItem
                     {...sidebarItemProps}
@@ -367,6 +379,7 @@ class Sidebar extends React.Component {
                     icon={<InlineSvg src="icon-star" />}
                     label={t('Bookmarked issues')}
                     to={`/organizations/${organization.slug}/issues/bookmarks/`}
+                    id="bookmarks"
                   />
                   <SidebarItem
                     {...sidebarItemProps}
@@ -374,6 +387,7 @@ class Sidebar extends React.Component {
                     icon={<InlineSvg src="icon-history" />}
                     label={t('Recently viewed')}
                     to={`/organizations/${organization.slug}/issues/history/`}
+                    id="history"
                   />
                 </SidebarSection>
               )}
@@ -385,6 +399,7 @@ class Sidebar extends React.Component {
                   icon={<InlineSvg src="icon-activity" />}
                   label={t('Activity')}
                   to={`/organizations/${organization.slug}/activity/`}
+                  id="activity"
                 />
                 <SidebarItem
                   {...sidebarItemProps}
@@ -392,6 +407,7 @@ class Sidebar extends React.Component {
                   icon={<InlineSvg src="icon-stats" />}
                   label={t('Stats')}
                   to={`/organizations/${organization.slug}/stats/`}
+                  id="stats"
                 />
               </SidebarSection>
 
@@ -402,6 +418,7 @@ class Sidebar extends React.Component {
                   icon={<InlineSvg src="icon-settings" />}
                   label={t('Settings')}
                   to={`/settings/${organization.slug}/`}
+                  id="settings"
                 />
               </SidebarSection>
             </React.Fragment>
@@ -411,6 +428,11 @@ class Sidebar extends React.Component {
         {hasOrganization && (
           <SidebarSectionGroup>
             <SidebarSection>
+              {HookStore.get('sidebar:bottom-items').length > 0 &&
+                HookStore.get('sidebar:bottom-items')[0]({
+                  organization,
+                  ...sidebarItemProps,
+                })}
               <SidebarHelp
                 orientation={orientation}
                 collapsed={collapsed}

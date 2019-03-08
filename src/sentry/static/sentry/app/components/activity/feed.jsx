@@ -47,11 +47,17 @@ class ActivityFeed extends React.Component {
       location.pathname != nextLocation.pathname ||
       location.search != nextLocation.search
     ) {
-      this.remountComponent();
+      this.setState({
+        itemList: [],
+        loading: true,
+        error: false,
+        pageLinks: null,
+      });
+      this.fetchData();
     }
   }
 
-  fetchData() {
+  fetchData = () => {
     const location = this.props.location;
     this.props.api.clear();
     this.props.api.request(this.props.endpoint, {
@@ -75,7 +81,7 @@ class ActivityFeed extends React.Component {
         });
       },
     });
-  }
+  };
 
   renderResults() {
     let body;

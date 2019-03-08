@@ -34,8 +34,9 @@ class OrganizationPermission(SentryPermission):
         'DELETE': ['org:admin'],
     }
 
-    def is_not_2fa_compliant(self, user, organization):
-        return organization.flags.require_2fa and not Authenticator.objects.user_has_2fa(user)
+    def is_not_2fa_compliant(self, request, organization):
+        return organization.flags.require_2fa and not Authenticator.objects.user_has_2fa(
+            request.user) and not is_active_superuser(request)
 
     def needs_sso(self, request, organization):
         # XXX(dcramer): this is very similar to the server-rendered views
@@ -52,6 +53,15 @@ class OrganizationPermission(SentryPermission):
         self.determine_access(request, organization)
         allowed_scopes = set(self.scope_map.get(request.method, []))
         return any(request.access.has_scope(s) for s in allowed_scopes)
+
+
+class OrganizationEventPermission(OrganizationPermission):
+    scope_map = {
+        'GET': ['event:read', 'event:write', 'event:admin'],
+        'POST': ['event:write', 'event:admin'],
+        'PUT': ['event:write', 'event:admin'],
+        'DELETE': ['event:admin'],
+    }
 
 
 # These are based on ProjectReleasePermission
@@ -72,6 +82,15 @@ class OrganizationIntegrationsPermission(OrganizationPermission):
         'POST': ['org:write', 'org:admin', 'org:integrations'],
         'PUT': ['org:write', 'org:admin', 'org:integrations'],
         'DELETE': ['org:admin', 'org:integrations'],
+    }
+
+
+class OrganizationRepositoryPermission(OrganizationPermission):
+    scope_map = {
+        'GET': ['org:read', 'org:write', 'org:admin', 'org:integrations'],
+        'POST': ['org:write', 'org:admin', 'org:integrations'],
+        'PUT': ['org:write', 'org:admin'],
+        'DELETE': ['org:admin'],
     }
 
 

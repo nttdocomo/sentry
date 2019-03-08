@@ -22,6 +22,7 @@ from sentry.utils.cache import memoize
 from sentry.utils.http import is_valid_origin
 from sentry.utils.safe import trim
 from sentry.web.helpers import render_to_string
+from sentry.event_hashing import GroupingComponent
 
 # Default block list sourced from personal experience as well as
 # reputable blogs from Twitter and Dropbox
@@ -171,8 +172,14 @@ class Hpkp(SecurityReport):
     def get_culprit(self):
         return None
 
-    def get_hash(self, platform=None, is_processed_data=True):
-        return ['hpkp', self.hostname]
+    def get_grouping_component(self, platform=None, variant=None):
+        return GroupingComponent(
+            id='hpkp',
+            values=[
+                GroupingComponent(id='salt', values=['hpkp']),
+                GroupingComponent(id='hostname', values=[self.hostname]),
+            ]
+        )
 
     def get_message(self):
         return u"Public key pinning validation failed for '{self.hostname}'".format(self=self)
@@ -235,8 +242,14 @@ class ExpectStaple(SecurityReport):
     def get_culprit(self):
         return self.hostname
 
-    def get_hash(self, platform=None, is_processed_data=True):
-        return ['expect-staple', self.hostname]
+    def get_grouping_component(self, platform=None, variant=None):
+        return GroupingComponent(
+            id='expect-staple',
+            values=[
+                GroupingComponent(id='salt', values=['expect-staple']),
+                GroupingComponent(id='hostname', values=[self.hostname]),
+            ]
+        )
 
     def get_message(self):
         return u"Expect-Staple failed for '{self.hostname}'".format(self=self)
@@ -297,8 +310,14 @@ class ExpectCT(SecurityReport):
     def get_culprit(self):
         return self.hostname
 
-    def get_hash(self, platform=None, is_processed_data=True):
-        return ['expect-ct', self.hostname]
+    def get_grouping_component(self, platform=None, variant=None):
+        return GroupingComponent(
+            id='expect-ct',
+            values=[
+                GroupingComponent(id='salt', values=['expect-ct']),
+                GroupingComponent(id='hostname', values=[self.hostname]),
+            ]
+        )
 
     def get_message(self):
         return u"Expect-CT failed for '{self.hostname}'".format(self=self)
@@ -353,13 +372,36 @@ class Csp(SecurityReport):
 
         return cls.to_python(kwargs)
 
-    def get_hash(self, platform=None, is_processed_data=True):
-        if self._local_script_violation_type:
-            uri = "'%s'" % self._local_script_violation_type
-        else:
-            uri = self._normalized_blocked_uri
+    def get_grouping_component(self, platform=None, variant=None):
+        violation_component = GroupingComponent(id='violation')
+        uri_component = GroupingComponent(id='uri')
 
-        return [self.effective_directive, uri]
+        if self._local_script_violation_type:
+            violation_component.update(
+                values=["'%s'" % self._local_script_violation_type],
+            )
+            uri_component.update(
+                contributes=False,
+                hint='violation takes precedence',
+                values=[self._normalized_blocked_uri],
+            )
+        else:
+            violation_component.update(
+                contributes=False,
+                hint='not a local script violation',
+            )
+            uri_component.update(
+                values=[self._normalized_blocked_uri]
+            )
+
+        return GroupingComponent(
+            id='csp',
+            values=[
+                GroupingComponent(id='salt', values=[self.effective_directive]),
+                violation_component,
+                uri_component,
+            ],
+        )
 
     def get_message(self):
         templates = {

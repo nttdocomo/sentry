@@ -139,11 +139,16 @@ class Event(Model):
 
         See ``sentry.eventtypes``.
         """
-        return self.data['metadata']
+        # For some inexplicable reason we have some cases where the data
+        # is completely empty.  In that case we want to hobble along
+        # further.
+        return self.data.get('metadata') or {}
 
     def get_hashes(self):
         """
-        Returns the calculated hashes for the event.
+        Returns the calculated hashes for the event.  This uses the stored
+        information if available.  Grouping hashes will take into account
+        fingerprinting and checksums.
         """
         from sentry.event_hashing import calculate_event_hashes
         # If we have hashes stored in the data we use them, otherwise we
@@ -152,6 +157,14 @@ class Event(Model):
         if hashes is not None:
             return hashes
         return calculate_event_hashes(self)
+
+    def get_grouping_variants(self):
+        """
+        This is similar to `get_hashes` but will instead return the
+        grouping components for each variant in a dictionary.
+        """
+        from sentry.event_hashing import get_grouping_variants_for_event
+        return get_grouping_variants_for_event(self)
 
     def get_primary_hash(self):
         # TODO: This *might* need to be protected from an IndexError?

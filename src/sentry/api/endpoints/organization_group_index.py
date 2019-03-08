@@ -7,7 +7,8 @@ from django.conf import settings
 
 from rest_framework.response import Response
 
-from sentry.api.bases import OrganizationEventsEndpointBase
+from sentry import features
+from sentry.api.bases import OrganizationEventsEndpointBase, OrganizationEventPermission
 from sentry.api.helpers.group_index import (
     build_query_params_from_request, delete_groups, get_by_short_id, update_groups, ValidationError
 )
@@ -25,6 +26,7 @@ search = SnubaSearchBackend(**settings.SENTRY_SEARCH_OPTIONS)
 
 
 class OrganizationGroupIndexEndpoint(OrganizationEventsEndpointBase):
+    permission_classes = (OrganizationEventPermission, )
 
     def _search(self, request, organization, projects, environments, extra_query_kwargs=None):
         query_kwargs = build_query_params_from_request(
@@ -103,6 +105,12 @@ class OrganizationGroupIndexEndpoint(OrganizationEventsEndpointBase):
         if not projects:
             return Response([])
 
+        if len(projects) > 1 and not features.has(
+                'organizations:global-views', organization, actor=request.user):
+            return Response({
+                'detail': 'You do not have the multi project stream feature enabled'
+            }, status=400)
+
         # we ignore date range for both short id and event ids
         query = request.GET.get('query', '').strip()
         if query:
@@ -127,8 +135,8 @@ class OrganizationGroupIndexEndpoint(OrganizationEventsEndpointBase):
 
             group = get_by_short_id(organization.id, request.GET.get('shortIdLookup'), query)
             if group is not None:
-                # check to make sure user has access to project
-                if group.project_id in project_ids:
+                # check all projects user has access to
+                if request.access.has_project_access(group.project):
                     response = Response(
                         serialize(
                             [group], request.user, serializer()
@@ -228,6 +236,11 @@ class OrganizationGroupIndexEndpoint(OrganizationEventsEndpointBase):
         """
 
         projects = self.get_projects(request, organization)
+        if len(projects) > 1 and not features.has(
+                'organizations:global-views', organization, actor=request.user):
+            return Response({
+                'detail': 'You do not have the multi project stream feature enabled'
+            }, status=400)
 
         search_fn = functools.partial(
             self._search, request, organization, projects,
@@ -261,6 +274,11 @@ class OrganizationGroupIndexEndpoint(OrganizationEventsEndpointBase):
         :auth: required
         """
         projects = self.get_projects(request, organization)
+        if len(projects) > 1 and not features.has(
+                'organizations:global-views', organization, actor=request.user):
+            return Response({
+                'detail': 'You do not have the multi project stream feature enabled'
+            }, status=400)
 
         search_fn = functools.partial(
             self._search, request, organization, projects,

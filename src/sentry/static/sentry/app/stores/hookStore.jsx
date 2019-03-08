@@ -33,6 +33,8 @@ const validHookNames = new Set([
   'organization:header',
   'sidebar:help-menu',
   'sidebar:organization-dropdown-menu',
+  'sidebar:bottom-items',
+  'sidebar:item-label',
 
   // Used to provide a component for integration features.
   'integrations:feature-gates',
@@ -47,9 +49,6 @@ const validHookNames = new Set([
   'feature-disabled:sso-basic',
   'feature-disabled:sso-rippling',
   'feature-disabled:sso-saml2',
-
-  // TODO(epurkhiser): These are not used anymore and should be removed
-  'organization:sidebar',
 ]);
 
 /**
