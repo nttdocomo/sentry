@@ -14,6 +14,7 @@ exports[`ProjectPluginDetails renders 1`] = `
         "org:read",
         "org:write",
         "org:admin",
+        "org:integrations",
         "project:read",
         "project:write",
         "project:admin",
@@ -68,6 +69,7 @@ exports[`ProjectPluginDetails renders 1`] = `
           "org:read",
           "org:write",
           "org:admin",
+          "org:integrations",
           "project:read",
           "project:write",
           "project:admin",
@@ -206,6 +208,7 @@ exports[`ProjectPluginDetails renders 1`] = `
                               }
                             >
                               <StyledButton
+                                aria-disabled={false}
                                 aria-label="Enable Plugin"
                                 disabled={false}
                                 onClick={[Function]}
@@ -218,9 +221,9 @@ exports[`ProjectPluginDetails renders 1`] = `
                                 }
                               >
                                 <Component
+                                  aria-disabled={false}
                                   aria-label="Enable Plugin"
                                   className="css-dkprmi-StyledButton-getColors eqrebog0"
-                                  disabled={false}
                                   onClick={[Function]}
                                   role="button"
                                   size="small"
@@ -231,9 +234,9 @@ exports[`ProjectPluginDetails renders 1`] = `
                                   }
                                 >
                                   <button
+                                    aria-disabled={false}
                                     aria-label="Enable Plugin"
                                     className="css-dkprmi-StyledButton-getColors eqrebog0"
-                                    disabled={false}
                                     onClick={[Function]}
                                     role="button"
                                     size="small"
@@ -267,6 +270,7 @@ exports[`ProjectPluginDetails renders 1`] = `
                               size="small"
                             >
                               <StyledButton
+                                aria-disabled={false}
                                 aria-label="Reset Configuration"
                                 disabled={false}
                                 onClick={[Function]}
@@ -274,17 +278,17 @@ exports[`ProjectPluginDetails renders 1`] = `
                                 size="small"
                               >
                                 <Component
+                                  aria-disabled={false}
                                   aria-label="Reset Configuration"
                                   className="css-dkprmi-StyledButton-getColors eqrebog0"
-                                  disabled={false}
                                   onClick={[Function]}
                                   role="button"
                                   size="small"
                                 >
                                   <button
+                                    aria-disabled={false}
                                     aria-label="Reset Configuration"
                                     className="css-dkprmi-StyledButton-getColors eqrebog0"
-                                    disabled={false}
                                     onClick={[Function]}
                                     role="button"
                                     size="small"
@@ -348,6 +352,7 @@ exports[`ProjectPluginDetails renders 1`] = `
                       "org:read",
                       "org:write",
                       "org:admin",
+                      "org:integrations",
                       "project:read",
                       "project:write",
                       "project:admin",
@@ -506,6 +511,7 @@ exports[`ProjectPluginDetails renders 1`] = `
                                       "org:read",
                                       "org:write",
                                       "org:admin",
+                                      "org:integrations",
                                       "project:read",
                                       "project:write",
                                       "project:admin",

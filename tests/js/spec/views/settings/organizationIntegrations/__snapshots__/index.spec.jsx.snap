@@ -8,6 +8,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
         "org:read",
         "org:write",
         "org:admin",
+        "org:integrations",
         "project:read",
         "project:write",
         "project:admin",
@@ -172,6 +173,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                 "org:read",
                 "org:write",
                 "org:admin",
+                "org:integrations",
                 "project:read",
                 "project:write",
                 "project:admin",
@@ -195,64 +197,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
           }
           renderNoAccessMessage={false}
           requireAll={true}
-        >
-          <Alert
-            icon="icon-warning-sm"
-            iconSize="24px"
-            type="warning"
-          >
-            <AlertWrapper
-              className="ref-warning"
-              type="warning"
-            >
-              <div
-                className="ref-warning css-3oyttp-AlertWrapper e1xb5l7j1"
-                type="warning"
-              >
-                <StyledInlineSvg
-                  size="24px"
-                  src="icon-warning-sm"
-                >
-                  <InlineSvg
-                    className="css-1e3iblq-StyledInlineSvg e1xb5l7j0"
-                    size="24px"
-                    src="icon-warning-sm"
-                  >
-                    <StyledSvg
-                      className="css-1e3iblq-StyledInlineSvg e1xb5l7j0"
-                      height="24px"
-                      viewBox={Object {}}
-                      width="24px"
-                    >
-                      <svg
-                        className="e1xb5l7j0 css-lbx2sj-StyledSvg-StyledInlineSvg e2idor0"
-                        height="24px"
-                        viewBox={Object {}}
-                        width="24px"
-                      >
-                        <use
-                          href="#test"
-                          xlinkHref="#test"
-                        />
-                      </svg>
-                    </StyledSvg>
-                  </InlineSvg>
-                </StyledInlineSvg>
-                <StyledTextBlock>
-                  <Component
-                    className="css-1h3n7tg-TextBlock-StyledTextBlock e1xb5l7j2"
-                  >
-                    <div
-                      className="css-1h3n7tg-TextBlock-StyledTextBlock e1xb5l7j2"
-                    >
-                      These settings can only be edited by users with the owner or manager role.
-                    </div>
-                  </Component>
-                </StyledTextBlock>
-              </div>
-            </AlertWrapper>
-          </Alert>
-        </Access>
+        />
       </AccessContainer>
     </withConfig(AccessContainer)>
   </PermissionAlert>
@@ -579,11 +524,6 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                             theme={
                                               Object {
                                                 "alert": Object {
-                                                  "attention": Object {
-                                                    "background": "#F09E71",
-                                                    "backgroundLight": "#ECBFA6",
-                                                    "border": "#D0816D",
-                                                  },
                                                   "beta": Object {
                                                     "background": "linear-gradient(90deg, #F868BC, #6C5FC7)",
                                                   },
@@ -595,32 +535,32 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                   "error": Object {
                                                     "background": "#e03e2f",
                                                     "backgroundLight": "#FDF6F5",
-                                                    "border": "#E7C0BC",
-                                                    "iconColor": "#C72516",
-                                                    "textLight": "#92635f",
+                                                    "border": "#FA5849",
+                                                    "iconColor": "#e03e2f",
+                                                    "textLight": "#FA5849",
                                                   },
                                                   "info": Object {
                                                     "background": "#3B6ECC",
                                                     "backgroundLight": "#F5FAFE",
-                                                    "border": "#B5D6ED",
+                                                    "border": "#628BD6",
                                                     "iconColor": "#3B6ECC",
                                                   },
                                                   "success": Object {
                                                     "background": "#57be8c",
-                                                    "backgroundLight": "#F8FCF7",
-                                                    "border": "#BBD6B3",
+                                                    "backgroundLight": "#f8fcf7",
+                                                    "border": "#57be8c",
                                                     "iconColor": "#3EA573",
                                                   },
                                                   "warn": Object {
-                                                    "background": "#ecc844",
+                                                    "background": "#ecbb08",
                                                     "backgroundLight": "#FFFDF7",
-                                                    "border": "#E1D697",
+                                                    "border": "#e6bc23",
                                                     "iconColor": "#e6bc23",
                                                   },
                                                   "warning": Object {
-                                                    "background": "#ecc844",
+                                                    "background": "#ecbb08",
                                                     "backgroundLight": "#FFFDF7",
-                                                    "border": "#E1D697",
+                                                    "border": "#e6bc23",
                                                     "iconColor": "#e6bc23",
                                                   },
                                                 },
@@ -628,6 +568,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                 "blue": "#3B6ECC",
                                                 "blueDark": "#2F58A3",
                                                 "blueLight": "#628BD6",
+                                                "blueLightest": "#F5FAFE",
                                                 "borderDark": "#D1CAD8",
                                                 "borderLight": "#E2DBE8",
                                                 "borderLighter": "#f9f6fd",
@@ -729,6 +670,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                 "green": "#57be8c",
                                                 "greenDark": "#3EA573",
                                                 "greenLight": "#71D8A6",
+                                                "greenLightest": "#f8fcf7",
                                                 "greenTransparent": "rgba(87, 190, 140, 0.5)",
                                                 "grid": 8,
                                                 "headerFontSize": "22px",
@@ -750,6 +692,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                 "red": "#e03e2f",
                                                 "redDark": "#C72516",
                                                 "redLight": "#FA5849",
+                                                "redLightest": "#FDF6F5",
                                                 "settings": Object {
                                                   "containerWidth": "1440px",
                                                   "headerHeight": "115px",
@@ -793,6 +736,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                 "whiteDark": "#fbfbfc",
                                                 "yellow": "#ecc844",
                                                 "yellowDark": "#e6bc23",
+                                                "yellowDarkest": "#ecbb08",
                                                 "yellowLight": "#FFF15E",
                                                 "yellowLightest": "#FFFDF7",
                                                 "yellowOrange": "#f9a66d",
@@ -808,6 +752,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                   "header": 1000,
                                                   "modal": 10000,
                                                   "orgAndUserMenu": 1004,
+                                                  "sentryErrorEmbed": 1009,
                                                   "sidebar": 1003,
                                                   "toast": 10001,
                                                 },
@@ -847,11 +792,6 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                     theme={
                                                       Object {
                                                         "alert": Object {
-                                                          "attention": Object {
-                                                            "background": "#F09E71",
-                                                            "backgroundLight": "#ECBFA6",
-                                                            "border": "#D0816D",
-                                                          },
                                                           "beta": Object {
                                                             "background": "linear-gradient(90deg, #F868BC, #6C5FC7)",
                                                           },
@@ -863,32 +803,32 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                           "error": Object {
                                                             "background": "#e03e2f",
                                                             "backgroundLight": "#FDF6F5",
-                                                            "border": "#E7C0BC",
-                                                            "iconColor": "#C72516",
-                                                            "textLight": "#92635f",
+                                                            "border": "#FA5849",
+                                                            "iconColor": "#e03e2f",
+                                                            "textLight": "#FA5849",
                                                           },
                                                           "info": Object {
                                                             "background": "#3B6ECC",
                                                             "backgroundLight": "#F5FAFE",
-                                                            "border": "#B5D6ED",
+                                                            "border": "#628BD6",
                                                             "iconColor": "#3B6ECC",
                                                           },
                                                           "success": Object {
                                                             "background": "#57be8c",
-                                                            "backgroundLight": "#F8FCF7",
-                                                            "border": "#BBD6B3",
+                                                            "backgroundLight": "#f8fcf7",
+                                                            "border": "#57be8c",
                                                             "iconColor": "#3EA573",
                                                           },
                                                           "warn": Object {
-                                                            "background": "#ecc844",
+                                                            "background": "#ecbb08",
                                                             "backgroundLight": "#FFFDF7",
-                                                            "border": "#E1D697",
+                                                            "border": "#e6bc23",
                                                             "iconColor": "#e6bc23",
                                                           },
                                                           "warning": Object {
-                                                            "background": "#ecc844",
+                                                            "background": "#ecbb08",
                                                             "backgroundLight": "#FFFDF7",
-                                                            "border": "#E1D697",
+                                                            "border": "#e6bc23",
                                                             "iconColor": "#e6bc23",
                                                           },
                                                         },
@@ -896,6 +836,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                         "blue": "#3B6ECC",
                                                         "blueDark": "#2F58A3",
                                                         "blueLight": "#628BD6",
+                                                        "blueLightest": "#F5FAFE",
                                                         "borderDark": "#D1CAD8",
                                                         "borderLight": "#E2DBE8",
                                                         "borderLighter": "#f9f6fd",
@@ -997,6 +938,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                         "green": "#57be8c",
                                                         "greenDark": "#3EA573",
                                                         "greenLight": "#71D8A6",
+                                                        "greenLightest": "#f8fcf7",
                                                         "greenTransparent": "rgba(87, 190, 140, 0.5)",
                                                         "grid": 8,
                                                         "headerFontSize": "22px",
@@ -1018,6 +960,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                         "red": "#e03e2f",
                                                         "redDark": "#C72516",
                                                         "redLight": "#FA5849",
+                                                        "redLightest": "#FDF6F5",
                                                         "settings": Object {
                                                           "containerWidth": "1440px",
                                                           "headerHeight": "115px",
@@ -1061,6 +1004,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                         "whiteDark": "#fbfbfc",
                                                         "yellow": "#ecc844",
                                                         "yellowDark": "#e6bc23",
+                                                        "yellowDarkest": "#ecbb08",
                                                         "yellowLight": "#FFF15E",
                                                         "yellowLightest": "#FFFDF7",
                                                         "yellowOrange": "#f9a66d",
@@ -1076,6 +1020,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                           "header": 1000,
                                                           "modal": 10000,
                                                           "orgAndUserMenu": 1004,
+                                                          "sentryErrorEmbed": 1009,
                                                           "sidebar": 1003,
                                                           "toast": 10001,
                                                         },
@@ -1126,6 +1071,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                   size="small"
                                 >
                                   <StyledButton
+                                    aria-disabled={false}
                                     aria-label="Add Another"
                                     disabled={false}
                                     onClick={[Function]}
@@ -1133,17 +1079,17 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                     size="small"
                                   >
                                     <Component
+                                      aria-disabled={false}
                                       aria-label="Add Another"
                                       className="css-dkprmi-StyledButton-getColors eqrebog0"
-                                      disabled={false}
                                       onClick={[Function]}
                                       role="button"
                                       size="small"
                                     >
                                       <button
+                                        aria-disabled={false}
                                         aria-label="Add Another"
                                         className="css-dkprmi-StyledButton-getColors eqrebog0"
-                                        disabled={false}
                                         onClick={[Function]}
                                         role="button"
                                         size="small"
@@ -1533,6 +1479,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                       "org:read",
                                       "org:write",
                                       "org:admin",
+                                      "org:integrations",
                                       "project:read",
                                       "project:write",
                                       "project:admin",
@@ -1704,7 +1651,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                               cancelText="Cancel"
                                               confirmText="Delete"
                                               disableConfirmButton={false}
-                                              disabled={true}
+                                              disabled={false}
                                               message={
                                                 <React.Fragment>
                                                   <Alert
@@ -1722,45 +1669,39 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                             >
                                               <StyledButton
                                                 borderless={true}
-                                                disabled={true}
+                                                disabled={false}
                                                 icon="icon-trash"
                                                 onClick={[Function]}
                                               >
                                                 <Button
                                                   borderless={true}
                                                   className="css-1j0nrmm-StyledButton ejqw4f70"
-                                                  disabled={true}
+                                                  disabled={false}
                                                   icon="icon-trash"
                                                   onClick={[Function]}
                                                 >
                                                   <StyledButton
+                                                    aria-disabled={false}
                                                     aria-label="Remove"
                                                     borderless={true}
                                                     className="css-1j0nrmm-StyledButton ejqw4f70"
-                                                    disabled={true}
-                                                    href={null}
+                                                    disabled={false}
                                                     onClick={[Function]}
                                                     role="button"
-                                                    to={null}
                                                   >
                                                     <Component
+                                                      aria-disabled={false}
                                                       aria-label="Remove"
-                                                      borderless={true}
-                                                      className="ejqw4f70 css-h1aems-StyledButton-getColors-StyledButton eqrebog0"
-                                                      disabled={true}
-                                                      href={null}
+                                                      className="ejqw4f70 css-1rs3lxn-StyledButton-getColors-StyledButton eqrebog0"
                                                       onClick={[Function]}
                                                       role="button"
-                                                      to={null}
                                                     >
                                                       <button
+                                                        aria-disabled={false}
                                                         aria-label="Remove"
-                                                        className="ejqw4f70 css-h1aems-StyledButton-getColors-StyledButton eqrebog0"
-                                                        disabled={true}
-                                                        href={null}
+                                                        className="ejqw4f70 css-1rs3lxn-StyledButton-getColors-StyledButton eqrebog0"
                                                         onClick={[Function]}
                                                         role="button"
-                                                        to={null}
                                                       >
                                                         <ButtonLabel
                                                           borderless={true}
@@ -2047,11 +1988,6 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                             theme={
                                               Object {
                                                 "alert": Object {
-                                                  "attention": Object {
-                                                    "background": "#F09E71",
-                                                    "backgroundLight": "#ECBFA6",
-                                                    "border": "#D0816D",
-                                                  },
                                                   "beta": Object {
                                                     "background": "linear-gradient(90deg, #F868BC, #6C5FC7)",
                                                   },
@@ -2063,32 +1999,32 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                   "error": Object {
                                                     "background": "#e03e2f",
                                                     "backgroundLight": "#FDF6F5",
-                                                    "border": "#E7C0BC",
-                                                    "iconColor": "#C72516",
-                                                    "textLight": "#92635f",
+                                                    "border": "#FA5849",
+                                                    "iconColor": "#e03e2f",
+                                                    "textLight": "#FA5849",
                                                   },
                                                   "info": Object {
                                                     "background": "#3B6ECC",
                                                     "backgroundLight": "#F5FAFE",
-                                                    "border": "#B5D6ED",
+                                                    "border": "#628BD6",
                                                     "iconColor": "#3B6ECC",
                                                   },
                                                   "success": Object {
                                                     "background": "#57be8c",
-                                                    "backgroundLight": "#F8FCF7",
-                                                    "border": "#BBD6B3",
+                                                    "backgroundLight": "#f8fcf7",
+                                                    "border": "#57be8c",
                                                     "iconColor": "#3EA573",
                                                   },
                                                   "warn": Object {
-                                                    "background": "#ecc844",
+                                                    "background": "#ecbb08",
                                                     "backgroundLight": "#FFFDF7",
-                                                    "border": "#E1D697",
+                                                    "border": "#e6bc23",
                                                     "iconColor": "#e6bc23",
                                                   },
                                                   "warning": Object {
-                                                    "background": "#ecc844",
+                                                    "background": "#ecbb08",
                                                     "backgroundLight": "#FFFDF7",
-                                                    "border": "#E1D697",
+                                                    "border": "#e6bc23",
                                                     "iconColor": "#e6bc23",
                                                   },
                                                 },
@@ -2096,6 +2032,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                 "blue": "#3B6ECC",
                                                 "blueDark": "#2F58A3",
                                                 "blueLight": "#628BD6",
+                                                "blueLightest": "#F5FAFE",
                                                 "borderDark": "#D1CAD8",
                                                 "borderLight": "#E2DBE8",
                                                 "borderLighter": "#f9f6fd",
@@ -2197,6 +2134,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                 "green": "#57be8c",
                                                 "greenDark": "#3EA573",
                                                 "greenLight": "#71D8A6",
+                                                "greenLightest": "#f8fcf7",
                                                 "greenTransparent": "rgba(87, 190, 140, 0.5)",
                                                 "grid": 8,
                                                 "headerFontSize": "22px",
@@ -2218,6 +2156,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                 "red": "#e03e2f",
                                                 "redDark": "#C72516",
                                                 "redLight": "#FA5849",
+                                                "redLightest": "#FDF6F5",
                                                 "settings": Object {
                                                   "containerWidth": "1440px",
                                                   "headerHeight": "115px",
@@ -2261,6 +2200,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                 "whiteDark": "#fbfbfc",
                                                 "yellow": "#ecc844",
                                                 "yellowDark": "#e6bc23",
+                                                "yellowDarkest": "#ecbb08",
                                                 "yellowLight": "#FFF15E",
                                                 "yellowLightest": "#FFFDF7",
                                                 "yellowOrange": "#f9a66d",
@@ -2276,6 +2216,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                   "header": 1000,
                                                   "modal": 10000,
                                                   "orgAndUserMenu": 1004,
+                                                  "sentryErrorEmbed": 1009,
                                                   "sidebar": 1003,
                                                   "toast": 10001,
                                                 },
@@ -2315,11 +2256,6 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                     theme={
                                                       Object {
                                                         "alert": Object {
-                                                          "attention": Object {
-                                                            "background": "#F09E71",
-                                                            "backgroundLight": "#ECBFA6",
-                                                            "border": "#D0816D",
-                                                          },
                                                           "beta": Object {
                                                             "background": "linear-gradient(90deg, #F868BC, #6C5FC7)",
                                                           },
@@ -2331,32 +2267,32 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                           "error": Object {
                                                             "background": "#e03e2f",
                                                             "backgroundLight": "#FDF6F5",
-                                                            "border": "#E7C0BC",
-                                                            "iconColor": "#C72516",
-                                                            "textLight": "#92635f",
+                                                            "border": "#FA5849",
+                                                            "iconColor": "#e03e2f",
+                                                            "textLight": "#FA5849",
                                                           },
                                                           "info": Object {
                                                             "background": "#3B6ECC",
                                                             "backgroundLight": "#F5FAFE",
-                                                            "border": "#B5D6ED",
+                                                            "border": "#628BD6",
                                                             "iconColor": "#3B6ECC",
                                                           },
                                                           "success": Object {
                                                             "background": "#57be8c",
-                                                            "backgroundLight": "#F8FCF7",
-                                                            "border": "#BBD6B3",
+                                                            "backgroundLight": "#f8fcf7",
+                                                            "border": "#57be8c",
                                                             "iconColor": "#3EA573",
                                                           },
                                                           "warn": Object {
-                                                            "background": "#ecc844",
+                                                            "background": "#ecbb08",
                                                             "backgroundLight": "#FFFDF7",
-                                                            "border": "#E1D697",
+                                                            "border": "#e6bc23",
                                                             "iconColor": "#e6bc23",
                                                           },
                                                           "warning": Object {
-                                                            "background": "#ecc844",
+                                                            "background": "#ecbb08",
                                                             "backgroundLight": "#FFFDF7",
-                                                            "border": "#E1D697",
+                                                            "border": "#e6bc23",
                                                             "iconColor": "#e6bc23",
                                                           },
                                                         },
@@ -2364,6 +2300,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                         "blue": "#3B6ECC",
                                                         "blueDark": "#2F58A3",
                                                         "blueLight": "#628BD6",
+                                                        "blueLightest": "#F5FAFE",
                                                         "borderDark": "#D1CAD8",
                                                         "borderLight": "#E2DBE8",
                                                         "borderLighter": "#f9f6fd",
@@ -2465,6 +2402,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                         "green": "#57be8c",
                                                         "greenDark": "#3EA573",
                                                         "greenLight": "#71D8A6",
+                                                        "greenLightest": "#f8fcf7",
                                                         "greenTransparent": "rgba(87, 190, 140, 0.5)",
                                                         "grid": 8,
                                                         "headerFontSize": "22px",
@@ -2486,6 +2424,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                         "red": "#e03e2f",
                                                         "redDark": "#C72516",
                                                         "redLight": "#FA5849",
+                                                        "redLightest": "#FDF6F5",
                                                         "settings": Object {
                                                           "containerWidth": "1440px",
                                                           "headerHeight": "115px",
@@ -2529,6 +2468,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                         "whiteDark": "#fbfbfc",
                                                         "yellow": "#ecc844",
                                                         "yellowDark": "#e6bc23",
+                                                        "yellowDarkest": "#ecbb08",
                                                         "yellowLight": "#FFF15E",
                                                         "yellowLightest": "#FFFDF7",
                                                         "yellowOrange": "#f9a66d",
@@ -2544,6 +2484,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                                           "header": 1000,
                                                           "modal": 10000,
                                                           "orgAndUserMenu": 1004,
+                                                          "sentryErrorEmbed": 1009,
                                                           "sidebar": 1003,
                                                           "toast": 10001,
                                                         },
@@ -2594,6 +2535,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                   size="small"
                                 >
                                   <StyledButton
+                                    aria-disabled={false}
                                     aria-label="Add Another"
                                     disabled={false}
                                     onClick={[Function]}
@@ -2601,17 +2543,17 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                     size="small"
                                   >
                                     <Component
+                                      aria-disabled={false}
                                       aria-label="Add Another"
                                       className="css-dkprmi-StyledButton-getColors eqrebog0"
-                                      disabled={false}
                                       onClick={[Function]}
                                       role="button"
                                       size="small"
                                     >
                                       <button
+                                        aria-disabled={false}
                                         aria-label="Add Another"
                                         className="css-dkprmi-StyledButton-getColors eqrebog0"
-                                        disabled={false}
                                         onClick={[Function]}
                                         role="button"
                                         size="small"
@@ -2980,6 +2922,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                       "org:read",
                                       "org:write",
                                       "org:admin",
+                                      "org:integrations",
                                       "project:read",
                                       "project:write",
                                       "project:admin",
@@ -3151,7 +3094,7 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                               cancelText="Cancel"
                                               confirmText="Delete"
                                               disableConfirmButton={false}
-                                              disabled={true}
+                                              disabled={false}
                                               message={
                                                 <React.Fragment>
                                                   <Alert
@@ -3169,45 +3112,39 @@ exports[`OrganizationIntegrations render() with installed integrations Displays 
                                             >
                                               <StyledButton
                                                 borderless={true}
-                                                disabled={true}
+                                                disabled={false}
                                                 icon="icon-trash"
                                                 onClick={[Function]}
                                               >
                                                 <Button
                                                   borderless={true}
                                                   className="css-1j0nrmm-StyledButton ejqw4f70"
-                                                  disabled={true}
+                                                  disabled={false}
                                                   icon="icon-trash"
                                                   onClick={[Function]}
                                                 >
                                                   <StyledButton
+                                                    aria-disabled={false}
                                                     aria-label="Remove"
                                                     borderless={true}
                                                     className="css-1j0nrmm-StyledButton ejqw4f70"
-                                                    disabled={true}
-                                                    href={null}
+                                                    disabled={false}
                                                     onClick={[Function]}
                                                     role="button"
-                                                    to={null}
                                                   >
                                                     <Component
+                                                      aria-disabled={false}
                                                       aria-label="Remove"
-                                                      borderless={true}
-                                                      className="ejqw4f70 css-h1aems-StyledButton-getColors-StyledButton eqrebog0"
-                                                      disabled={true}
-                                                      href={null}
+                                                      className="ejqw4f70 css-1rs3lxn-StyledButton-getColors-StyledButton eqrebog0"
                                                       onClick={[Function]}
                                                       role="button"
-                                                      to={null}
                                                     >
                                                       <button
+                                                        aria-disabled={false}
                                                         aria-label="Remove"
-                                                        className="ejqw4f70 css-h1aems-StyledButton-getColors-StyledButton eqrebog0"
-                                                        disabled={true}
-                                                        href={null}
+                                                        className="ejqw4f70 css-1rs3lxn-StyledButton-getColors-StyledButton eqrebog0"
                                                         onClick={[Function]}
                                                         role="button"
-                                                        to={null}
                                                       >
                                                         <ButtonLabel
                                                           borderless={true}
@@ -3355,6 +3292,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
         "org:read",
         "org:write",
         "org:admin",
+        "org:integrations",
         "project:read",
         "project:write",
         "project:admin",
@@ -3519,6 +3457,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                 "org:read",
                 "org:write",
                 "org:admin",
+                "org:integrations",
                 "project:read",
                 "project:write",
                 "project:admin",
@@ -3542,64 +3481,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
           }
           renderNoAccessMessage={false}
           requireAll={true}
-        >
-          <Alert
-            icon="icon-warning-sm"
-            iconSize="24px"
-            type="warning"
-          >
-            <AlertWrapper
-              className="ref-warning"
-              type="warning"
-            >
-              <div
-                className="ref-warning css-3oyttp-AlertWrapper e1xb5l7j1"
-                type="warning"
-              >
-                <StyledInlineSvg
-                  size="24px"
-                  src="icon-warning-sm"
-                >
-                  <InlineSvg
-                    className="css-1e3iblq-StyledInlineSvg e1xb5l7j0"
-                    size="24px"
-                    src="icon-warning-sm"
-                  >
-                    <StyledSvg
-                      className="css-1e3iblq-StyledInlineSvg e1xb5l7j0"
-                      height="24px"
-                      viewBox={Object {}}
-                      width="24px"
-                    >
-                      <svg
-                        className="e1xb5l7j0 css-lbx2sj-StyledSvg-StyledInlineSvg e2idor0"
-                        height="24px"
-                        viewBox={Object {}}
-                        width="24px"
-                      >
-                        <use
-                          href="#test"
-                          xlinkHref="#test"
-                        />
-                      </svg>
-                    </StyledSvg>
-                  </InlineSvg>
-                </StyledInlineSvg>
-                <StyledTextBlock>
-                  <Component
-                    className="css-1h3n7tg-TextBlock-StyledTextBlock e1xb5l7j2"
-                  >
-                    <div
-                      className="css-1h3n7tg-TextBlock-StyledTextBlock e1xb5l7j2"
-                    >
-                      These settings can only be edited by users with the owner or manager role.
-                    </div>
-                  </Component>
-                </StyledTextBlock>
-              </div>
-            </AlertWrapper>
-          </Alert>
-        </Access>
+        />
       </AccessContainer>
     </withConfig(AccessContainer)>
   </PermissionAlert>
@@ -3860,11 +3742,6 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                             theme={
                                               Object {
                                                 "alert": Object {
-                                                  "attention": Object {
-                                                    "background": "#F09E71",
-                                                    "backgroundLight": "#ECBFA6",
-                                                    "border": "#D0816D",
-                                                  },
                                                   "beta": Object {
                                                     "background": "linear-gradient(90deg, #F868BC, #6C5FC7)",
                                                   },
@@ -3876,32 +3753,32 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                   "error": Object {
                                                     "background": "#e03e2f",
                                                     "backgroundLight": "#FDF6F5",
-                                                    "border": "#E7C0BC",
-                                                    "iconColor": "#C72516",
-                                                    "textLight": "#92635f",
+                                                    "border": "#FA5849",
+                                                    "iconColor": "#e03e2f",
+                                                    "textLight": "#FA5849",
                                                   },
                                                   "info": Object {
                                                     "background": "#3B6ECC",
                                                     "backgroundLight": "#F5FAFE",
-                                                    "border": "#B5D6ED",
+                                                    "border": "#628BD6",
                                                     "iconColor": "#3B6ECC",
                                                   },
                                                   "success": Object {
                                                     "background": "#57be8c",
-                                                    "backgroundLight": "#F8FCF7",
-                                                    "border": "#BBD6B3",
+                                                    "backgroundLight": "#f8fcf7",
+                                                    "border": "#57be8c",
                                                     "iconColor": "#3EA573",
                                                   },
                                                   "warn": Object {
-                                                    "background": "#ecc844",
+                                                    "background": "#ecbb08",
                                                     "backgroundLight": "#FFFDF7",
-                                                    "border": "#E1D697",
+                                                    "border": "#e6bc23",
                                                     "iconColor": "#e6bc23",
                                                   },
                                                   "warning": Object {
-                                                    "background": "#ecc844",
+                                                    "background": "#ecbb08",
                                                     "backgroundLight": "#FFFDF7",
-                                                    "border": "#E1D697",
+                                                    "border": "#e6bc23",
                                                     "iconColor": "#e6bc23",
                                                   },
                                                 },
@@ -3909,6 +3786,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                 "blue": "#3B6ECC",
                                                 "blueDark": "#2F58A3",
                                                 "blueLight": "#628BD6",
+                                                "blueLightest": "#F5FAFE",
                                                 "borderDark": "#D1CAD8",
                                                 "borderLight": "#E2DBE8",
                                                 "borderLighter": "#f9f6fd",
@@ -4010,6 +3888,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                 "green": "#57be8c",
                                                 "greenDark": "#3EA573",
                                                 "greenLight": "#71D8A6",
+                                                "greenLightest": "#f8fcf7",
                                                 "greenTransparent": "rgba(87, 190, 140, 0.5)",
                                                 "grid": 8,
                                                 "headerFontSize": "22px",
@@ -4031,6 +3910,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                 "red": "#e03e2f",
                                                 "redDark": "#C72516",
                                                 "redLight": "#FA5849",
+                                                "redLightest": "#FDF6F5",
                                                 "settings": Object {
                                                   "containerWidth": "1440px",
                                                   "headerHeight": "115px",
@@ -4074,6 +3954,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                 "whiteDark": "#fbfbfc",
                                                 "yellow": "#ecc844",
                                                 "yellowDark": "#e6bc23",
+                                                "yellowDarkest": "#ecbb08",
                                                 "yellowLight": "#FFF15E",
                                                 "yellowLightest": "#FFFDF7",
                                                 "yellowOrange": "#f9a66d",
@@ -4089,6 +3970,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                   "header": 1000,
                                                   "modal": 10000,
                                                   "orgAndUserMenu": 1004,
+                                                  "sentryErrorEmbed": 1009,
                                                   "sidebar": 1003,
                                                   "toast": 10001,
                                                 },
@@ -4128,11 +4010,6 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                     theme={
                                                       Object {
                                                         "alert": Object {
-                                                          "attention": Object {
-                                                            "background": "#F09E71",
-                                                            "backgroundLight": "#ECBFA6",
-                                                            "border": "#D0816D",
-                                                          },
                                                           "beta": Object {
                                                             "background": "linear-gradient(90deg, #F868BC, #6C5FC7)",
                                                           },
@@ -4144,32 +4021,32 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                           "error": Object {
                                                             "background": "#e03e2f",
                                                             "backgroundLight": "#FDF6F5",
-                                                            "border": "#E7C0BC",
-                                                            "iconColor": "#C72516",
-                                                            "textLight": "#92635f",
+                                                            "border": "#FA5849",
+                                                            "iconColor": "#e03e2f",
+                                                            "textLight": "#FA5849",
                                                           },
                                                           "info": Object {
                                                             "background": "#3B6ECC",
                                                             "backgroundLight": "#F5FAFE",
-                                                            "border": "#B5D6ED",
+                                                            "border": "#628BD6",
                                                             "iconColor": "#3B6ECC",
                                                           },
                                                           "success": Object {
                                                             "background": "#57be8c",
-                                                            "backgroundLight": "#F8FCF7",
-                                                            "border": "#BBD6B3",
+                                                            "backgroundLight": "#f8fcf7",
+                                                            "border": "#57be8c",
                                                             "iconColor": "#3EA573",
                                                           },
                                                           "warn": Object {
-                                                            "background": "#ecc844",
+                                                            "background": "#ecbb08",
                                                             "backgroundLight": "#FFFDF7",
-                                                            "border": "#E1D697",
+                                                            "border": "#e6bc23",
                                                             "iconColor": "#e6bc23",
                                                           },
                                                           "warning": Object {
-                                                            "background": "#ecc844",
+                                                            "background": "#ecbb08",
                                                             "backgroundLight": "#FFFDF7",
-                                                            "border": "#E1D697",
+                                                            "border": "#e6bc23",
                                                             "iconColor": "#e6bc23",
                                                           },
                                                         },
@@ -4177,6 +4054,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                         "blue": "#3B6ECC",
                                                         "blueDark": "#2F58A3",
                                                         "blueLight": "#628BD6",
+                                                        "blueLightest": "#F5FAFE",
                                                         "borderDark": "#D1CAD8",
                                                         "borderLight": "#E2DBE8",
                                                         "borderLighter": "#f9f6fd",
@@ -4278,6 +4156,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                         "green": "#57be8c",
                                                         "greenDark": "#3EA573",
                                                         "greenLight": "#71D8A6",
+                                                        "greenLightest": "#f8fcf7",
                                                         "greenTransparent": "rgba(87, 190, 140, 0.5)",
                                                         "grid": 8,
                                                         "headerFontSize": "22px",
@@ -4299,6 +4178,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                         "red": "#e03e2f",
                                                         "redDark": "#C72516",
                                                         "redLight": "#FA5849",
+                                                        "redLightest": "#FDF6F5",
                                                         "settings": Object {
                                                           "containerWidth": "1440px",
                                                           "headerHeight": "115px",
@@ -4342,6 +4222,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                         "whiteDark": "#fbfbfc",
                                                         "yellow": "#ecc844",
                                                         "yellowDark": "#e6bc23",
+                                                        "yellowDarkest": "#ecbb08",
                                                         "yellowLight": "#FFF15E",
                                                         "yellowLightest": "#FFFDF7",
                                                         "yellowOrange": "#f9a66d",
@@ -4357,6 +4238,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                           "header": 1000,
                                                           "modal": 10000,
                                                           "orgAndUserMenu": 1004,
+                                                          "sentryErrorEmbed": 1009,
                                                           "sidebar": 1003,
                                                           "toast": 10001,
                                                         },
@@ -4407,6 +4289,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                   size="small"
                                 >
                                   <StyledButton
+                                    aria-disabled={false}
                                     aria-label="Install"
                                     disabled={false}
                                     onClick={[Function]}
@@ -4414,17 +4297,17 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                     size="small"
                                   >
                                     <Component
+                                      aria-disabled={false}
                                       aria-label="Install"
                                       className="css-dkprmi-StyledButton-getColors eqrebog0"
-                                      disabled={false}
                                       onClick={[Function]}
                                       role="button"
                                       size="small"
                                     >
                                       <button
+                                        aria-disabled={false}
                                         aria-label="Install"
                                         className="css-dkprmi-StyledButton-getColors eqrebog0"
-                                        disabled={false}
                                         onClick={[Function]}
                                         role="button"
                                         size="small"
@@ -4623,11 +4506,6 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                             theme={
                                               Object {
                                                 "alert": Object {
-                                                  "attention": Object {
-                                                    "background": "#F09E71",
-                                                    "backgroundLight": "#ECBFA6",
-                                                    "border": "#D0816D",
-                                                  },
                                                   "beta": Object {
                                                     "background": "linear-gradient(90deg, #F868BC, #6C5FC7)",
                                                   },
@@ -4639,32 +4517,32 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                   "error": Object {
                                                     "background": "#e03e2f",
                                                     "backgroundLight": "#FDF6F5",
-                                                    "border": "#E7C0BC",
-                                                    "iconColor": "#C72516",
-                                                    "textLight": "#92635f",
+                                                    "border": "#FA5849",
+                                                    "iconColor": "#e03e2f",
+                                                    "textLight": "#FA5849",
                                                   },
                                                   "info": Object {
                                                     "background": "#3B6ECC",
                                                     "backgroundLight": "#F5FAFE",
-                                                    "border": "#B5D6ED",
+                                                    "border": "#628BD6",
                                                     "iconColor": "#3B6ECC",
                                                   },
                                                   "success": Object {
                                                     "background": "#57be8c",
-                                                    "backgroundLight": "#F8FCF7",
-                                                    "border": "#BBD6B3",
+                                                    "backgroundLight": "#f8fcf7",
+                                                    "border": "#57be8c",
                                                     "iconColor": "#3EA573",
                                                   },
                                                   "warn": Object {
-                                                    "background": "#ecc844",
+                                                    "background": "#ecbb08",
                                                     "backgroundLight": "#FFFDF7",
-                                                    "border": "#E1D697",
+                                                    "border": "#e6bc23",
                                                     "iconColor": "#e6bc23",
                                                   },
                                                   "warning": Object {
-                                                    "background": "#ecc844",
+                                                    "background": "#ecbb08",
                                                     "backgroundLight": "#FFFDF7",
-                                                    "border": "#E1D697",
+                                                    "border": "#e6bc23",
                                                     "iconColor": "#e6bc23",
                                                   },
                                                 },
@@ -4672,6 +4550,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                 "blue": "#3B6ECC",
                                                 "blueDark": "#2F58A3",
                                                 "blueLight": "#628BD6",
+                                                "blueLightest": "#F5FAFE",
                                                 "borderDark": "#D1CAD8",
                                                 "borderLight": "#E2DBE8",
                                                 "borderLighter": "#f9f6fd",
@@ -4773,6 +4652,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                 "green": "#57be8c",
                                                 "greenDark": "#3EA573",
                                                 "greenLight": "#71D8A6",
+                                                "greenLightest": "#f8fcf7",
                                                 "greenTransparent": "rgba(87, 190, 140, 0.5)",
                                                 "grid": 8,
                                                 "headerFontSize": "22px",
@@ -4794,6 +4674,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                 "red": "#e03e2f",
                                                 "redDark": "#C72516",
                                                 "redLight": "#FA5849",
+                                                "redLightest": "#FDF6F5",
                                                 "settings": Object {
                                                   "containerWidth": "1440px",
                                                   "headerHeight": "115px",
@@ -4837,6 +4718,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                 "whiteDark": "#fbfbfc",
                                                 "yellow": "#ecc844",
                                                 "yellowDark": "#e6bc23",
+                                                "yellowDarkest": "#ecbb08",
                                                 "yellowLight": "#FFF15E",
                                                 "yellowLightest": "#FFFDF7",
                                                 "yellowOrange": "#f9a66d",
@@ -4852,6 +4734,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                   "header": 1000,
                                                   "modal": 10000,
                                                   "orgAndUserMenu": 1004,
+                                                  "sentryErrorEmbed": 1009,
                                                   "sidebar": 1003,
                                                   "toast": 10001,
                                                 },
@@ -4891,11 +4774,6 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                     theme={
                                                       Object {
                                                         "alert": Object {
-                                                          "attention": Object {
-                                                            "background": "#F09E71",
-                                                            "backgroundLight": "#ECBFA6",
-                                                            "border": "#D0816D",
-                                                          },
                                                           "beta": Object {
                                                             "background": "linear-gradient(90deg, #F868BC, #6C5FC7)",
                                                           },
@@ -4907,32 +4785,32 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                           "error": Object {
                                                             "background": "#e03e2f",
                                                             "backgroundLight": "#FDF6F5",
-                                                            "border": "#E7C0BC",
-                                                            "iconColor": "#C72516",
-                                                            "textLight": "#92635f",
+                                                            "border": "#FA5849",
+                                                            "iconColor": "#e03e2f",
+                                                            "textLight": "#FA5849",
                                                           },
                                                           "info": Object {
                                                             "background": "#3B6ECC",
                                                             "backgroundLight": "#F5FAFE",
-                                                            "border": "#B5D6ED",
+                                                            "border": "#628BD6",
                                                             "iconColor": "#3B6ECC",
                                                           },
                                                           "success": Object {
                                                             "background": "#57be8c",
-                                                            "backgroundLight": "#F8FCF7",
-                                                            "border": "#BBD6B3",
+                                                            "backgroundLight": "#f8fcf7",
+                                                            "border": "#57be8c",
                                                             "iconColor": "#3EA573",
                                                           },
                                                           "warn": Object {
-                                                            "background": "#ecc844",
+                                                            "background": "#ecbb08",
                                                             "backgroundLight": "#FFFDF7",
-                                                            "border": "#E1D697",
+                                                            "border": "#e6bc23",
                                                             "iconColor": "#e6bc23",
                                                           },
                                                           "warning": Object {
-                                                            "background": "#ecc844",
+                                                            "background": "#ecbb08",
                                                             "backgroundLight": "#FFFDF7",
-                                                            "border": "#E1D697",
+                                                            "border": "#e6bc23",
                                                             "iconColor": "#e6bc23",
                                                           },
                                                         },
@@ -4940,6 +4818,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                         "blue": "#3B6ECC",
                                                         "blueDark": "#2F58A3",
                                                         "blueLight": "#628BD6",
+                                                        "blueLightest": "#F5FAFE",
                                                         "borderDark": "#D1CAD8",
                                                         "borderLight": "#E2DBE8",
                                                         "borderLighter": "#f9f6fd",
@@ -5041,6 +4920,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                         "green": "#57be8c",
                                                         "greenDark": "#3EA573",
                                                         "greenLight": "#71D8A6",
+                                                        "greenLightest": "#f8fcf7",
                                                         "greenTransparent": "rgba(87, 190, 140, 0.5)",
                                                         "grid": 8,
                                                         "headerFontSize": "22px",
@@ -5062,6 +4942,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                         "red": "#e03e2f",
                                                         "redDark": "#C72516",
                                                         "redLight": "#FA5849",
+                                                        "redLightest": "#FDF6F5",
                                                         "settings": Object {
                                                           "containerWidth": "1440px",
                                                           "headerHeight": "115px",
@@ -5105,6 +4986,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                         "whiteDark": "#fbfbfc",
                                                         "yellow": "#ecc844",
                                                         "yellowDark": "#e6bc23",
+                                                        "yellowDarkest": "#ecbb08",
                                                         "yellowLight": "#FFF15E",
                                                         "yellowLightest": "#FFFDF7",
                                                         "yellowOrange": "#f9a66d",
@@ -5120,6 +5002,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                                           "header": 1000,
                                                           "modal": 10000,
                                                           "orgAndUserMenu": 1004,
+                                                          "sentryErrorEmbed": 1009,
                                                           "sidebar": 1003,
                                                           "toast": 10001,
                                                         },
@@ -5170,6 +5053,7 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                   size="small"
                                 >
                                   <StyledButton
+                                    aria-disabled={false}
                                     aria-label="Install"
                                     disabled={false}
                                     onClick={[Function]}
@@ -5177,17 +5061,17 @@ exports[`OrganizationIntegrations render() without integrations Displays integra
                                     size="small"
                                   >
                                     <Component
+                                      aria-disabled={false}
                                       aria-label="Install"
                                       className="css-dkprmi-StyledButton-getColors eqrebog0"
-                                      disabled={false}
                                       onClick={[Function]}
                                       role="button"
                                       size="small"
                                     >
                                       <button
+                                        aria-disabled={false}
                                         aria-label="Install"
                                         className="css-dkprmi-StyledButton-getColors eqrebog0"
-                                        disabled={false}
                                         onClick={[Function]}
                                         role="button"
                                         size="small"

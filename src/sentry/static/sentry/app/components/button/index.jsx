@@ -2,6 +2,7 @@ import {Link} from 'react-router';
 import PropTypes from 'prop-types';
 import React from 'react';
 import styled, {css} from 'react-emotion';
+import isPropValid from '@emotion/is-prop-valid';
 
 import ExternalLink from 'app/components/externalLink';
 import InlineSvg from 'app/components/inlineSvg';
@@ -79,6 +80,7 @@ class Button extends React.Component {
       label,
       borderless,
       priority,
+      disabled,
 
       // destructure from `buttonProps`
       // not necessary, but just in case someone re-orders props
@@ -86,7 +88,6 @@ class Button extends React.Component {
       onClick,
       ...buttonProps
     } = this.props;
-
     // For `aria-label`
     const screenReaderLabel =
       label || (typeof children === 'string' ? children : undefined);
@@ -97,6 +98,8 @@ class Button extends React.Component {
     const button = (
       <StyledButton
         aria-label={screenReaderLabel}
+        aria-disabled={disabled}
+        disabled={disabled}
         to={this.getUrl(to)}
         href={this.getUrl(href)}
         size={size}
@@ -187,23 +190,30 @@ const getColors = ({priority, disabled, borderless, theme}) => {
   `;
 };
 
-const StyledButton = styled(({busy, external, borderless, ...props}) => {
-  // Get component to use based on existance of `to` or `href` properties
-  // Can be react-router `Link`, `a`, or `button`
-  if (props.to) {
-    return <Link {...props} />;
-  }
+const customProps = ['external', 'size'];
+const shouldForwardProp = p =>
+  (p !== 'disabled' && isPropValid(p)) || customProps.includes(p);
 
-  if (!props.href) {
-    return <button {...props} />;
-  }
+const StyledButton = styled(
+  ({external, ...props}) => {
+    // Get component to use based on existance of `to` or `href` properties
+    // Can be react-router `Link`, `a`, or `button`
+    if (props.to) {
+      return <Link {...props} />;
+    }
 
-  if (external) {
-    return <ExternalLink {...props} />;
-  }
+    if (!props.href) {
+      return <button {...props} />;
+    }
 
-  return <a {...props} />;
-})`
+    if (external) {
+      return <ExternalLink {...props} />;
+    }
+
+    return <a {...props} />;
+  },
+  {shouldForwardProp}
+)`
   display: inline-block;
   line-height: 1;
   border-radius: ${p => p.theme.button.borderRadius};

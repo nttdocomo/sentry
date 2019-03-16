@@ -10,6 +10,7 @@ exports[`IntegrationDetailsModal renders simple integration 1`] = `
         "org:read",
         "org:write",
         "org:admin",
+        "org:integrations",
         "project:read",
         "project:write",
         "project:admin",
@@ -188,6 +189,7 @@ exports[`IntegrationDetailsModal renders simple integration 1`] = `
           "org:read",
           "org:write",
           "org:admin",
+          "org:integrations",
           "project:read",
           "project:write",
           "project:admin",
@@ -332,7 +334,7 @@ exports[`IntegrationDetailsModal renders simple integration 1`] = `
       type="warning"
     >
       <div
-        className="ref-warning css-3oyttp-AlertWrapper e1xb5l7j1"
+        className="ref-warning css-fcu40c-AlertWrapper e1xb5l7j1"
         type="warning"
       >
         <StyledTextBlock>
@@ -376,6 +378,7 @@ exports[`IntegrationDetailsModal renders simple integration 1`] = `
           "org:read",
           "org:write",
           "org:admin",
+          "org:integrations",
           "project:read",
           "project:write",
           "project:admin",
@@ -407,6 +410,7 @@ exports[`IntegrationDetailsModal renders simple integration 1`] = `
         size="small"
       >
         <StyledButton
+          aria-disabled={false}
           aria-label="Cancel"
           disabled={false}
           onClick={[Function]}
@@ -414,17 +418,17 @@ exports[`IntegrationDetailsModal renders simple integration 1`] = `
           size="small"
         >
           <Component
+            aria-disabled={false}
             aria-label="Cancel"
             className="css-dkprmi-StyledButton-getColors eqrebog0"
-            disabled={false}
             onClick={[Function]}
             role="button"
             size="small"
           >
             <button
+              aria-disabled={false}
               aria-label="Cancel"
               className="css-dkprmi-StyledButton-getColors eqrebog0"
-              disabled={false}
               onClick={[Function]}
               role="button"
               size="small"
@@ -459,6 +463,7 @@ exports[`IntegrationDetailsModal renders simple integration 1`] = `
               "org:read",
               "org:write",
               "org:admin",
+              "org:integrations",
               "project:read",
               "project:write",
               "project:admin",
@@ -514,6 +519,7 @@ exports[`IntegrationDetailsModal renders simple integration 1`] = `
                 "org:read",
                 "org:write",
                 "org:admin",
+                "org:integrations",
                 "project:read",
                 "project:write",
                 "project:admin",
@@ -586,6 +592,7 @@ exports[`IntegrationDetailsModal renders simple integration 1`] = `
                   "org:read",
                   "org:write",
                   "org:admin",
+                  "org:integrations",
                   "project:read",
                   "project:write",
                   "project:admin",
@@ -611,18 +618,15 @@ exports[`IntegrationDetailsModal renders simple integration 1`] = `
             requireAll={true}
           >
             <Tooltip
-              disabled={false}
-              title="You must be an Owner or Manager to install this."
+              disabled={true}
+              title="You must be an Owner, Manager or Admin to install this."
             >
-              <span
-                className="tip"
-                title="You must be an Owner or Manager to install this."
-              >
+              <span>
                 <AddButton
-                  disabled={true}
+                  disabled={false}
                 >
                   <AddIntegrationButton
-                    disabled={true}
+                    disabled={false}
                     onAddIntegration={[Function]}
                     priority="primary"
                     provider={
@@ -711,7 +715,7 @@ exports[`IntegrationDetailsModal renders simple integration 1`] = `
                           }
                         >
                           <Button
-                            disabled={true}
+                            disabled={false}
                             onClick={[Function]}
                             priority="primary"
                             size="small"
@@ -722,9 +726,9 @@ exports[`IntegrationDetailsModal renders simple integration 1`] = `
                             }
                           >
                             <StyledButton
+                              aria-disabled={false}
                               aria-label="Add Installation"
-                              disabled={true}
-                              href={null}
+                              disabled={false}
                               onClick={[Function]}
                               priority="primary"
                               role="button"
@@ -734,15 +738,12 @@ exports[`IntegrationDetailsModal renders simple integration 1`] = `
                                   "marginLeft": "8px",
                                 }
                               }
-                              to={null}
                             >
                               <Component
+                                aria-disabled={false}
                                 aria-label="Add Installation"
-                                className="css-1ujzp8g-StyledButton-getColors eqrebog0"
-                                disabled={true}
-                                href={null}
+                                className="css-zvpqlo-StyledButton-getColors eqrebog0"
                                 onClick={[Function]}
-                                priority="primary"
                                 role="button"
                                 size="small"
                                 style={
@@ -750,15 +751,12 @@ exports[`IntegrationDetailsModal renders simple integration 1`] = `
                                     "marginLeft": "8px",
                                   }
                                 }
-                                to={null}
                               >
                                 <button
+                                  aria-disabled={false}
                                   aria-label="Add Installation"
-                                  className="css-1ujzp8g-StyledButton-getColors eqrebog0"
-                                  disabled={true}
-                                  href={null}
+                                  className="css-zvpqlo-StyledButton-getColors eqrebog0"
                                   onClick={[Function]}
-                                  priority="primary"
                                   role="button"
                                   size="small"
                                   style={
@@ -766,7 +764,6 @@ exports[`IntegrationDetailsModal renders simple integration 1`] = `
                                       "marginLeft": "8px",
                                     }
                                   }
-                                  to={null}
                                 >
                                   <ButtonLabel
                                     priority="primary"

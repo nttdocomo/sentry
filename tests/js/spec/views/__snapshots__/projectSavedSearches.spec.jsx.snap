@@ -210,6 +210,7 @@ exports[`ProjectSavedSearches renders 1`] = `
                         "org:read",
                         "org:write",
                         "org:admin",
+                        "org:integrations",
                         "project:read",
                         "project:write",
                         "project:admin",
@@ -370,21 +371,22 @@ exports[`ProjectSavedSearches renders 1`] = `
                                             size="small"
                                           >
                                             <StyledButton
+                                              aria-disabled={false}
                                               disabled={false}
                                               onClick={[Function]}
                                               role="button"
                                               size="small"
                                             >
                                               <Component
+                                                aria-disabled={false}
                                                 className="css-dkprmi-StyledButton-getColors eqrebog0"
-                                                disabled={false}
                                                 onClick={[Function]}
                                                 role="button"
                                                 size="small"
                                               >
                                                 <button
+                                                  aria-disabled={false}
                                                   className="css-dkprmi-StyledButton-getColors eqrebog0"
-                                                  disabled={false}
                                                   onClick={[Function]}
                                                   role="button"
                                                   size="small"
@@ -521,6 +523,7 @@ exports[`ProjectSavedSearches renders 1`] = `
                         "org:read",
                         "org:write",
                         "org:admin",
+                        "org:integrations",
                         "project:read",
                         "project:write",
                         "project:admin",
@@ -681,21 +684,22 @@ exports[`ProjectSavedSearches renders 1`] = `
                                             size="small"
                                           >
                                             <StyledButton
+                                              aria-disabled={false}
                                               disabled={false}
                                               onClick={[Function]}
                                               role="button"
                                               size="small"
                                             >
                                               <Component
+                                                aria-disabled={false}
                                                 className="css-dkprmi-StyledButton-getColors eqrebog0"
-                                                disabled={false}
                                                 onClick={[Function]}
                                                 role="button"
                                                 size="small"
                                               >
                                                 <button
+                                                  aria-disabled={false}
                                                   className="css-dkprmi-StyledButton-getColors eqrebog0"
-                                                  disabled={false}
                                                   onClick={[Function]}
                                                   role="button"
                                                   size="small"

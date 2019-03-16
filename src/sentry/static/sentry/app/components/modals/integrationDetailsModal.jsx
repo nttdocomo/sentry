@@ -65,7 +65,7 @@ class IntegrationDetailsModal extends React.Component {
 
   earlyAdopterLabel(provider) {
     return EARLY_ADOPTER_INTEGRATIONS.includes(provider.key) ? (
-      <StyledTag priority="attention">Early Adopter</StyledTag>
+      <StyledTag priority="warning">Early Adopter</StyledTag>
     ) : null;
   }
 
@@ -166,7 +166,7 @@ class IntegrationDetailsModal extends React.Component {
               <Access organization={organization} access={['org:integrations']}>
                 {({hasAccess}) => (
                   <Tooltip
-                    title={t('You must be an Owner or Manager to install this.')}
+                    title={t('You must be an Owner, Manager or Admin to install this.')}
                     disabled={hasAccess}
                   >
                     <span>

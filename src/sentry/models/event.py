@@ -150,21 +150,20 @@ class Event(Model):
         information if available.  Grouping hashes will take into account
         fingerprinting and checksums.
         """
-        from sentry.event_hashing import calculate_event_hashes
         # If we have hashes stored in the data we use them, otherwise we
         # fall back to generating new ones from the data
         hashes = self.data.get('hashes')
         if hashes is not None:
             return hashes
-        return calculate_event_hashes(self)
+        return filter(None, [x.get_hash() for x in self.get_grouping_variants().values()])
 
-    def get_grouping_variants(self):
+    def get_grouping_variants(self, force_config=None):
         """
         This is similar to `get_hashes` but will instead return the
         grouping components for each variant in a dictionary.
         """
-        from sentry.event_hashing import get_grouping_variants_for_event
-        return get_grouping_variants_for_event(self)
+        from sentry.grouping.api import get_grouping_variants_for_event
+        return get_grouping_variants_for_event(self, config_name=force_config)
 
     def get_primary_hash(self):
         # TODO: This *might* need to be protected from an IndexError?
