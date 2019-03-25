@@ -23,14 +23,14 @@ from jsonfield import JSONField
 from django.db import models, transaction, IntegrityError
 from django.db.models.fields.related import OneToOneRel
 
-from symbolic import FatObject, SymbolicError, ObjectErrorUnsupportedObject, \
+from symbolic import Archive, SymbolicError, ObjectErrorUnsupportedObject, \
     SYMCACHE_LATEST_VERSION, SymCache, SymCacheErrorMissingDebugInfo, \
     SymCacheErrorMissingDebugSection, CfiCache, CfiErrorMissingDebugInfo, \
     CFICACHE_LATEST_VERSION
 
 from sentry import options
 from sentry.cache import default_cache
-from sentry.constants import KNOWN_DIF_TYPES
+from sentry.constants import KNOWN_DIF_FORMATS
 from sentry.db.models import FlexibleForeignKey, Model, \
     sane_repr, BaseManager, BoundedPositiveIntegerField
 from sentry.models.file import File
@@ -51,7 +51,7 @@ ONE_DAY_AND_A_HALF = int(ONE_DAY * 1.5)
 # 10 minutes is assumed to be a reasonable value here.
 CONVERSION_ERROR_TTL = 60 * 10
 
-DIF_MIMETYPES = dict((v, k) for k, v in KNOWN_DIF_TYPES.items())
+DIF_MIMETYPES = dict((v, k) for k, v in KNOWN_DIF_FORMATS.items())
 
 _proguard_file_re = re.compile(r'/proguard/(?:mapping-)?(.*?)\.txt$')
 
@@ -164,30 +164,31 @@ class ProjectDebugFile(Model):
     cpu_name = models.CharField(max_length=40)
     project = FlexibleForeignKey('sentry.Project', null=True)
     debug_id = models.CharField(max_length=64, db_column='uuid')
+    code_id = models.CharField(max_length=64, null=True)
     data = JSONField(null=True)
     objects = ProjectDebugFileManager()
 
     class Meta:
-        index_together = (('project', 'debug_id'), )
+        index_together = (('project', 'debug_id'), ('project', 'code_id'))
         db_table = 'sentry_projectdsymfile'
         app_label = 'sentry'
 
     __repr__ = sane_repr('object_name', 'cpu_name', 'debug_id')
 
     @property
-    def dif_type(self):
+    def file_format(self):
         ct = self.file.headers.get('Content-Type', 'unknown').lower()
-        return KNOWN_DIF_TYPES.get(ct, 'unknown')
+        return KNOWN_DIF_FORMATS.get(ct, 'unknown')
 
     @property
     def file_extension(self):
-        if self.dif_type == 'breakpad':
+        if self.file_format == 'breakpad':
             return '.sym'
-        if self.dif_type == 'macho':
+        if self.file_format == 'macho':
             return '.dSYM'
-        if self.dif_type == 'proguard':
+        if self.file_format == 'proguard':
             return '.txt'
-        if self.dif_type == 'elf':
+        if self.file_format == 'elf':
             return '.debug'
 
         return ''
@@ -318,7 +319,7 @@ class ProjectSymCacheFile(ProjectCacheFile):
     def computes_from(cls, debug_file):
         if debug_file.data is None:
             # Compatibility with legacy DIFs before features were introduced
-            return debug_file.dif_type in ('breakpad', 'macho', 'elf')
+            return debug_file.file_format in ('breakpad', 'macho', 'elf')
         return super(ProjectSymCacheFile, cls).computes_from(debug_file)
 
     @property
@@ -370,21 +371,19 @@ def clean_redundant_difs(project, debug_id):
             all_features.update(dif.features)
 
 
-def create_dif_from_id(project, dif_type, cpu_name, debug_id, data,
-                       basename, fileobj=None, file=None):
+def create_dif_from_id(project, meta, fileobj=None, file=None):
     """This creates a mach dsym file or proguard mapping from the given
     debug id and open file object to a debug file.  This will not verify the
-    debug id(intentionally so).  Use `create_files_from_dif_zip` for doing
-    everything.
+    debug id (intentionally so).  Use `detect_dif_from_path` to do that.
     """
-    if dif_type == 'proguard':
+    if meta.file_format == 'proguard':
         object_name = 'proguard-mapping'
-    elif dif_type in ('macho', 'elf'):
-        object_name = basename
-    elif dif_type == 'breakpad':
-        object_name = basename[:-4] if basename.endswith('.sym') else basename
+    elif meta.file_format in ('macho', 'elf'):
+        object_name = meta.name
+    elif meta.file_format == 'breakpad':
+        object_name = meta.name[:-4] if meta.name.endswith('.sym') else meta.name
     else:
-        raise TypeError('unknown dif type %r' % (dif_type, ))
+        raise TypeError('unknown dif type %r' % (meta.file_format, ))
 
     if file is not None:
         checksum = file.checksum
@@ -402,7 +401,7 @@ def create_dif_from_id(project, dif_type, cpu_name, debug_id, data,
 
     dif = ProjectDebugFile.objects \
         .select_related('file') \
-        .filter(project=project, debug_id=debug_id, file__checksum=checksum, data__isnull=False) \
+        .filter(project=project, debug_id=meta.debug_id, file__checksum=checksum, data__isnull=False) \
         .order_by('-id') \
         .first()
 
@@ -411,35 +410,36 @@ def create_dif_from_id(project, dif_type, cpu_name, debug_id, data,
 
     if file is None:
         file = File.objects.create(
-            name=debug_id,
+            name=meta.debug_id,
             type='project.dif',
-            headers={'Content-Type': DIF_MIMETYPES[dif_type]},
+            headers={'Content-Type': DIF_MIMETYPES[meta.file_format]},
         )
         file.putfile(fileobj)
     else:
         file.type = 'project.dif'
-        file.headers['Content-Type'] = DIF_MIMETYPES[dif_type]
+        file.headers['Content-Type'] = DIF_MIMETYPES[meta.file_format]
         file.save()
 
     dif = ProjectDebugFile.objects.create(
         file=file,
-        debug_id=debug_id,
-        cpu_name=cpu_name,
+        debug_id=meta.debug_id,
+        code_id=meta.code_id,
+        cpu_name=meta.arch,
         object_name=object_name,
         project=project,
-        data=data,
+        data=meta.data,
     )
 
     # The DIF we've just created might actually be removed here again. But since
     # this can happen at any time in near or distant future, we don't care and
     # assume a successful upload. The DIF will be reported to the uploader and
     # reprocessing can start.
-    clean_redundant_difs(project, debug_id)
+    clean_redundant_difs(project, meta.debug_id)
 
     resolve_processing_issue(
         project=project,
         scope='native',
-        object='dsym:%s' % debug_id,
+        object='dsym:%s' % meta.debug_id,
     )
 
     return dif, True
@@ -458,27 +458,64 @@ def _analyze_progard_filename(filename):
         pass
 
 
-def detect_dif_from_path(path):
+class DifMeta(object):
+    def __init__(self, file_format, arch, debug_id, path, code_id=None, name=None, data=None):
+        self.file_format = file_format
+        self.arch = arch
+        self.debug_id = debug_id
+        self.code_id = code_id
+        self.path = path
+        self.data = data
+
+        if name is not None:
+            self.name = os.path.basename(name)
+        elif path is not None:
+            self.name = os.path.basename(path)
+
+    @classmethod
+    def from_object(cls, obj, path, name=None):
+        return cls(
+            file_format=obj.file_format,
+            arch=obj.arch,
+            debug_id=obj.debug_id,
+            code_id=obj.code_id,
+            path=path,
+            # TODO: Extract the object name from the object
+            name=name,
+            data={
+                'type': obj.kind,
+                'features': list(obj.features),
+            },
+        )
+
+    @property
+    def basename(self):
+        return os.path.basename(self.path)
+
+
+def detect_dif_from_path(path, name=None):
     """This detects which kind of dif(Debug Information File) the path
-    provided is. It returns an array since a FatObject can contain more than
-    on dif.
+    provided is. It returns an array since an Archive can contain more than
+    one Object.
     """
     # proguard files (proguard/UUID.txt) or
     # (proguard/mapping-UUID.txt).
     proguard_id = _analyze_progard_filename(path)
     if proguard_id is not None:
         data = {'features': ['mapping']}
-        return [(
-            'proguard',   # dif type
-            'any',        # architecture
-            proguard_id,  # debug_id
-            path,         # basepath
-            data,         # extra data
+        return [DifMeta(
+            file_format='proguard',
+            arch='any',
+            debug_id=proguard_id,
+            code_id=None,
+            path=path,
+            name=name,
+            data=data,
         )]
 
     # native debug information files (MachO, ELF or Breakpad)
     try:
-        fo = FatObject.from_path(path)
+        archive = Archive.open(path)
     except ObjectErrorUnsupportedObject as e:
         raise BadDif("Unsupported debug information file: %s" % e)
     except SymbolicError as e:
@@ -486,29 +523,19 @@ def detect_dif_from_path(path):
         raise BadDif("Invalid debug information file: %s" % e)
     else:
         objs = []
-        for obj in fo.iter_objects():
-            data = {
-                'type': obj.type,
-                'features': list(obj.features),
-            }
-            objs.append((obj.kind, obj.arch, obj.id, path, data))
+        for obj in archive.iter_objects():
+            objs.append(DifMeta.from_object(obj, path, name=name))
         return objs
 
 
-def create_debug_file_from_dif(to_create, project, overwrite_filename=None):
-    """Create a ProjectDebugFile from a dif(Debug Information File) and
+def create_debug_file_from_dif(to_create, project):
+    """Create a ProjectDebugFile from a dif (Debug Information File) and
     return an array of created objects.
     """
     rv = []
-    for dif_type, cpu, debug_id, filename, data in to_create:
-        with open(filename, 'rb') as f:
-            result_filename = os.path.basename(filename)
-            if overwrite_filename is not None:
-                result_filename = overwrite_filename
-            dif, created = create_dif_from_id(
-                project, dif_type, cpu, debug_id, data,
-                result_filename, fileobj=f
-            )
+    for meta in to_create:
+        with open(meta.path, 'rb') as f:
+            dif, created = create_dif_from_id(project, meta, fileobj=f)
             if created:
                 rv.append(dif)
     return rv
@@ -577,6 +604,7 @@ class DIFCache(object):
         blob store."""
         cachefiles, conversion_errors = self._get_caches_impl(
             project, debug_ids, ProjectSymCacheFile, on_dif_referenced)
+
         symcaches = self._load_cachefiles_via_fs(project, cachefiles, SymCache)
         if with_conversion_errors:
             return symcaches, dict((k, v) for k, v in conversion_errors.items())
@@ -729,22 +757,22 @@ class DIFCache(object):
         if not cls.computes_from(debug_file):
             return None, None, None
 
-        # Locate the object inside the FatObject. Since we have keyed debug
+        # Locate the object inside the Archive. Since we have keyed debug
         # files by debug_id, we expect a corresponding object. Otherwise, we
         # fail silently, just like with missing symbols.
         try:
-            fo = FatObject.from_path(path)
-            o = fo.get_object(id=debug_id)
-            if o is None:
+            archive = Archive.open(path)
+            obj = archive.get_object(debug_id=debug_id)
+            if obj is None:
                 return None, None, None
 
             # Check features from the actual object file, if this is a legacy
             # DIF where features have not been extracted yet.
             if (debug_file.data or {}).get('features') is None:
-                if o.features < set(cls.required_features):
+                if not set(cls.required_features) <= obj.features:
                     return None, None, None
 
-            cache = cls.cache_cls.from_object(o)
+            cache = cls.cache_cls.from_object(obj)
         except SymbolicError as e:
             if not isinstance(e, cls.ignored_errors):
                 logger.error('dsymfile.%s-build-error' % cls.cache_name,
@@ -770,7 +798,7 @@ class DIFCache(object):
                     cache_file=file,
                     debug_file=debug_file,
                     checksum=debug_file.file.checksum,
-                    version=cache.file_format_version,
+                    version=cache.version,
                 ), cache, None
         except IntegrityError:
             file.delete()
@@ -824,7 +852,7 @@ class DIFCache(object):
                 if stat.st_ctime < now - ONE_DAY:
                     os.utime(cachefile_path, (now, now))
 
-            rv[debug_id] = cls.from_path(cachefile_path)
+            rv[debug_id] = cls.open(cachefile_path)
         return rv
 
     def clear_old_entries(self):

@@ -71,8 +71,10 @@ default_manager.add('organizations:legacy-event-id', OrganizationFeature)  # NOQ
 default_manager.add('organizations:monitors', OrganizationFeature)  # NOQA
 default_manager.add('organizations:new-teams', OrganizationFeature)  # NOQA
 default_manager.add('organizations:onboarding', OrganizationFeature)  # NOQA
+default_manager.add('organizations:org-saved-searches', OrganizationFeature)  # NOQA
 default_manager.add('organizations:relay', OrganizationFeature)  # NOQA
 default_manager.add('organizations:release-commits', OrganizationFeature)  # NOQA
+default_manager.add('organizations:recent-searches', OrganizationFeature)  # NOQA
 default_manager.add('organizations:repos', OrganizationFeature)  # NOQA
 default_manager.add('organizations:require-2fa', OrganizationFeature)  # NOQA
 default_manager.add('organizations:sentry10', OrganizationFeature)  # NOQA
@@ -82,6 +84,7 @@ default_manager.add('organizations:sso-saml2', OrganizationFeature)  # NOQA
 default_manager.add('organizations:suggested-commits', OrganizationFeature)  # NOQA
 default_manager.add('organizations:unreleased-changes', OrganizationFeature)  # NOQA
 default_manager.add('organizations:grouping-info', OrganizationFeature)  # NOQA
+default_manager.add('organizations:set-grouping-config', OrganizationFeature)  # NOQA
 
 # Project scoped features
 default_manager.add('projects:custom-inbound-filters', ProjectFeature)  # NOQA

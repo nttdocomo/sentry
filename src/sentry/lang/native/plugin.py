@@ -27,7 +27,8 @@ FRAME_CACHE_VERSION = 6
 
 class NativeStacktraceProcessor(StacktraceProcessor):
     supported_platforms = ('cocoa', 'native')
-    supported_images = ('apple', 'symbolic')
+    # TODO(ja): Clean up all uses of image type "apple", "uuid", "id" and "name"
+    supported_images = ('apple', 'symbolic', 'elf', 'macho', 'pe')
 
     def __init__(self, *args, **kwargs):
         StacktraceProcessor.__init__(self, *args, **kwargs)
@@ -47,11 +48,13 @@ class NativeStacktraceProcessor(StacktraceProcessor):
             self.available = False
 
     def _is_valid_image(self, image):
+        # TODO(ja): Deprecate this. The symbolicator should take care of
+        # filtering valid images.
         return bool(image) \
             and image.get('type') in self.supported_images \
             and image.get('image_addr') is not None \
             and image.get('image_size') is not None \
-            and (image.get('id') or image.get('uuid')) is not None
+            and (image.get('debug_id') or image.get('id') or image.get('uuid')) is not None
 
     def close(self):
         StacktraceProcessor.close(self)
@@ -113,7 +116,7 @@ class NativeStacktraceProcessor(StacktraceProcessor):
         processable_frame.data = {
             'instruction_addr': instr_addr,
             'obj': obj,
-            'debug_id': obj.id if obj is not None else None,
+            'debug_id': obj.debug_id if obj is not None else None,
             'symbolserver_match': None,
         }
 
@@ -125,7 +128,7 @@ class NativeStacktraceProcessor(StacktraceProcessor):
                     # the address for the cache key to be within the image
                     # the same way as we do it in the symbolizer.
                     rebase_addr(instr_addr, obj),
-                    obj.id,
+                    obj.debug_id,
                     obj.arch,
                     obj.size,
                 )
@@ -162,13 +165,13 @@ class NativeStacktraceProcessor(StacktraceProcessor):
             # uuid.  If we encounter things with an age appended or
             # similar we need to skip.
             try:
-                uuid.UUID(obj.id)
+                uuid.UUID(obj.debug_id)
             except (ValueError, TypeError):
                 continue
 
             to_lookup.append(
                 {
-                    'object_uuid': obj.id,
+                    'object_uuid': obj.debug_id,
                     'object_name': obj.name or '<unknown>',
                     'addr': '0x%x' % rebase_addr(pf.data['instruction_addr'], obj)
                 }

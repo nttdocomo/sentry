@@ -139,6 +139,7 @@ class DifAssembleEndpoint(APITestCase):
             cpu_name='x86_64',
             project=self.project,
             debug_id='df449af8-0dcd-4320-9943-ec192134d593',
+            code_id='DF449AF80DCD43209943EC192134D593',
         )
 
         # Request now tells us that everything is alright
@@ -315,4 +316,5 @@ class DifAssembleEndpoint(APITestCase):
 
         assert response.status_code == 200, response.content
         assert response.data[total_checksum]['state'] == ChunkFileState.ERROR
-        assert response.data[total_checksum]['detail'].startswith('Invalid debug information file')
+        assert response.data[total_checksum]['detail'].startswith(
+            'Unsupported debug information file')

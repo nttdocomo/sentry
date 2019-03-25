@@ -217,6 +217,10 @@ const OrganizationStream = createReactClass({
     return new Set(this.props.organization.access);
   },
 
+  getFeatures() {
+    return new Set(this.props.organization.features);
+  },
+
   /**
    * Get the projects that are selected in the global filters
    */
@@ -320,7 +324,9 @@ const OrganizationStream = createReactClass({
   },
 
   resumePolling() {
-    if (!this.state.pageLinks) return;
+    if (!this.state.pageLinks) {
+      return;
+    }
 
     // Only resume polling if we're on the first page of results
     const links = parseLinkHeader(this.state.pageLinks);
@@ -431,7 +437,9 @@ const OrganizationStream = createReactClass({
    * Returns true if all results in the current query are visible/on this page
    */
   allResultsVisible() {
-    if (!this.state.pageLinks) return false;
+    if (!this.state.pageLinks) {
+      return false;
+    }
 
     const links = parseLinkHeader(this.state.pageLinks);
     return links && !links.previous.results && !links.next.results;
@@ -459,7 +467,7 @@ const OrganizationStream = createReactClass({
       // If the saved search is project-less and the user doesn't have
       // global-views we retain their current project filter
       // so that the backend doesn't reject their request.
-      const hasMultipleProjectSelection = organization.features.includes('global-views');
+      const hasMultipleProjectSelection = this.getFeatures().has('global-views');
       if (!savedSearch.projectId && !hasMultipleProjectSelection) {
         query.project = this.props.selection.projects;
       }
@@ -556,7 +564,9 @@ const OrganizationStream = createReactClass({
       return acc;
     }, {});
 
-    fetchSavedSearches(this.api, orgId).then(
+    const useOrgSavedSearches = this.getFeatures().has('org-saved-searches');
+
+    fetchSavedSearches(this.api, orgId, useOrgSavedSearches).then(
       data => {
         // Add in project slugs so that we can display them in the picker bars.
         const savedSearchList = data.map(search => {
@@ -636,8 +646,7 @@ const OrganizationStream = createReactClass({
     const projects = this.getGlobalSearchProjects();
 
     if (selectedProject) {
-      const features = new Set(selectedProject.features);
-      hasReleases = features.has('releases');
+      hasReleases = this.getFeatures().has('releases');
       latestRelease = selectedProject.latestRelease;
       projectId = selectedProject.slug;
     } else if (projects.length == 1) {

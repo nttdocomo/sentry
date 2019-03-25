@@ -1,5 +1,5 @@
 import React from 'react';
-import {shallow} from 'enzyme';
+import {mount, shallow} from 'enzyme';
 
 import GroupSidebar from 'app/components/group/sidebar';
 
@@ -44,7 +44,7 @@ describe('GroupSidebar', function() {
       body: TestStubs.Tags(),
     });
 
-    wrapper = shallow(
+    wrapper = mount(
       <GroupSidebar
         group={group}
         project={project}
@@ -70,7 +70,9 @@ describe('GroupSidebar', function() {
       expect(wrapper.find('SuggestedOwners')).toHaveLength(1);
       expect(wrapper.find('GroupReleaseStats')).toHaveLength(1);
       expect(wrapper.find('ExternalIssueList')).toHaveLength(1);
-      expect(wrapper.find('[data-test-id="group-tag"]')).toHaveLength(5);
+      expect(wrapper.find('TagDistributionMeter[data-test-id="group-tag"]')).toHaveLength(
+        5
+      );
     });
   });
 

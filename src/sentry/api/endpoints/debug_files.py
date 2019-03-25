@@ -8,6 +8,7 @@ import posixpath
 from django.db import transaction
 from django.db.models import Q
 from rest_framework.response import Response
+from symbolic import normalize_debug_id, SymbolicError
 
 from sentry import ratelimits
 
@@ -16,7 +17,7 @@ from sentry.api.bases.project import ProjectEndpoint, ProjectReleasePermission
 from sentry.api.content_negotiation import ConditionalContentNegotiation
 from sentry.api.paginator import OffsetPaginator
 from sentry.api.serializers import serialize
-from sentry.constants import KNOWN_DIF_TYPES
+from sentry.constants import KNOWN_DIF_FORMATS
 from sentry.models import ChunkFileState, FileBlobOwner, ProjectDebugFile, \
     create_files_from_dif_zip, get_assemble_status, set_assemble_status
 from sentry.utils import json
@@ -104,15 +105,24 @@ class DebugFilesEndpoint(ProjectEndpoint):
         ).select_related('file')
 
         if query:
+            if len(query) <= 45:
+                # If this query contains a debug identifier, normalize it to
+                # allow for more lenient queries (e.g. supporting Breakpad ids).
+                try:
+                    query = normalize_debug_id(query.strip())
+                except SymbolicError:
+                    pass
+
             q = Q(object_name__icontains=query) \
                 | Q(debug_id__icontains=query) \
+                | Q(code_id__icontains=query) \
                 | Q(cpu_name__icontains=query) \
                 | Q(file__headers__icontains=query)
 
-            KNOWN_DIF_TYPES_REVERSE = dict((v, k) for (k, v) in six.iteritems(KNOWN_DIF_TYPES))
-            dif_type = KNOWN_DIF_TYPES_REVERSE.get(query)
-            if dif_type:
-                q |= Q(file__headers__icontains=dif_type)
+            KNOWN_DIF_FORMATS_REVERSE = dict((v, k) for (k, v) in six.iteritems(KNOWN_DIF_FORMATS))
+            file_format = KNOWN_DIF_FORMATS_REVERSE.get(query)
+            if file_format:
+                q |= Q(file__headers__icontains=file_format)
 
             queryset = queryset.filter(q)
 

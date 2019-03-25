@@ -1,12 +1,13 @@
 from __future__ import absolute_import
 
 from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUploadedFile
-from symbolic import arch_from_breakpad, ProcessState, id_from_breakpad
+
 import dateutil.parser as dp
-from sentry.utils.safe import get_path
 import logging
-import msgpack
-from msgpack import UnpackException, ExtraData
+from msgpack import unpack, Unpacker, UnpackException, ExtraData
+from symbolic import normalize_arch, ProcessState, id_from_breakpad
+
+from sentry.utils.safe import get_path
 
 minidumps_logger = logging.getLogger('sentry.minidumps')
 
@@ -20,6 +21,17 @@ MAX_MSGPACK_EVENT_SIZE_BYTES = 100000
 MINIDUMP_OS_TYPES = {
     'Mac OS X': 'macOS',
     'Windows NT': 'Windows',
+}
+
+# Mapping of well-known minidump OS constants to image file formats
+MINIDUMP_IMAGE_TYPES = {
+    'Windows': 'pe',
+    'Windows NT': 'pe',
+    'iOS': 'macho',
+    'Mac OS X': 'macho',
+    'Linux': 'elf',
+    'Solaris': 'elf',
+    'Android': 'elf',
 }
 
 
@@ -54,7 +66,7 @@ def merge_process_state_event(data, state, cfi=None):
     os['name'] = MINIDUMP_OS_TYPES.get(info.os_name, info.os_name)
     os['version'] = info.os_version
     os['build'] = info.os_build
-    device['arch'] = arch_from_breakpad(info.cpu_family)
+    device['arch'] = normalize_arch(info.cpu_family)
 
     # We can extract stack traces here already but since CFI is not
     # available yet (without debug symbols), the stackwalker will
@@ -95,12 +107,14 @@ def merge_process_state_event(data, state, cfi=None):
 
     # Extract referenced (not all loaded) images
     images = [{
-        'type': 'symbolic',
-        'id': id_from_breakpad(module.id),
+        'type': MINIDUMP_IMAGE_TYPES.get(info.os_name, 'symbolic'),
+        'code_id': module.code_id,
+        'code_file': module.code_file,
+        'debug_id': id_from_breakpad(module.debug_id),
+        'debug_file': module.debug_file,
         'image_addr': '0x%x' % module.addr,
         'image_size': module.size,
-        'name': module.name,
-    } for module in state.modules() if is_valid_module_id(module.id)]
+    } for module in state.modules() if module.debug_id]
     data.setdefault('debug_meta', {})['images'] = images
 
 
@@ -110,7 +124,7 @@ def merge_attached_event(mpack_event, data):
         return
 
     try:
-        event = msgpack.unpack(mpack_event)
+        event = unpack(mpack_event)
     except (UnpackException, ExtraData) as e:
         minidumps_logger.exception(e)
         return
@@ -127,7 +141,7 @@ def merge_attached_breadcrumbs(mpack_breadcrumbs, data):
         return
 
     try:
-        unpacker = msgpack.Unpacker(mpack_breadcrumbs)
+        unpacker = Unpacker(mpack_breadcrumbs)
         breadcrumbs = list(unpacker)
     except (UnpackException, ExtraData) as e:
         minidumps_logger.exception(e)
@@ -160,14 +174,9 @@ def merge_attached_breadcrumbs(mpack_breadcrumbs, data):
     data['breadcrumbs'] = data['breadcrumbs'][-cap:]
 
 
-def is_valid_module_id(id):
-    return id is not None and id != '000000000000000000000000000000000'
-
-
 def frames_from_minidump_thread(thread):
     return [{
         'instruction_addr': '0x%x' % frame.return_address,
-        'function': '<unknown>',  # Required by interface
-        'package': frame.module.name if frame.module else None,
+        'package': frame.module.code_file if frame.module else None,
         'trust': frame.trust,
     } for frame in reversed(list(thread.frames()))]

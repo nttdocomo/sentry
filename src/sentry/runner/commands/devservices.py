@@ -23,6 +23,17 @@ def get_or_create(client, thing, name):
         return getattr(client, thing + 's').create(name)
 
 
+def ensure_interface(ports):
+    # If there is no interface specified, make sure the
+    # default interface is 127.0.0.1
+    rv = {}
+    for k, v in ports.items():
+        if not isinstance(v, tuple):
+            v = ('127.0.0.1', v)
+        rv[k] = v
+    return rv
+
+
 class SetType(click.ParamType):
     name = 'set'
 
@@ -67,13 +78,22 @@ def up(project, exclude):
     if 'bigtable' not in settings.SENTRY_NODESTORE:
         exclude |= {'bigtable'}
 
+    if 'memcached' not in settings.CACHES.get('default', {}).get('BACKEND'):
+        exclude |= {'memcached'}
+
     if 'kafka' in settings.SENTRY_EVENTSTREAM:
         pass
     elif 'snuba' in settings.SENTRY_EVENTSTREAM:
-        click.secho('! Skipping kafka and zookeeper since your eventstream backend does not require it', err=True, fg='cyan')
+        click.secho(
+            '! Skipping kafka and zookeeper since your eventstream backend does not require it',
+            err=True,
+            fg='cyan')
         exclude |= {'kafka', 'zookeeper'}
     else:
-        click.secho('! Skipping kafka, zookeeper, snuba, and clickhouse since your eventstream backend does not require it', err=True, fg='cyan')
+        click.secho(
+            '! Skipping kafka, zookeeper, snuba, and clickhouse since your eventstream backend does not require it',
+            err=True,
+            fg='cyan')
         exclude |= {'kafka', 'zookeeper', 'snuba', 'clickhouse'}
 
     get_or_create(client, 'network', project)
@@ -89,6 +109,7 @@ def up(project, exclude):
         options.setdefault('ports', {})
         options.setdefault('environment', {})
         options.setdefault('restart_policy', {'Name': 'on-failure'})
+        options['ports'] = ensure_interface(options['ports'])
         containers[name] = options
 
     pulled = set()
@@ -145,7 +166,9 @@ def down(project, service):
 def rm(project, service):
     "Delete all services and associated data."
 
-    click.confirm('Are you sure you want to continue?\nThis will delete all of your Sentry related data!', abort=True)
+    click.confirm(
+        'Are you sure you want to continue?\nThis will delete all of your Sentry related data!',
+        abort=True)
 
     import docker
     client = get_docker_client()

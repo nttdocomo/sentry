@@ -179,7 +179,9 @@ const InviteMember = createReactClass({
   submit() {
     const {email} = this.state;
     const emails = this.splitEmails(email);
-    if (!emails.length) return;
+    if (!emails.length) {
+      return;
+    }
     this.setState({busy: true});
     Promise.all(emails.map(this.inviteUser))
       .then(() => this.redirectToMemberPage())
@@ -195,17 +197,17 @@ const InviteMember = createReactClass({
       });
   },
 
-  handleAddTeam(slug) {
+  handleAddTeam(team) {
     const {selectedTeams} = this.state;
-    if (!selectedTeams.has(slug)) {
-      selectedTeams.add(slug);
+    if (!selectedTeams.has(team.slug)) {
+      selectedTeams.add(team.slug);
     }
     this.setState({selectedTeams});
   },
 
-  handleRemoveTeam(slug) {
+  handleRemoveTeam(team) {
     const {selectedTeams} = this.state;
-    selectedTeams.delete(slug);
+    selectedTeams.delete(team.slug);
 
     this.setState({selectedTeams});
   },

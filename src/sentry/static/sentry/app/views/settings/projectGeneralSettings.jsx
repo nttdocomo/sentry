@@ -49,7 +49,10 @@ class ProjectGeneralSettings extends AsyncView {
 
   getEndpoints() {
     const {orgId, projectId} = this.props.params;
-    return [['data', `/projects/${orgId}/${projectId}/`]];
+    return [
+      ['data', `/projects/${orgId}/${projectId}/`],
+      ['groupingConfigs', '/grouping-configs/'],
+    ];
   }
 
   handleTransferFieldChange = (id, value) => {
@@ -59,7 +62,9 @@ class ProjectGeneralSettings extends AsyncView {
   handleRemoveProject = () => {
     const {orgId} = this.props.params;
     const project = this.state.data;
-    if (!project) return;
+    if (!project) {
+      return;
+    }
 
     removeProject(this.api, orgId, project).then(() => {
       // Need to hard reload because lots of components do not listen to Projects Store
@@ -70,8 +75,12 @@ class ProjectGeneralSettings extends AsyncView {
   handleTransferProject = () => {
     const {orgId} = this.props.params;
     const project = this.state.data;
-    if (!project) return;
-    if (!this._form.email) return;
+    if (!project) {
+      return;
+    }
+    if (!this._form.email) {
+      return;
+    }
 
     transferProject(this.api, orgId, project, this._form.email).then(() => {
       // Need to hard reload because lots of components do not listen to Projects Store
@@ -225,7 +234,7 @@ class ProjectGeneralSettings extends AsyncView {
     const endpoint = `/projects/${orgId}/${projectId}/`;
     const access = new Set(organization.access);
     const jsonFormProps = {
-      additionalFieldProps: {organization},
+      additionalFieldProps: {organization, groupingConfigs: this.state.groupingConfigs},
       features: new Set(organization.features),
       access,
       disabled: !access.has('project:write'),
@@ -272,6 +281,23 @@ class ProjectGeneralSettings extends AsyncView {
             title={t('Event Settings')}
             fields={[fields.resolveAge]}
           />
+
+          {jsonFormProps.features.has('set-grouping-config') && (
+            <JsonForm
+              {...jsonFormProps}
+              title={t('Grouping Settings')}
+              fields={[fields.groupingConfig]}
+              renderHeader={() => (
+                <PanelAlert type="warning">
+                  <TextBlock noMargin>
+                    {t(
+                      'This is an experimental feature. Changing the value here will only apply to future events and is likely to cause events to create different groups than before.'
+                    )}
+                  </TextBlock>
+                </PanelAlert>
+              )}
+            />
+          )}
 
           <JsonForm
             {...jsonFormProps}
@@ -336,10 +362,14 @@ class ProjectGeneralSettings extends AsyncView {
 const ProjectGeneralSettingsContainer = createReactClass({
   mixins: [Reflux.listenTo(ProjectsStore, 'onProjectsUpdate')],
   onProjectsUpdate(projects) {
-    if (!this.changedSlug) return;
+    if (!this.changedSlug) {
+      return;
+    }
     const project = ProjectsStore.getBySlug(this.changedSlug);
 
-    if (!project) return;
+    if (!project) {
+      return;
+    }
 
     browserHistory.replace(
       recreateRoute('', {

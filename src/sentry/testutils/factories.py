@@ -434,12 +434,18 @@ class Factories(object):
             }
 
         if normalize:
-            manager = EventManager(CanonicalKeyDict(kwargs['data']),
-                                   for_store=False)
+            manager = EventManager(CanonicalKeyDict(kwargs['data']))
             manager.normalize()
             kwargs['data'] = manager.get_data()
             kwargs['data'].update(manager.materialize_metadata())
             kwargs['message'] = manager.get_search_message()
+
+        # This is needed so that create_event saves the event in nodestore
+        # under the correct key. This is usually dont in EventManager.save()
+        kwargs['data'].setdefault(
+            'node_id',
+            Event.generate_node_id(kwargs['project'].id, event_id)
+        )
 
         event = Event(event_id=event_id, group=group, **kwargs)
         EventMapping.objects.create(
@@ -620,7 +626,8 @@ class Factories(object):
 
     @staticmethod
     def create_dif_file(project, debug_id=None, object_name=None,
-                        features=None, data=None, file=None, cpu_name=None, **kwargs):
+                        features=None, data=None, file=None, cpu_name=None,
+                        code_id=None, **kwargs):
         if debug_id is None:
             debug_id = six.text_type(uuid4())
 
@@ -642,6 +649,7 @@ class Factories(object):
 
         return ProjectDebugFile.objects.create(
             debug_id=debug_id,
+            code_id=code_id,
             project=project,
             object_name=object_name,
             cpu_name=cpu_name or 'x86_64',
@@ -649,8 +657,6 @@ class Factories(object):
             data=data,
             **kwargs
         )
-
-        return ProjectDebugFile.objects.create(project=project, **kwargs)
 
     @staticmethod
     def create_dif_from_path(path, object_name=None, **kwargs):

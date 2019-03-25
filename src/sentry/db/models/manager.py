@@ -317,9 +317,41 @@ class BaseManager(Manager):
         return self._queryset_class(self.model, using=self._db)
 
 
+class SnubaEventManager:
+    def from_event_id(self, id_or_event_id, project_id):
+        """
+        Get a SnubaEvent by either its id primary key or its hex event_id.
+
+        Returns None if the event cannot be found under either scheme.
+
+        Log any attempt to fetch a SnubaEvent by primary key and eventually remove.
+        """
+        from sentry.models import SnubaEvent, Event
+
+        if not is_event_id(id_or_event_id):
+            logger.warning('Attempt to fetch SnubaEvent by primary key', exc_info=True, extra={
+                'stack': True
+            })
+
+            event = Event.objects.from_event_id(id_or_event_id, project_id)
+
+            if not event:
+                return None
+
+            id_or_event_id = event.event_id
+
+        return SnubaEvent.get_event(project_id, id_or_event_id)
+
+
 class EventManager(BaseManager):
 
     def bind_nodes(self, object_list, *node_names):
+        """
+        For a list of Event objects, and a property name where we might find an
+        (unfetched) NodeData on those objects, fetch all the data blobs for
+        those NodeDatas with a single multi-get command to nodestore, and bind
+        the returned blobs to the NodeDatas
+        """
         object_node_list = []
         for name in node_names:
             object_node_list.extend(
