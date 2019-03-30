@@ -39,6 +39,7 @@ from .endpoints.group_notes import GroupNotesEndpoint
 from .endpoints.group_notes_details import GroupNotesDetailsEndpoint
 from .endpoints.group_participants import GroupParticipantsEndpoint
 from .endpoints.group_external_issues import GroupExternalIssuesEndpoint
+from .endpoints.group_external_issue_details import GroupExternalIssueDetailsEndpoint
 from .endpoints.group_similar_issues import GroupSimilarIssuesEndpoint
 from .endpoints.group_stats import GroupStatsEndpoint
 from .endpoints.group_tags import GroupTagsEndpoint
@@ -90,6 +91,7 @@ from .endpoints.organization_member_team_details import OrganizationMemberTeamDe
 from .endpoints.organization_monitors import OrganizationMonitorsEndpoint
 from .endpoints.organization_onboarding_tasks import OrganizationOnboardingTaskEndpoint
 from .endpoints.organization_index import OrganizationIndexEndpoint
+from .endpoints.organization_pinned_searches import OrganizationPinnedSearchEndpoint
 from .endpoints.organization_plugins import OrganizationPluginsEndpoint
 from .endpoints.organization_processingissues import OrganizationProcessingIssuesEndpoint
 from .endpoints.organization_projects import OrganizationProjectsEndpoint
@@ -107,6 +109,7 @@ from .endpoints.organization_config_integrations import OrganizationConfigIntegr
 from .endpoints.organization_config_repositories import OrganizationConfigRepositoriesEndpoint
 from .endpoints.organization_repository_commits import OrganizationRepositoryCommitsEndpoint
 from .endpoints.organization_repository_details import OrganizationRepositoryDetailsEndpoint
+from .endpoints.organization_search_details import OrganizationSearchDetailsEndpoint
 from .endpoints.organization_searches import OrganizationSearchesEndpoint
 from .endpoints.organization_sentry_apps import OrganizationSentryAppsEndpoint
 from .endpoints.organization_tagkey_values import OrganizationTagKeyValuesEndpoint
@@ -588,9 +591,19 @@ urlpatterns = patterns(
         OrganizationMonitorsEndpoint.as_view(),
     ),
     url(
+        r'^organizations/(?P<organization_slug>[^\/]+)/pinned-searches/$',
+        OrganizationPinnedSearchEndpoint.as_view(),
+        name='sentry-api-0-organization-pinned-searches'
+    ),
+    url(
         r'^organizations/(?P<organization_slug>[^\/]+)/recent-searches/$',
         OrganizationRecentSearchesEndpoint.as_view(),
         name='sentry-api-0-organization-recent-searches'
+    ),
+    url(
+        r'^organizations/(?P<organization_slug>[^\/]+)/searches/(?P<search_id>[^\/]+)/$',
+        OrganizationSearchDetailsEndpoint.as_view(),
+        name='sentry-api-0-organization-search-details'
     ),
     url(
         r'^organizations/(?P<organization_slug>[^\/]+)/searches/$',
@@ -862,6 +875,16 @@ urlpatterns = patterns(
         r'^projects/(?P<organization_slug>[^\/]+)/(?P<project_slug>[^\/]+)/events/(?P<event_id>(?:\d+|[A-Fa-f0-9]{32}))/$',
         ProjectEventDetailsEndpoint.as_view(),
         name='sentry-api-0-project-event-details'
+    ),
+    url(
+        r'^projects/(?P<organization_slug>[^\/]+)/(?P<project_slug>[^\/]+)/events/(?P<event_id>[\w-]+)/grouping-info/$',
+        EventGroupingInfoEndpoint.as_view(),
+        name='sentry-api-0-event-grouping-info'
+    ),
+    url(
+        r'^projects/(?P<organization_slug>[^\/]+)/(?P<project_slug>[^\/]+)/events/(?P<event_id>[\w-]+)/apple-crash-report$',
+        EventAppleCrashReportEndpoint.as_view(),
+        name='sentry-api-0-event-apple-crash-report'
     ),
     url(
         r'^projects/(?P<organization_slug>[^\/]+)/(?P<project_slug>[^\/]+)/events/(?P<event_id>[\w-]+)/attachments/$',
@@ -1193,6 +1216,11 @@ urlpatterns = patterns(
         name='sentry-api-0-group-external-issues'
     ),
     url(
+        r'^(?:issues|groups)/(?P<issue_id>\d+)/external-issues/(?P<external_issue_id>\d+)/$',
+        GroupExternalIssueDetailsEndpoint.as_view(),
+        name='sentry-api-0-group-external-issue-details'
+    ),
+    url(
         r'^(?:issues|groups)/(?P<issue_id>\d+)/integrations/$',
         GroupIntegrationsEndpoint.as_view(),
         name='sentry-api-0-group-integrations'
@@ -1230,16 +1258,6 @@ urlpatterns = patterns(
         r'^events/(?P<event_id>\d+)/$',
         EventDetailsEndpoint.as_view(),
         name='sentry-api-0-event-details'
-    ),
-    url(
-        r'^events/(?P<event_id>\d+)/apple-crash-report$',
-        EventAppleCrashReportEndpoint.as_view(),
-        name='sentry-api-0-event-apple-crash-report'
-    ),
-    url(
-        r'^events/(?P<event_id>\d+)/grouping-info/$',
-        EventGroupingInfoEndpoint.as_view(),
-        name='sentry-api-0-event-grouping-info'
     ),
 
     # Sentry Apps

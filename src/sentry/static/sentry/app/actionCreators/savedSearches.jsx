@@ -1,3 +1,4 @@
+import {MAX_RECENT_SEARCHES} from 'app/constants';
 import handleXhrErrorResponse from 'app/utils/handleXhrErrorResponse';
 
 export function fetchSavedSearches(api, orgId, useOrgSavedSearches = false) {
@@ -63,9 +64,29 @@ export function fetchRecentSearches(api, orgId, type, query) {
       query: {
         query,
         type,
+        limit: MAX_RECENT_SEARCHES,
       },
     })
     .catch(handleXhrErrorResponse('Unable to fetch recent searches'));
+
+  return promise;
+}
+
+/**
+ * Send a DELETE rquest to remove a saved search
+ *
+ * @param {Object} api API client
+ * @param {String} orgId Organization slug
+ * @param {Object} search The search to remove.
+ */
+export function deleteSavedSearch(api, orgId, search) {
+  const url = `/organizations/${orgId}/searches/${search.id}/`;
+
+  const promise = api
+    .requestPromise(url, {
+      method: 'DELETE',
+    })
+    .catch(handleXhrErrorResponse('Unable to delete a saved search'));
 
   return promise;
 }

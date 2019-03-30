@@ -17,6 +17,7 @@ from datetime import datetime
 from bitfield import BitField
 from django.conf import settings
 from django.db import IntegrityError, models, transaction
+from django.db.models.signals import pre_delete
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.utils.http import urlencode
@@ -24,6 +25,7 @@ from uuid import uuid1
 
 from sentry.app import locks
 from sentry.constants import ObjectStatus, RESERVED_PROJECT_SLUGS
+from sentry.db.mixin import PendingDeletionMixin, delete_pending_deletion_option
 from sentry.db.models import (
     BaseManager, BoundedPositiveIntegerField, FlexibleForeignKey, Model, sane_repr
 )
@@ -81,7 +83,7 @@ class ProjectManager(BaseManager):
         return sorted(project_list, key=lambda x: x.name.lower())
 
 
-class Project(Model):
+class Project(Model, PendingDeletionMixin):
     """
     Projects are permission based namespaces which generally
     are the top level entry point for all data.
@@ -125,6 +127,8 @@ class Project(Model):
         unique_together = (('organization', 'slug'),)
 
     __repr__ = sane_repr('team_id', 'name', 'slug')
+
+    _rename_fields_on_pending_delete = frozenset(['slug'])
 
     def __unicode__(self):
         return u'%s (%s)' % (self.name, self.slug)
@@ -253,16 +257,22 @@ class Project(Model):
     def get_full_name(self):
         return self.slug
 
+    def get_member_alert_settings(self, user_option):
+        """
+        Returns a list of users who have alert notifications explicitly
+        enabled/disabled.
+        :param user_option: alert option key, typically 'mail:alert'
+        :return: A dictionary in format {<user_id>: <int_alert_value>}
+        """
+        from sentry.models import UserOption
+        return {o.user_id: int(o.value) for o in UserOption.objects.filter(
+            project=self,
+            key=user_option,
+        )}
+
     def get_notification_recipients(self, user_option):
         from sentry.models import UserOption
-        alert_settings = dict(
-            (o.user_id, int(o.value))
-            for o in UserOption.objects.filter(
-                project=self,
-                key=user_option,
-            )
-        )
-
+        alert_settings = self.get_member_alert_settings(user_option)
         disabled = set(u for u, v in six.iteritems(alert_settings) if v == 0)
 
         member_set = set(
@@ -407,3 +417,57 @@ class Project(Model):
 
     def get_lock_key(self):
         return 'project_token:%s' % self.id
+
+    def copy_settings_from(self, project_id):
+        """
+        Copies project level settings of the inputted project
+        - General Settings
+        - ProjectTeams
+        - Alerts Settings and Rules
+        - EnvironmentProjects
+        - ProjectOwnership Rules and settings
+        - Project Inbound Data Filters
+
+        Returns True if the settings have successfully been copied over
+        Returns False otherwise
+        """
+        from sentry.models import (
+            EnvironmentProject, ProjectOption, ProjectOwnership, Rule
+        )
+        model_list = [EnvironmentProject, ProjectOwnership, ProjectTeam, Rule]
+
+        project = Project.objects.get(id=project_id)
+        try:
+            with transaction.atomic():
+                for model in model_list:
+                    # remove all previous project settings
+                    model.objects.filter(
+                        project_id=self.id,
+                    ).delete()
+
+                    # add settings from other project to self
+                    for setting in model.objects.filter(
+                        project_id=project_id
+                    ):
+                        setting.pk = None
+                        setting.project_id = self.id
+                        setting.save()
+
+                options = ProjectOption.objects.get_all_values(project=project)
+                for key, value in six.iteritems(options):
+                    self.update_option(key, value)
+
+        except IntegrityError as e:
+            logging.exception(
+                'Error occurred during copy project settings.',
+                extra={
+                    'error': e.message,
+                    'project_to': self.id,
+                    'project_from': project_id,
+                }
+            )
+            return False
+        return True
+
+
+pre_delete.connect(delete_pending_deletion_option, sender=Project, weak=False)

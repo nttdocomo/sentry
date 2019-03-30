@@ -19,7 +19,7 @@ import {Panel, PanelBody} from 'app/components/panels';
 import StreamGroup from 'app/components/stream/group';
 import {fetchOrganizationTags, fetchTagValues} from 'app/actionCreators/tags';
 import {fetchOrgMembers, indexMembersByProject} from 'app/actionCreators/members';
-import {fetchSavedSearches} from 'app/actionCreators/savedSearches';
+import {fetchSavedSearches, deleteSavedSearch} from 'app/actionCreators/savedSearches';
 import ConfigStore from 'app/stores/configStore';
 import GroupStore from 'app/stores/groupStore';
 import SelectedGroupStore from 'app/stores/selectedGroupStore';
@@ -98,14 +98,8 @@ const OrganizationStream = createReactClass({
     this.fetchMemberList();
 
     // Start by getting searches first so if the user is on a saved search
-    // we load the correct data the first time.
+    // or they have a pinned search we load the correct data the first time.
     this.fetchSavedSearches();
-
-    // If we don't have a searchId there won't be more chained requests
-    // so we should fetch groups
-    if (!this.props.params.searchId) {
-      this.fetchData();
-    }
   },
 
   componentDidUpdate(prevProps, prevState) {
@@ -211,10 +205,6 @@ const OrganizationStream = createReactClass({
 
     // only include defined values.
     return pickBy(params, v => utils.defined(v));
-  },
-
-  getAccess() {
-    return new Set(this.props.organization.access);
   },
 
   getFeatures() {
@@ -340,10 +330,6 @@ const OrganizationStream = createReactClass({
     const params = this.props.params;
 
     return `/organizations/${params.orgId}/issues/`;
-  },
-
-  onSavedSearchSelect(search) {
-    this.setState({savedSearch: search, issuesLoading: true}, this.transitionTo);
   },
 
   onRealtimeChange(realtime) {
@@ -579,14 +565,30 @@ const OrganizationStream = createReactClass({
           savedSearchLoading: false,
         };
 
+        // Switch to the the current saved search or pinned result if available
         if (searchId) {
           const match = savedSearchList.find(search => search.id === searchId);
           newState.savedSearch = match ? match : null;
         }
+        if (
+          useOrgSavedSearches &&
+          !newState.savedSearch &&
+          this.getQuery() === DEFAULT_QUERY
+        ) {
+          const pin = savedSearchList.find(search => search.isPinned);
+          newState.savedSearch = pin ? pin : null;
+        }
         this.setState(newState);
+
+        // If we aren't loading a saved search/pin fetch data as there won't
+        // be a re-render
+        if (!newState.savedSearch) {
+          this.fetchData();
+        }
       },
       error => {
         logAjaxError(error);
+        this.fetchData();
       }
     );
   },
@@ -599,6 +601,26 @@ const OrganizationStream = createReactClass({
       savedSearchList: sortBy(savedSearchList, ['name', 'projectId']),
     });
     this.setState({savedSearch: data}, this.transitionTo);
+  },
+
+  onSavedSearchSelect(search) {
+    this.setState({savedSearch: search, issuesLoading: true}, this.transitionTo);
+  },
+
+  onSavedSearchDelete(search) {
+    const {orgId} = this.props.params;
+    const {savedSearchList} = this.state;
+
+    deleteSavedSearch(this.api, orgId, search).then(() => {
+      this.setState(
+        {
+          savedSearchList: savedSearchList.filter(s => s.id != search.id),
+          savedSearch: null,
+          issuesLoading: true,
+        },
+        this.transitionTo
+      );
+    });
   },
 
   renderAwaitingEvents(projects) {
@@ -627,13 +649,12 @@ const OrganizationStream = createReactClass({
     if (this.state.savedSearchLoading) {
       return this.renderLoading();
     }
-    const params = this.props.params;
     const classes = ['stream-row'];
     if (this.state.isSidebarVisible) {
       classes.push('show-sidebar');
     }
-    const {orgId, searchId} = this.props.params;
-    const access = this.getAccess();
+
+    const {params, organization} = this.props;
     const query = this.getQuery();
 
     // If we have a selected project set release data up
@@ -646,7 +667,7 @@ const OrganizationStream = createReactClass({
     const projects = this.getGlobalSearchProjects();
 
     if (selectedProject) {
-      hasReleases = this.getFeatures().has('releases');
+      hasReleases = new Set(selectedProject.features).has('releases');
       latestRelease = selectedProject.latestRelease;
       projectId = selectedProject.slug;
     } else if (projects.length == 1) {
@@ -659,10 +680,9 @@ const OrganizationStream = createReactClass({
       <div className={classNames(classes)}>
         <div className="stream-content">
           <StreamFilters
-            access={access}
-            orgId={orgId}
+            organization={organization}
             projectId={projectId}
-            searchId={searchId}
+            searchId={params.searchId}
             query={query}
             sort={this.getSort()}
             queryCount={this.state.queryCount}
@@ -671,6 +691,7 @@ const OrganizationStream = createReactClass({
             onSearch={this.onSearch}
             onSavedSearchCreate={this.onSavedSearchCreate}
             onSavedSearchSelect={this.onSavedSearchSelect}
+            onSavedSearchDelete={this.onSavedSearchDelete}
             onSidebarToggle={this.onSidebarToggle}
             isSearchDisabled={this.state.isSidebarVisible}
             savedSearchList={this.state.savedSearchList}
@@ -680,7 +701,7 @@ const OrganizationStream = createReactClass({
 
           <Panel>
             <StreamActions
-              orgId={params.orgId}
+              orgId={organization.slug}
               projectId={projectId}
               selection={this.props.selection}
               hasReleases={hasReleases}
@@ -710,7 +731,7 @@ const OrganizationStream = createReactClass({
           tags={this.state.tags}
           query={query}
           onQueryChange={this.onSearch}
-          orgId={params.orgId}
+          orgId={organization.slug}
           tagValueLoader={this.tagValueLoader}
         />
       </div>
