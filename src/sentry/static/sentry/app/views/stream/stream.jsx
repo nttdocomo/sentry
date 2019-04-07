@@ -11,7 +11,6 @@ import qs from 'query-string';
 
 import {Panel, PanelBody} from 'app/components/panels';
 import {analytics} from 'app/utils/analytics';
-import {logAjaxError} from 'app/utils/logging';
 import {
   setActiveEnvironment,
   setActiveEnvironmentName,
@@ -230,8 +229,7 @@ const Stream = createReactClass({
         this.setState(newState, needsData ? this.fetchData : null);
       },
       error => {
-        // XXX(dcramer): fail gracefully by still loading the stream
-        logAjaxError(error);
+        // Fail gracefully by still loading the stream
         this.setState({
           loading: false,
           isDefaultSearch: null,
@@ -381,8 +379,9 @@ const Stream = createReactClass({
         if (jqXHR.getResponseHeader('X-Sentry-Direct-Hit') === '1') {
           if (data && data[0].matchingEventId) {
             const {project, id, matchingEventId, matchingEventEnvironment} = data[0];
-            let redirect = `/${this.props.params
-              .orgId}/${project.slug}/issues/${id}/events/${matchingEventId}/`;
+            let redirect = `/${this.props.params.orgId}/${
+              project.slug
+            }/issues/${id}/events/${matchingEventId}/`;
             // Also direct to the environment of this specific event if this
             // key exists. We need to explicitly check against undefined becasue
             // an environment name may be an empty string, which is perfectly valid.
@@ -682,8 +681,9 @@ const Stream = createReactClass({
     const project = this.getProject();
 
     // for compatibility with new filters/stream component
+
     const selection = {
-      projects: [project.id],
+      projects: [parseInt(project.id, 10)],
       environments: this.state.environment ? [this.state.environment.name] : [],
       datetime: {start: null, end: null, period: null, utc: null},
     };

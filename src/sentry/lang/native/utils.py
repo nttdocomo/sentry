@@ -22,6 +22,8 @@ AppInfo = namedtuple('AppInfo', ['id', 'version', 'build', 'name'])
 
 
 def image_name(pkg):
+    if not pkg:
+        return pkg
     split = '\\' if WINDOWS_PATH_RE.match(pkg) else '/'
     return pkg.rsplit(split, 1)[-1]
 
@@ -79,3 +81,12 @@ def sdk_info_to_sdk_id(sdk_info):
     if build is not None:
         rv = '%s_%s' % (rv, build)
     return rv
+
+
+def signal_from_data(data):
+    exceptions = get_path(data, 'exception', 'values', filter=True)
+    signal = get_path(exceptions, 0, 'mechanism', 'meta', 'signal', 'number')
+    if signal is not None:
+        return int(signal)
+
+    return None
