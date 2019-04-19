@@ -135,8 +135,6 @@ if 'DATABASE_URL' in os.environ:
     if url.scheme == 'postgres':
         DATABASES['default']['ENGINE'] = 'sentry.db.postgres'
 
-    if url.scheme == 'mysql':
-        DATABASES['default']['ENGINE'] = 'django.db.backends.mysql'
 
 # This should always be UTC.
 TIME_ZONE = 'UTC'
@@ -808,6 +806,8 @@ SENTRY_FEATURES = {
     'organizations:discover': False,
     # Enable attaching arbitrary files to events.
     'organizations:event-attachments': False,
+    # Allow organizations to configure custom external symbol sources.
+    'organizations:symbol-sources': False,
     # Enable the events stream interface.
     'organizations:events': False,
     # Enable multi project selection
@@ -834,8 +834,6 @@ SENTRY_FEATURES = {
     # Enable organizations to create and utilize Sentry Apps.
     'organizations:sentry-apps': False,
 
-    # DEPRECATED: pending removal.
-    'organizations:js-loader': False,
     # DEPRECATED: pending removal.
     'organizations:new-teams': True,
     # Enable the relay functionality, for use with sentry semaphore. See
@@ -1078,7 +1076,7 @@ SENTRY_TAGSTORE_OPTIONS = (
 )
 
 # Search backend
-SENTRY_SEARCH = os.environ.get('SENTRY_SEARCH', 'sentry.search.django.DjangoSearchBackend')
+SENTRY_SEARCH = os.environ.get('SENTRY_SEARCH', 'sentry.search.snuba.SnubaSearchBackend')
 SENTRY_SEARCH_OPTIONS = {}
 # SENTRY_SEARCH_OPTIONS = {
 #     'urls': ['http://localhost:9200/'],
@@ -1092,7 +1090,7 @@ SENTRY_TSDB_OPTIONS = {}
 SENTRY_NEWSLETTER = 'sentry.newsletter.base.Newsletter'
 SENTRY_NEWSLETTER_OPTIONS = {}
 
-SENTRY_EVENTSTREAM = 'sentry.eventstream.base.EventStream'
+SENTRY_EVENTSTREAM = 'sentry.eventstream.snuba.SnubaEventStream'
 SENTRY_EVENTSTREAM_OPTIONS = {}
 
 # rollups must be ordered from highest granularity to lowest

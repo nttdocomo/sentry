@@ -2,11 +2,20 @@ import {isEqual, omit} from 'lodash';
 import PropTypes from 'prop-types';
 import React from 'react';
 
+import {DEFAULT_STATS_PERIOD} from 'app/constants';
 import {getInterval} from 'app/components/charts/utils';
 import {getPeriod} from 'app/utils/getPeriod';
 import {parsePeriodToHours} from 'app/utils';
 import SentryTypes from 'app/sentryTypes';
 import createQueryBuilder from 'app/views/organizationDiscover/queryBuilder';
+
+const createReleaseFieldCondition = releases => [
+  [
+    'if',
+    [['in', ['release', 'tuple', releases.map(r => `'${r}'`)]], 'release', "'other'"],
+    'release',
+  ],
+];
 
 class DiscoverQuery extends React.Component {
   static propTypes = {
@@ -18,6 +27,7 @@ class DiscoverQuery extends React.Component {
     organization: SentryTypes.Organization,
     selection: SentryTypes.GlobalSelection,
     queries: PropTypes.arrayOf(SentryTypes.DiscoverQuery),
+    releases: PropTypes.arrayOf(SentryTypes.Release),
   };
 
   constructor(props) {
@@ -30,16 +40,19 @@ class DiscoverQuery extends React.Component {
 
     // Query builders based on `queries`
     this.queryBuilders = [];
-
-    this.createQueryBuilders();
   }
 
   componentDidMount() {
+    this.createQueryBuilders();
     this.fetchData();
   }
 
   shouldComponentUpdate(nextProps, nextState) {
     if (this.state !== nextState) {
+      return true;
+    }
+
+    if (this.props.releases !== nextProps.releases) {
       return true;
     }
 
@@ -59,7 +72,11 @@ class DiscoverQuery extends React.Component {
       return;
     }
 
-    this.fetchData();
+    if (this.props.releases !== prevProps.releases) {
+      this.createQueryBuilders();
+    } else {
+      this.fetchData();
+    }
   }
 
   componentWillUnmount() {
@@ -68,8 +85,25 @@ class DiscoverQuery extends React.Component {
 
   createQueryBuilders() {
     const {organization, queries} = this.props;
-    queries.forEach(query => {
-      this.queryBuilders.push(createQueryBuilder(this.getQuery(query), organization));
+    queries.forEach(({constraints, ...query}) => {
+      if (constraints && constraints.includes('recentReleases')) {
+        if (!this.props.releases) {
+          return;
+        }
+        const newQuery = {
+          ...query,
+          fields: [],
+          conditionFields:
+            this.props.releases &&
+            createReleaseFieldCondition(this.props.releases.map(({version}) => version)),
+        };
+        this.queryBuilders.push(
+          createQueryBuilder(this.getQuery(newQuery), organization)
+        );
+        this.fetchData();
+      } else {
+        this.queryBuilders.push(createQueryBuilder(this.getQuery(query), organization));
+      }
     });
   }
 
@@ -88,7 +122,12 @@ class DiscoverQuery extends React.Component {
     if (query.rollup) {
       // getInterval returns a period string depending on current datetime range selected
       // we then use a helper function to parse into hours and then convert back to seconds
-      query.rollup = parsePeriodToHours(getInterval(datetime)) * 60 * 60;
+      query.rollup =
+        parsePeriodToHours(
+          getInterval({...datetime, period: datetime.period || DEFAULT_STATS_PERIOD})
+        ) *
+        60 *
+        60;
     }
 
     return {
@@ -108,9 +147,6 @@ class DiscoverQuery extends React.Component {
   }
 
   async fetchData() {
-    // Reset query builder
-    this.resetQueries();
-
     // Fetch
     this.setState({reloading: true});
     const promises = this.queryBuilders.map(builder => builder.fetchWithoutLimit());

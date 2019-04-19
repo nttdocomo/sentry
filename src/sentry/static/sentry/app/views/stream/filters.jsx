@@ -1,9 +1,14 @@
 import PropTypes from 'prop-types';
 import React from 'react';
+import styled from 'react-emotion';
 
 import Feature from 'app/components/acl/feature';
-
 import SentryTypes from 'app/sentryTypes';
+import QueryCount from 'app/components/queryCount';
+import {PageHeader} from 'app/styles/organization';
+import PageHeading from 'app/components/pageHeading';
+import {t} from 'app/locale';
+
 import SearchBar from './searchBar';
 import SortOptions from './sortOptions';
 import SavedSearchSelector from './savedSearchSelector';
@@ -15,7 +20,8 @@ class StreamFilters extends React.Component {
     organization: SentryTypes.Organization,
 
     searchId: PropTypes.string,
-    savedSearchList: PropTypes.array.isRequired,
+    savedSearchList: PropTypes.arrayOf(SentryTypes.SavedSearch),
+    savedSearch: SentryTypes.SavedSearch,
 
     sort: PropTypes.string,
     query: PropTypes.string,
@@ -50,6 +56,7 @@ class StreamFilters extends React.Component {
     const {
       organization,
       projectId,
+      savedSearch,
       searchId,
       queryCount,
       queryMaxCount,
@@ -67,65 +74,65 @@ class StreamFilters extends React.Component {
       tagValueLoader,
       tags,
     } = this.props;
+    const hasOrgSavedSearches = organization.features.includes('org-saved-searches');
 
     return (
-      <div className="stream-header">
-        <div className="row">
-          <div className="col-sm-5">
-            <Feature
-              features={['org-saved-searches']}
-              renderDisabled={() => (
-                <SavedSearchSelector
-                  organization={organization}
-                  projectId={projectId}
-                  searchId={searchId}
-                  queryCount={queryCount}
-                  queryMaxCount={queryMaxCount}
-                  query={query}
-                  onSavedSearchCreate={onSavedSearchCreate}
-                  onSavedSearchSelect={onSavedSearchSelect}
-                  savedSearchList={savedSearchList}
-                />
-              )}
-            >
-              <OrganizationSavedSearchSelector
-                organization={organization}
-                savedSearchList={savedSearchList}
-                onSavedSearchSelect={onSavedSearchSelect}
-                onSavedSearchDelete={onSavedSearchDelete}
-                query={query}
-                queryCount={queryCount}
-                queryMaxCount={queryMaxCount}
-              />
-            </Feature>
-          </div>
-          <div className="col-sm-7">
-            <div className="search-container">
-              <div className="stream-sort">
-                <SortOptions sort={sort} onSelect={onSortChange} />
-              </div>
+      <PageHeader>
+        <Feature
+          features={['org-saved-searches']}
+          renderDisabled={() => (
+            <SavedSearchSelector
+              organization={organization}
+              projectId={projectId}
+              searchId={searchId}
+              queryCount={queryCount}
+              queryMaxCount={queryMaxCount}
+              query={query}
+              onSavedSearchCreate={onSavedSearchCreate}
+              onSavedSearchSelect={onSavedSearchSelect}
+              savedSearchList={savedSearchList}
+            />
+          )}
+        >
+          <PageHeading>
+            {t('Issues')}
+            <QueryCount count={queryCount} max={queryMaxCount} />
+          </PageHeading>
+        </Feature>
+        <SearchContainer isWide={hasOrgSavedSearches}>
+          <SortOptions sort={sort} onSelect={onSortChange} />
 
-              <SearchBar
-                orgId={organization.slug}
-                query={query || ''}
-                onSearch={onSearch}
-                disabled={isSearchDisabled}
-                excludeEnvironment={true}
-                supportedTags={tags}
-                tagValueLoader={tagValueLoader}
-              />
-              <a
-                className="btn btn-default toggle-stream-sidebar"
-                onClick={onSidebarToggle}
-              >
-                <span className="icon-filter" />
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
+          <Feature features={['org-saved-searches']}>
+            <OrganizationSavedSearchSelector
+              key={query}
+              organization={organization}
+              savedSearchList={savedSearchList}
+              onSavedSearchSelect={onSavedSearchSelect}
+              onSavedSearchDelete={onSavedSearchDelete}
+              query={query}
+            />
+          </Feature>
+
+          <SearchBar
+            orgId={organization.slug}
+            query={query || ''}
+            onSearch={onSearch}
+            disabled={isSearchDisabled}
+            excludeEnvironment={true}
+            supportedTags={tags}
+            tagValueLoader={tagValueLoader}
+            savedSearch={savedSearch}
+            onSidebarToggle={onSidebarToggle}
+          />
+        </SearchContainer>
+      </PageHeader>
     );
   }
 }
+
+const SearchContainer = styled.div`
+  display: flex;
+  width: ${p => (p.isWide ? '70%' : '58.3%')};
+`;
 
 export default StreamFilters;

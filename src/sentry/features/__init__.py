@@ -58,6 +58,7 @@ default_manager.add('organizations:api-keys', OrganizationFeature)  # NOQA
 default_manager.add('organizations:discover', OrganizationFeature)  # NOQA
 default_manager.add('organizations:events', OrganizationFeature)  # NOQA
 default_manager.add('organizations:event-attachments', OrganizationFeature)  # NOQA
+default_manager.add('organizations:symbol-sources', OrganizationFeature)  # NOQA
 default_manager.add('organizations:gitlab-integration', OrganizationFeature)  # NOQA
 default_manager.add('organizations:global-views', OrganizationFeature)  # NOQA
 default_manager.add('organizations:integrations-issue-basic', OrganizationFeature)  # NOQA
@@ -65,7 +66,6 @@ default_manager.add('organizations:integrations-issue-sync', OrganizationFeature
 default_manager.add('organizations:internal-catchall', OrganizationFeature)  # NOQA
 default_manager.add('organizations:sentry-apps', OrganizationFeature)  # NOQA
 default_manager.add('organizations:invite-members', OrganizationFeature)  # NOQA
-default_manager.add('organizations:js-loader', OrganizationFeature)  # NOQA
 default_manager.add('organizations:large-debug-files', OrganizationFeature)  # NOQA
 default_manager.add('organizations:legacy-event-id', OrganizationFeature)  # NOQA
 default_manager.add('organizations:monitors', OrganizationFeature)  # NOQA

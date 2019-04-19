@@ -1,6 +1,7 @@
 import React from 'react';
-import {mount} from 'enzyme';
 
+import {initializeOrg} from 'app-test/helpers/initializeOrg';
+import {mount} from 'enzyme';
 import SearchBar from 'app/views/stream/searchBar';
 import TagStore from 'app/stores/tagStore';
 
@@ -9,6 +10,7 @@ describe('SearchBar', function() {
   let tagValuePromise;
   let supportedTags;
   let recentSearchMock;
+
   const clickInput = searchBar => searchBar.find('input[name="query"]').simulate('click');
 
   beforeEach(function() {
@@ -16,9 +18,7 @@ describe('SearchBar', function() {
     TagStore.onLoadTagsSuccess(TestStubs.Tags());
     supportedTags = TagStore.getAllTags();
 
-    options = {
-      context: {organization: {id: '123'}},
-    };
+    options = TestStubs.routerContext([{organization: {id: '123', features: []}}]);
 
     tagValuePromise = Promise.resolve([]);
 
@@ -191,6 +191,96 @@ describe('SearchBar', function() {
           query: {
             query: 'is:',
             limit: 3,
+            type: 0,
+          },
+        })
+      );
+    });
+  });
+
+  describe('Pinned Searches', function() {
+    let pinSearch;
+    let unpinSearch;
+    const {organization, routerContext} = initializeOrg({
+      organization: {features: ['org-saved-searches']},
+    });
+
+    beforeEach(function() {
+      MockApiClient.clearMockResponses();
+      pinSearch = MockApiClient.addMockResponse({
+        url: '/organizations/org-slug/pinned-searches/',
+        method: 'PUT',
+        body: {},
+      });
+      unpinSearch = MockApiClient.addMockResponse({
+        url: '/organizations/org-slug/pinned-searches/',
+        method: 'DELETE',
+        body: {},
+      });
+    });
+
+    it('does not have pin icon without org-saved-searches featureflag', function() {
+      const props = {
+        orgId: organization.slug,
+        query: 'url:"fu"',
+        onSearch: jest.fn(),
+        tagValueLoader: () => Promise.resolve([]),
+        supportedTags,
+        organization,
+      };
+      const searchBar = mount(<SearchBar {...props} />, routerContext);
+      expect(searchBar.find('PinIcon')).toHaveLength(1);
+
+      searchBar.setProps({
+        organization: TestStubs.Organization({features: []}),
+      });
+
+      searchBar.update();
+      expect(searchBar.find('PinIcon')).toHaveLength(0);
+    });
+
+    it('pins a search from the searchbar', function() {
+      const props = {
+        orgId: organization.slug,
+        query: 'url:"fu"',
+        onSearch: jest.fn(),
+        tagValueLoader: () => Promise.resolve([]),
+        supportedTags,
+        organization,
+      };
+      const searchBar = mount(<SearchBar {...props} />, routerContext);
+      searchBar.find('button[aria-label="Pin this search"]').simulate('click');
+
+      expect(pinSearch).toHaveBeenLastCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          method: 'PUT',
+          data: {
+            query: 'url:"fu" ',
+            type: 0,
+          },
+        })
+      );
+    });
+
+    it('unpins a search from the searchbar', function() {
+      const props = {
+        orgId: organization.slug,
+        query: 'url:"fu"',
+        onSearch: jest.fn(),
+        tagValueLoader: () => Promise.resolve([]),
+        supportedTags,
+        organization,
+        pinnedSearch: {id: '1', query: 'url:"fu" '},
+      };
+      const searchBar = mount(<SearchBar {...props} />, routerContext);
+      searchBar.find('button[aria-label="Pin this search"]').simulate('click');
+
+      expect(unpinSearch).toHaveBeenLastCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          method: 'DELETE',
+          data: {
             type: 0,
           },
         })

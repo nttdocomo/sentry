@@ -40,10 +40,16 @@ class DiscoverQuerySerializer(serializers.Serializer):
         child=serializers.CharField(),
         required=False,
         allow_null=True,
+        default=[],
+    )
+    conditionFields = ListField(
+        child=ListField(),
+        required=False,
+        allow_null=True,
     )
     limit = serializers.IntegerField(min_value=0, max_value=10000, required=False)
     rollup = serializers.IntegerField(required=False)
-    orderby = serializers.CharField(required=False)
+    orderby = serializers.CharField(required=False, default="")
     conditions = ListField(
         child=ListField(),
         required=False,
@@ -90,6 +96,9 @@ class DiscoverQuerySerializer(serializers.Serializer):
             raise serializers.ValidationError('You must specify a date filter')
         elif date_fields_provided > 1:
             raise serializers.ValidationError('Conflicting date filters supplied')
+
+        if not data.get('fields') and not data.get('aggregations'):
+            raise serializers.ValidationError('Specify at least one field or aggregation')
 
         try:
             start, end = get_date_range_from_params({
@@ -303,7 +312,8 @@ class OrganizationDiscoverQueryEndpoint(OrganizationEndpoint):
 
         has_aggregations = len(serialized.get('aggregations')) > 0
 
-        selected_columns = [] if has_aggregations else serialized.get('fields')
+        selected_columns = serialized.get(
+            'conditionFields', []) + [] if has_aggregations else serialized.get('fields', [])
 
         projects_map = {}
         for project in projects:
