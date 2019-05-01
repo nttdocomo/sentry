@@ -9,9 +9,9 @@ import {inputStyles} from 'app/styles/input';
 import {t, tct} from 'app/locale';
 import Button from 'app/components/button';
 import EmptyMessage from 'app/views/settings/components/emptyMessage';
-import ExternalLink from 'app/components/externalLink';
+import ExternalLink from 'app/components/links/externalLink';
 import InlineSvg from 'app/components/inlineSvg';
-import ListLink from 'app/components/listLink';
+import ListLink from 'app/components/links/listLink';
 import NavTabs from 'app/components/navTabs';
 import PlatformIconTile from 'app/components/platformIconTile';
 import categoryList from 'app/data/platformCategories';
@@ -25,6 +25,7 @@ class PlatformPicker extends React.Component {
     setPlatform: PropTypes.func.isRequired,
     platform: PropTypes.string,
     showOther: PropTypes.bool,
+    listClass: PropTypes.string,
   };
 
   static defaultProps = {
@@ -73,7 +74,7 @@ class PlatformPicker extends React.Component {
 
   render() {
     const platformList = this.platformList;
-    const {setPlatform} = this.props;
+    const {setPlatform, listClass} = this.props;
     const {filter, category} = this.state;
 
     return (
@@ -107,7 +108,7 @@ class PlatformPicker extends React.Component {
             />
           </SearchBar>
         </NavContainer>
-        <PlatformList>
+        <PlatformList className={listClass}>
           {platformList.map(platform => (
             <PlatformCard
               data-test-id={`platform-${platform.id}`}
@@ -170,6 +171,8 @@ const SearchBar = styled('div')`
     background: none;
     padding: 2px 4px;
     width: 100%;
+    /* Ensure a consistent line height to keep the input the desired height */
+    line-height: 24px;
 
     &:focus {
       outline: none;
@@ -186,6 +189,7 @@ const PlatformList = styled('div')`
   display: grid;
   grid-gap: ${space(1)};
   grid-template-columns: repeat(auto-fill, 112px);
+  margin-bottom: ${space(2)};
 `;
 
 const StyledPlatformIconTile = styled(PlatformIconTile)`

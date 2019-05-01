@@ -443,6 +443,11 @@ describe('SmartSearchBar', function() {
         method: 'DELETE',
         body: [],
       });
+      MockApiClient.addMockResponse({
+        url: '/organizations/org-slug/recent-searches/',
+        method: 'POST',
+        body: {},
+      });
     });
 
     it('adds pins', async function() {
@@ -483,7 +488,7 @@ describe('SmartSearchBar', function() {
         options
       );
 
-      wrapper.find('button[aria-label="Pin this search"]').simulate('click');
+      wrapper.find('button[aria-label="Unpin this search"]').simulate('click');
       await wrapper.update();
 
       expect(pinRequest).not.toHaveBeenCalled();

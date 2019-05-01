@@ -12,15 +12,19 @@ const SavedSearchesStore = Reflux.createStore({
       createSavedSearchSuccess,
       deleteSavedSearchSuccess,
       pinSearch,
+      pinSearchSuccess,
+      resetSavedSearches,
       unpinSearch,
     } = SavedSearchesActions;
 
     this.listenTo(startFetchSavedSearches, this.onStartFetchSavedSearches);
     this.listenTo(fetchSavedSearchesSuccess, this.onFetchSavedSearchesSuccess);
     this.listenTo(fetchSavedSearchesError, this.onFetchSavedSearchesError);
+    this.listenTo(resetSavedSearches, this.onReset);
     this.listenTo(createSavedSearchSuccess, this.onCreateSavedSearchSuccess);
     this.listenTo(deleteSavedSearchSuccess, this.onDeleteSavedSearchSuccess);
     this.listenTo(pinSearch, this.onPinSearch);
+    this.listenTo(pinSearchSuccess, this.onPinSearchSuccess);
     this.listenTo(unpinSearch, this.onUnpinSearch);
 
     this.reset();
@@ -93,6 +97,14 @@ const SavedSearchesStore = Reflux.createStore({
     return this.state.savedSearches.find(savedSearch => query === savedSearch.query);
   },
 
+  /**
+   * Reset store to initial state
+   */
+  onReset() {
+    this.reset();
+    this.trigger(this.state);
+  },
+
   onStartFetchSavedSearches() {
     this.state = {
       ...this.state,
@@ -129,6 +141,15 @@ const SavedSearchesStore = Reflux.createStore({
     this.trigger(this.state);
   },
 
+  onDeleteSavedSearchSuccess(search) {
+    this.state = {
+      ...this.state,
+      savedSearches: this.state.savedSearches.filter(item => item.id !== search.id),
+    };
+
+    this.trigger(this.state);
+  },
+
   onPinSearch(type, query, ...args) {
     const existingSearch = this.findByQuery(query);
 
@@ -158,6 +179,16 @@ const SavedSearchesStore = Reflux.createStore({
         ...this.getFilteredSearches(type, existingSearch && existingSearch.id),
       ],
     };
+    this.trigger(this.state);
+  },
+
+  onPinSearchSuccess(resp) {
+    const existingSearch = this.findByQuery(resp.query);
+
+    if (existingSearch) {
+      this.updateExistingSearch(existingSearch.id, resp);
+    }
+
     this.trigger(this.state);
   },
 

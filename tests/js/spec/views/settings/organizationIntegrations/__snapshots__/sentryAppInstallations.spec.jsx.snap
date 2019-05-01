@@ -109,12 +109,15 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
     }
     showPublishStatus={false}
   >
-    <SentryAppItem>
+    <SentryAppItem
+      p={2}
+    >
       <Base
-        className="css-h9gjd5-PanelItem-SentryAppItem eac2pqx0"
+        className="css-13p7dw9-PanelItem-SentryAppItem eac2pqx0"
+        p={2}
       >
         <div
-          className="css-h9gjd5-PanelItem-SentryAppItem eac2pqx0"
+          className="css-13p7dw9-PanelItem-SentryAppItem eac2pqx0"
           is={null}
         >
           <StyledFlex>
@@ -134,7 +137,7 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
                     size={36}
                   >
                     <div
-                      className="css-5iptpn-IntegrationIcon e1bhjds90"
+                      className="css-1c5rb9q-IntegrationIcon e1bhjds90"
                       size={36}
                     />
                   </IntegrationIcon>
@@ -276,6 +279,7 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
                                       "borderLight": "#E2DBE8",
                                       "borderLighter": "#f9f6fd",
                                       "borderRadius": "4px",
+                                      "borderRadiusBottom": "0 0 4px 4px",
                                       "breakpoints": Array [
                                         "768px",
                                         "992px",
@@ -378,6 +382,7 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
                                       "greenTransparent": "rgba(87, 190, 140, 0.5)",
                                       "grid": 8,
                                       "headerFontSize": "22px",
+                                      "headerSelectorLabelHeight": 28,
                                       "headerSelectorRowHeight": 44,
                                       "offWhite": "#FAF9FB",
                                       "offWhite2": "#E7E1EC",
@@ -545,6 +550,7 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
                                               "borderLight": "#E2DBE8",
                                               "borderLighter": "#f9f6fd",
                                               "borderRadius": "4px",
+                                              "borderRadiusBottom": "0 0 4px 4px",
                                               "breakpoints": Array [
                                                 "768px",
                                                 "992px",
@@ -647,6 +653,7 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
                                               "greenTransparent": "rgba(87, 190, 140, 0.5)",
                                               "grid": 8,
                                               "headerFontSize": "22px",
+                                              "headerSelectorLabelHeight": 28,
                                               "headerSelectorRowHeight": 44,
                                               "offWhite": "#FAF9FB",
                                               "offWhite2": "#E7E1EC",
@@ -742,6 +749,8 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
                             </Status>
                             <StyledLink
                               onClick={[Function]}
+                              onlyActiveOnIndex={false}
+                              style={Object {}}
                             >
                               <Link
                                 className="css-u3fgwp-StyledLink eac2pqx5"
@@ -791,7 +800,7 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
                           <ForwardRef
                             aria-disabled={false}
                             aria-label="Install"
-                            className="btn btn-default css-dkprmi-StyledButton-getColors e12ma6z0"
+                            className="btn btn-default css-o6814l-StyledButton-getColors e12ma6z0"
                             disabled={false}
                             onClick={[Function]}
                             role="button"
@@ -800,7 +809,7 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
                             <button
                               aria-disabled={false}
                               aria-label="Install"
-                              className="btn btn-default css-dkprmi-StyledButton-getColors e12ma6z0"
+                              className="btn btn-default css-o6814l-StyledButton-getColors e12ma6z0"
                               onClick={[Function]}
                               role="button"
                               size="small"

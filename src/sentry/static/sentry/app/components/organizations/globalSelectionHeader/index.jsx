@@ -1,4 +1,4 @@
-import {isEqual, pick, partition} from 'lodash';
+import {flatten, isEqual, pick, partition} from 'lodash';
 import {withRouter} from 'react-router';
 import PropTypes from 'prop-types';
 import React from 'react';
@@ -301,23 +301,24 @@ class GlobalSelectionHeader extends React.Component {
   };
 
   getProjects = () => {
-    const {projects} = this.props;
+    const {organization, projects} = this.props;
     const {isSuperuser} = ConfigStore.get('user');
+    const isOrgAdmin = new Set(organization.access).has('org:admin');
 
     const [memberProjects, nonMemberProjects] = partition(
       projects,
       project => project.isMember
     );
 
-    if (isSuperuser) {
-      return [...memberProjects, ...nonMemberProjects];
+    if (isSuperuser || isOrgAdmin) {
+      return [memberProjects, nonMemberProjects];
     }
 
-    return memberProjects;
+    return [memberProjects, []];
   };
 
   getFirstProject = () => {
-    return this.getProjects()
+    return flatten(this.getProjects())
       .map(p => parseInt(p.id, 10))
       .slice(0, 1);
   };
@@ -356,6 +357,8 @@ class GlobalSelectionHeader extends React.Component {
       ? [parseInt(forceProject.id, 10)]
       : this.props.selection.projects;
 
+    const [projects, nonMemberProjects] = this.getProjects();
+
     return (
       <Header className={className}>
         <HeaderItemPosition>
@@ -363,7 +366,8 @@ class GlobalSelectionHeader extends React.Component {
           <MultipleProjectSelector
             organization={organization}
             forceProject={forceProject}
-            projects={this.getProjects()}
+            projects={projects}
+            nonMemberProjects={nonMemberProjects}
             value={this.state.projects || this.props.selection.projects}
             onChange={this.handleChangeProjects}
             onUpdate={this.handleUpdateProjects}

@@ -194,7 +194,16 @@ class SmartSearchBar extends React.Component {
   };
 
   onSubmit = evt => {
+    const {organization, savedSearchType} = this.props;
     evt.preventDefault();
+
+    analytics('search.searched', {
+      org_id: parseInt(organization.id, 10),
+      query: removeSpace(this.state.query),
+      source: savedSearchType === 0 ? 'issues' : 'events',
+      search_source: 'main_search',
+    });
+
     this.doSearch();
   };
 
@@ -580,12 +589,18 @@ class SmartSearchBar extends React.Component {
           findSearchItemByIndex(searchItems, activeSearchItem) || [];
 
         if (typeof groupIndex !== 'undefined') {
-          // Move active selection up/down
-          delete searchItems[groupIndex].children[childrenIndex].active;
+          if (
+            searchItems[groupIndex] &&
+            searchItems[groupIndex].children &&
+            searchItems[groupIndex].children[childrenIndex]
+          ) {
+            delete searchItems[groupIndex].children[childrenIndex].active;
+          }
         }
 
         const totalItems = flatSearchItems.length;
 
+        // Move active selection up/down
         const nextActiveSearchItem =
           key === 'ArrowDown'
             ? (activeSearchItem + 1) % totalItems
@@ -622,6 +637,13 @@ class SmartSearchBar extends React.Component {
 
   onAutoComplete = (replaceText, item) => {
     if (item.type === 'recent-search') {
+      analytics('search.searched', {
+        org_id: parseInt(this.props.organization.id, 10),
+        query: replaceText,
+        source: this.props.savedSearchType === 0 ? 'issues' : 'events',
+        search_source: 'recent_search',
+      });
+
       this.setState({query: replaceText}, () => {
         // Propagate onSearch and save to recent searches
         this.doSearch();
@@ -685,18 +707,21 @@ class SmartSearchBar extends React.Component {
       dropdownClassName,
       hasPinnedSearch,
       organization,
+      pinnedSearch,
       placeholder,
       disabled,
       onSidebarToggle,
     } = this.props;
 
+    const pinTooltip = !!pinnedSearch ? t('Unpin this search') : t('Pin this search');
+    const pinIconSrc = !!pinnedSearch ? 'icon-pin-filled' : 'icon-pin';
+
     if (hasPinnedSearch) {
       return (
-        <Container isDisabled={disabled}>
-          <form onSubmit={this.onSubmit}>
+        <Container isDisabled={disabled} isOpen={this.state.dropdownVisible}>
+          <StyledForm onSubmit={this.onSubmit}>
             <StyledInput
               type="text"
-              className="search-input form-control"
               placeholder={placeholder}
               name="query"
               innerRef={this.searchInput}
@@ -721,21 +746,21 @@ class SmartSearchBar extends React.Component {
                 />
               </DropdownWrapper>
             )}
-          </form>
+          </StyledForm>
           <ButtonBar>
             <CreateSavedSearchButton
               query={this.state.query}
               organization={organization}
             />
-            <Tooltip title={t('Pin this search')}>
+            <Tooltip title={pinTooltip}>
               <Button
                 type="button"
                 borderless
-                aria-label={t('Pin this search')}
+                aria-label={pinTooltip}
                 size="zero"
                 onClick={this.onTogglePinnedSearch}
               >
-                <PinIcon isPinned={!!this.props.pinnedSearch} src="icon-pin" />
+                <PinIcon isPinned={!!pinnedSearch} src={pinIconSrc} />
               </Button>
             </Tooltip>
             <SidebarButton
@@ -824,30 +849,43 @@ const SmartSearchBarContainer = withApi(
 );
 
 const PinIcon = styled(InlineSvg)`
-  fill: ${p => (p.isPinned ? p.theme.blueLight : p.theme.gray2)};
+  color: ${p => (p.isPinned ? p.theme.blueLight : p.theme.gray2)};
   &:hover {
-    fill: ${p => p.theme.blueLight};
+    color: ${p => p.theme.gray3};
   }
 `;
 
 const Container = styled.div`
-  position: relative;
+  border: 1px solid ${p => p.theme.borderLight};
+  border-radius: ${p =>
+    p.isOpen
+      ? `0 ${p.theme.borderRadius} 0 0`
+      : `0 ${p.theme.borderRadius} ${p.theme.borderRadius} 0`};
+  /* match button height */
+  height: 40px;
+  box-shadow: inset ${p => p.theme.dropShadowLight};
+  background: #fff;
+
   flex-grow: 1;
+  position: relative;
+
   z-index: ${p => p.theme.zIndex.dropdown};
+  display: flex;
+
+  .show-sidebar & {
+    background: ${p => p.theme.offWhite};
+  }
 `;
 
-// Buttons are 18px wide, and we want 3px gutters
-const buttonBarWidth = 18 * 3 + 3 * 3;
-
 const ButtonBar = styled.div`
-  position: absolute;
-  top: ${space(1.5)};
-  right: ${space(1.5)};
   display: flex;
-  justify-content: space-between;
-  width: ${buttonBarWidth}px;
+  justify-content: flex-end;
+  margin-right: ${space(1)};
 
   button {
+    margin-left: ${space(0.5)};
+    width: 18px;
+
     background: transparent;
     &:hover {
       background: transparent;
@@ -859,19 +897,20 @@ const DropdownWrapper = styled('div')`
   display: ${p => (p.visible ? 'block' : 'none')};
 `;
 
+const StyledForm = styled.form`
+  flex-grow: 1;
+`;
+
 const StyledInput = styled.input`
-  border: 1px solid ${p => p.theme.borderLight};
-  border-radius: 0 ${p => p.theme.borderRadius} ${p => p.theme.borderRadius} 0;
-  box-shadow: inset ${p => p.theme.dropShadowLight};
   color: ${p => p.theme.foreground};
+  background: transparent;
+  border: 0;
+  outline: none;
 
   font-size: ${p => p.theme.fontSizeMedium};
-  /* match the height of buttons */
-  height: 40px;
   width: 100%;
-
-  /* pad the right side of the input to accomodate the button bar */
-  padding: ${space(1)} ${buttonBarWidth + 12}px ${space(1)} ${space(1)};
+  height: 100%;
+  padding: 0 0 0 ${space(1)};
 
   &::placeholder {
     color: ${p => p.theme.gray1};
@@ -880,11 +919,18 @@ const StyledInput = styled.input`
     border-color: ${p => p.theme.borderDark};
     border-bottom-right-radius: 0;
   }
+
+  .show-sidebar & {
+    color: ${p => p.theme.disabled};
+  }
 `;
 
 const SidebarButton = styled(Button)`
   & svg {
     color: ${p => p.theme.gray2};
+  }
+  &:hover svg {
+    color: ${p => p.theme.gray3};
   }
   .show-sidebar & svg {
     color: ${p => p.theme.blueLight};
@@ -968,7 +1014,7 @@ function createSearchGroups(
 
   return {
     searchItems: [searchGroup, ...(recentSearchItems ? [recentSearchGroup] : [])],
-    flatSearchItems: [...searchItems, ...(recentSearchItems ? [recentSearchItems] : [])],
+    flatSearchItems: [...searchItems, ...(recentSearchItems ? recentSearchItems : [])],
     activeSearchItem,
   };
 }

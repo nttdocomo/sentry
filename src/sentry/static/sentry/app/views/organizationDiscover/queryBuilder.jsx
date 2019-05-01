@@ -46,13 +46,16 @@ export default function createQueryBuilder(initial = {}, organization) {
     query.range = DEFAULT_STATS_PERIOD;
   }
 
-  const defaultProjects = organization.projects
-    .filter(projects => projects.isMember)
-    .map(project => parseInt(project.id, 10));
+  const defaultProjects = organization.projects.filter(projects => projects.isMember);
 
-  const projectsToFetchTags = ConfigStore.get('user').isSuperuser
-    ? organization.projects
-    : defaultProjects;
+  const defaultProjectIds = getProjectIds(defaultProjects);
+
+  const hasGlobalProjectAccess =
+    ConfigStore.get('user').isSuperuser || organization.access.includes('org:admin');
+
+  const projectsToFetchTags = getProjectIds(
+    hasGlobalProjectAccess ? organization.projects : defaultProjects
+  );
 
   const columns = COLUMNS.map(col => ({...col, isTag: false}));
   let tags = [];
@@ -120,7 +123,7 @@ export default function createQueryBuilder(initial = {}, organization) {
    */
   function getExternal() {
     // Default to all projects if none is selected
-    const projects = query.projects.length ? query.projects : defaultProjects;
+    const projects = query.projects.length ? query.projects : defaultProjectIds;
 
     // Default to DEFAULT_STATS_PERIOD when no date range selected (either relative or absolute)
     const {range, start, end} = query;
@@ -322,7 +325,7 @@ export default function createQueryBuilder(initial = {}, organization) {
    */
   function reset(q = {}) {
     const [validProjects, invalidProjects] = partition(q.projects || [], project =>
-      defaultProjects.includes(project)
+      defaultProjectIds.includes(project)
     );
 
     if (invalidProjects.length) {
@@ -340,4 +343,8 @@ export default function createQueryBuilder(initial = {}, organization) {
 
     query = applyDefaults(q);
   }
+}
+
+function getProjectIds(projects) {
+  return projects.map(project => parseInt(project.id, 10));
 }

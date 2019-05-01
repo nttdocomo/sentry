@@ -193,13 +193,11 @@ describe('OrganizationIntegrations', () => {
 
   describe('render()', () => {
     describe('without integrations', () => {
-      it('renders with sentry-apps', () => {
+      it('renders sentry apps', () => {
         orgOwnedSentryAppsRequest = Client.addMockResponse({
           url: `/organizations/${org.slug}/sentry-apps/`,
           body: [sentryApp],
         });
-
-        org = {...org, features: ['sentry-apps']};
 
         mount(
           <OrganizationIntegrations organization={org} params={params} />,
@@ -217,8 +215,6 @@ describe('OrganizationIntegrations', () => {
           body: [sentryApp],
         });
 
-        org = {...org, features: ['sentry-apps']};
-
         wrapper = mount(
           <OrganizationIntegrations organization={org} params={params} />,
           routerContext
@@ -234,12 +230,6 @@ describe('OrganizationIntegrations', () => {
         });
       });
 
-      it('Does`t hit sentry apps endpoints when sentry-apps isn`t present', () => {
-        expect(orgOwnedSentryAppsRequest).not.toHaveBeenCalled();
-        expect(publishedSentryAppsRequest).not.toHaveBeenCalled();
-        expect(sentryInstallsRequest).not.toHaveBeenCalled();
-      });
-
       it('Opens the integration dialog on install', function() {
         const options = {
           provider: githubProvider,
@@ -253,6 +243,25 @@ describe('OrganizationIntegrations', () => {
           .simulate('click');
 
         expect(openIntegrationDetails).toHaveBeenCalledWith(options);
+      });
+    });
+
+    describe('published and org-owned apps are consolidated', () => {
+      it('renders sentry app once', () => {
+        const publishedApp = {...sentryApp, status: 'published'};
+        Client.addMockResponse({
+          url: `/organizations/${org.slug}/sentry-apps/`,
+          body: [publishedApp],
+        });
+        Client.addMockResponse({
+          url: '/sentry-apps/',
+          body: [publishedApp],
+        });
+        wrapper = mount(
+          <OrganizationIntegrations organization={org} params={params} />,
+          routerContext
+        );
+        expect(wrapper.find('SentryAppInstallations').length).toBe(1);
       });
     });
 

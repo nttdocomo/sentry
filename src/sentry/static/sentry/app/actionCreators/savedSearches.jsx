@@ -4,6 +4,10 @@ import {t} from 'app/locale';
 import SavedSearchesActions from 'app/actions/savedSearchesActions';
 import handleXhrErrorResponse from 'app/utils/handleXhrErrorResponse';
 
+export function resetSavedSearches() {
+  SavedSearchesActions.resetSavedSearches();
+}
+
 export function fetchSavedSearches(api, orgId, projectMap, useOrgSavedSearches = false) {
   const url = `/organizations/${orgId}/searches/`;
 
@@ -141,6 +145,8 @@ export function pinSearch(api, orgId, type, query) {
     },
   });
 
+  promise.then(SavedSearchesActions.pinSearchSuccess);
+
   promise.catch(handleXhrErrorResponse('Unable to pin search'));
 
   promise.catch(err => {
@@ -187,6 +193,7 @@ export function deleteSavedSearch(api, orgId, search) {
     .requestPromise(url, {
       method: 'DELETE',
     })
+    .then(() => SavedSearchesActions.deleteSavedSearchSuccess(search))
     .catch(handleXhrErrorResponse('Unable to delete a saved search'));
 
   return promise;

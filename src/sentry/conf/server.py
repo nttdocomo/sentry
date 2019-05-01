@@ -816,6 +816,8 @@ SENTRY_FEATURES = {
     'organizations:grouping-info': False,
     # Lets organizations manage grouping configs
     'organizations:set-grouping-config': False,
+    # Enable incidents feature
+    'organizations:incidents': False,
     # Enable integration functionality to create and link groups to issues on
     # external services.
     'organizations:integrations-issue-basic': True,
@@ -829,18 +831,12 @@ SENTRY_FEATURES = {
     'organizations:invite-members': True,
     # Enable org-wide saved searches and user pinned search
     'organizations:org-saved-searches': False,
-    # Enable user recent searches
-    'organizations:recent-searches': False,
     # Enable organizations to create and utilize Sentry Apps.
     'organizations:sentry-apps': False,
 
-    # DEPRECATED: pending removal.
-    'organizations:new-teams': True,
     # Enable the relay functionality, for use with sentry semaphore. See
     # https://github.com/getsentry/semaphore.
     'organizations:relay': False,
-    # Enable managing repositories associated to an organization.
-    'organizations:repos': True,
     # DEPCREATED: pending removal.
     'organizations:require-2fa': False,
     # Sentry 10 - multi project interfaces.
@@ -854,10 +850,6 @@ SENTRY_FEATURES = {
     'organizations:sso-saml2': True,
     # Enable Rippling SSO functionality.
     'organizations:sso-rippling': False,
-    # Enable suggested commits associated to a event group in the UI.
-    'organizations:suggested-commits': True,
-    # DEPCREATED: pending removal.
-    'organizations:unreleased-changes': False,
 
     # Enable functionality to specify custom inbound filters on events.
     'projects:custom-inbound-filters': False,
@@ -1588,6 +1580,7 @@ KAFKA_PREPROCESS = 'events-preprocess'
 KAFKA_PROCESS = 'events-process'
 KAFKA_SAVE = 'events-save'
 KAFKA_EVENTS = 'events'
+KAFKA_OUTCOMES = 'outcomes'
 
 KAFKA_TOPICS = {
     KAFKA_PREPROCESS: {
@@ -1605,5 +1598,9 @@ KAFKA_TOPICS = {
     KAFKA_EVENTS: {
         'cluster': 'default',
         'topic': KAFKA_EVENTS,
+    },
+    KAFKA_OUTCOMES: {
+        'cluster': 'default',
+        'topic': KAFKA_OUTCOMES,
     },
 }

@@ -11,10 +11,14 @@ import qs from 'query-string';
 import {Client} from 'app/api';
 import {Panel, PanelBody} from 'app/components/panels';
 import {analytics} from 'app/utils/analytics';
+import {
+  deleteSavedSearch,
+  fetchSavedSearches,
+  resetSavedSearches,
+} from 'app/actionCreators/savedSearches';
 import {extractSelectionParameters} from 'app/components/organizations/globalSelectionHeader/utils';
 import {fetchOrgMembers, indexMembersByProject} from 'app/actionCreators/members';
 import {fetchOrganizationTags, fetchTagValues} from 'app/actionCreators/tags';
-import {fetchSavedSearches, deleteSavedSearch} from 'app/actionCreators/savedSearches';
 import {getUtcDateString} from 'app/utils/dates';
 import {t} from 'app/locale';
 import ConfigStore from 'app/stores/configStore';
@@ -160,6 +164,18 @@ const OrganizationStream = createReactClass({
     this.projectCache = {};
     GroupStore.reset();
     this.api.clear();
+
+    // Reset store when unmounting because we always fetch on mount
+    // This means if you navigate away from stream and then back to stream,
+    // this component will go from:
+    // "ready" ->
+    // "loading" (because fetching saved searches) ->
+    // "ready"
+    //
+    // We don't render anything until saved searches is ready, so this can
+    // cause weird side effects (e.g. ProcessingIssueList mounting and making
+    // a request, but immediately unmounting when fetching saved searches)
+    resetSavedSearches();
   },
 
   // Memoize projects fetched as selections are made
@@ -372,6 +388,17 @@ const OrganizationStream = createReactClass({
     if (!isEqual(groupIds, this.state.groupIds)) {
       this.setState({groupIds});
     }
+  },
+
+  onStreamSidebarSearch(query) {
+    analytics('search.searched', {
+      org_id: this.props.organization.id,
+      query,
+      source: 'issues',
+      search_source: 'search_builder',
+    });
+
+    this.onSearch(query);
   },
 
   onSearch(query) {
@@ -670,6 +697,7 @@ const OrganizationStream = createReactClass({
 
           <Panel>
             <StreamActions
+              organization={organization}
               orgId={organization.slug}
               projectId={projectId}
               selection={this.props.selection}
@@ -699,7 +727,7 @@ const OrganizationStream = createReactClass({
           loading={this.state.tagsLoading}
           tags={this.state.tags}
           query={query}
-          onQueryChange={this.onSearch}
+          onQueryChange={this.onStreamSidebarSearch}
           orgId={organization.slug}
           tagValueLoader={this.tagValueLoader}
         />
