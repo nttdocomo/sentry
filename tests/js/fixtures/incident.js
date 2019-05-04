@@ -1,9 +1,13 @@
-export function Incident(params = {}) {
+export function Incident(params) {
   return {
-    id: '1',
-    title: 'Test Incident',
-    updates: ['First Update', 'Second Update'],
-    url: 'https://status.sentry.io',
+    id: '123',
+    identifier: '123',
+    title: 'Too many Chrome errors',
+    status: 0,
+    projects: [],
+    suspects: [],
+    eventCount: 100,
+    usersAffected: 20,
     ...params,
   };
 }

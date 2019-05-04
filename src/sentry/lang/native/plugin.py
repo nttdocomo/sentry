@@ -20,7 +20,9 @@ from sentry.models.eventerror import EventError
 from sentry.utils import metrics
 from sentry.utils.in_app import is_known_third_party
 from sentry.utils.safe import get_path
-from sentry.stacktraces import StacktraceProcessor
+from sentry.stacktraces.processing import StacktraceProcessor
+from sentry.stacktraces.functions import trim_function_name
+from sentry.utils.safe import trim
 from sentry.reprocessing import report_processing_issue
 
 logger = logging.getLogger(__name__)
@@ -240,11 +242,10 @@ class NativeStacktraceProcessor(StacktraceProcessor):
                               signal=self.signal,
                               request_id_cache_key=request_id_cache_key)
         if not rv:
-            self.data \
-                .setdefault('errors', []) \
-                .extend(self._handle_symbolication_failed(
-                    SymbolicationFailed(type=EventError.NATIVE_SYMBOLICATOR_FAILED)
-                ))
+            self._handle_symbolication_failed(
+                SymbolicationFailed(type=EventError.NATIVE_SYMBOLICATOR_FAILED),
+                self.data.setdefault('errors', [])
+            )
             return
 
         # TODO(markus): Set signal and os context from symbolicator response,
@@ -380,10 +381,23 @@ class NativeStacktraceProcessor(StacktraceProcessor):
         else:  # processable_frame.cache_value is present
             _ignored, symbolicated_frames = processable_frame.cache_value
 
+        platform = raw_frame.get('platform') or self.data.get('platform')
         new_frames = []
         for sfrm in symbolicated_frames:
             new_frame = dict(raw_frame)
-            new_frame['function'] = sfrm['function']
+
+            raw_func = trim(sfrm['function'], 256)
+            func = trim(trim_function_name(sfrm['function'], platform), 256)
+
+            # if function and raw function match, we can get away without
+            # storing a raw function
+            if func == raw_func:
+                new_frame['function'] = raw_func
+            # otherwise we store both
+            else:
+                new_frame['raw_function'] = raw_func
+                new_frame['function'] = func
+
             if sfrm.get('symbol'):
                 new_frame['symbol'] = sfrm['symbol']
             if sfrm.get('abs_path'):

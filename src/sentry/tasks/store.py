@@ -22,7 +22,7 @@ from sentry.cache import default_cache
 from sentry.tasks.base import instrumented_task
 from sentry.utils import json, kafka, metrics
 from sentry.utils.safe import safe_execute
-from sentry.stacktraces import process_stacktraces, \
+from sentry.stacktraces.processing import process_stacktraces, \
     should_process_for_stacktraces
 from sentry.utils.data_filters import FilterStatKeys
 from sentry.utils.canonical import CanonicalKeyDict, CANONICAL_TYPES
@@ -435,9 +435,10 @@ def _do_save_event(cache_key=None, data=None, start_time=None, event_id=None,
     """
     Saves an event to the database.
     """
-    from sentry.event_manager import HashDiscarded, EventManager, track_outcome
+    from sentry.event_manager import HashDiscarded, EventManager
     from sentry import quotas
     from sentry.models import ProjectKey
+    from sentry.utils.outcomes import Outcome, track_outcome
 
     if cache_key and data is None:
         data = default_cache.get(cache_key)
@@ -497,9 +498,11 @@ def _do_save_event(cache_key=None, data=None, start_time=None, event_id=None,
             event.project.organization_id,
             event.project.id,
             key_id,
-            'accepted',
+            Outcome.ACCEPTED,
             None,
-            timestamp)
+            timestamp,
+            event_id
+        )
 
     except HashDiscarded:
         project = Project.objects.get_from_cache(id=project_id)
@@ -512,7 +515,15 @@ def _do_save_event(cache_key=None, data=None, start_time=None, event_id=None,
             pass
 
         quotas.refund(project, key=project_key, timestamp=start_time)
-        track_outcome(project.organization_id, project_id, key_id, 'filtered', reason, timestamp)
+        track_outcome(
+            project.organization_id,
+            project_id,
+            key_id,
+            Outcome.FILTERED,
+            reason,
+            timestamp,
+            event_id
+        )
 
     finally:
         if cache_key:

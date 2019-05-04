@@ -58,7 +58,6 @@ const OrganizationStream = createReactClass({
     savedSearch: SentryTypes.SavedSearch,
     savedSearches: PropTypes.arrayOf(SentryTypes.SavedSearch),
     savedSearchLoading: PropTypes.bool.isRequired,
-    useOrgSavedSearches: PropTypes.bool.isRequired,
   },
 
   mixins: [
@@ -317,6 +316,7 @@ const OrganizationStream = createReactClass({
 
         const queryCount = jqXHR.getResponseHeader('X-Hits');
         const queryMaxCount = jqXHR.getResponseHeader('X-Max-Hits');
+        const pageLinks = jqXHR.getResponseHeader('Link');
 
         this.setState({
           error: false,
@@ -325,7 +325,7 @@ const OrganizationStream = createReactClass({
             typeof queryCount !== 'undefined' ? parseInt(queryCount, 10) || 0 : 0,
           queryMaxCount:
             typeof queryMaxCount !== 'undefined' ? parseInt(queryMaxCount, 10) || 0 : 0,
-          pageLinks: jqXHR.getResponseHeader('Link'),
+          pageLinks,
         });
       },
       error: err => {
@@ -375,12 +375,9 @@ const OrganizationStream = createReactClass({
   },
 
   onRealtimePoll(data, links) {
+    // Note: We do not update state with cursors from polling,
+    // `CursorPoller` updates itself with new cursors
     this._streamManager.unshift(data);
-    if (!utils.valueIsEqual(this.state.pageLinks, links, true)) {
-      this.setState({
-        pageLinks: links,
-      });
-    }
   },
 
   onGroupChange() {
@@ -415,8 +412,19 @@ const OrganizationStream = createReactClass({
     this.transitionTo({sort});
   },
 
-  onCursorChange(cursor, path, query) {
-    this.transitionTo({cursor});
+  onCursorChange(cursor, path, query, pageDiff) {
+    const queryPageInt = parseInt(query.page, 10);
+    let nextPage = isNaN(queryPageInt) ? pageDiff : queryPageInt + pageDiff;
+
+    // unset cursor and page when we navigate back to the first page
+    // also reset cursor if somehow the previous button is enabled on
+    // first page and user attempts to go backwards
+    if (nextPage <= 0) {
+      cursor = undefined;
+      nextPage = undefined;
+    }
+
+    this.transitionTo({cursor, page: nextPage});
   },
 
   onTagsChange(tags) {
@@ -482,20 +490,15 @@ const OrganizationStream = createReactClass({
 
     if (savedSearch && savedSearch.id) {
       path = `/organizations/${organization.slug}/issues/searches/${savedSearch.id}/`;
-      // Drop query and project, adding the search project if available.
+
+      // Remove the query as saved searches bring their own query string.
       delete query.query;
-      delete query.project;
 
-      if (savedSearch.projectId) {
+      // If we aren't going to another page in the same search
+      // drop the query and replace the current project, with the saved search search project
+      // if available.
+      if (!query.cursor && savedSearch.projectId) {
         query.project = [savedSearch.projectId];
-      }
-
-      // If the saved search is project-less and the user doesn't have
-      // global-views we retain their current project filter
-      // so that the backend doesn't reject their request.
-      const hasMultipleProjectSelection = this.getFeatures().has('global-views');
-      if (!savedSearch.projectId && !hasMultipleProjectSelection) {
-        query.project = this.props.selection.projects;
       }
     } else {
       path = `/organizations/${organization.slug}/issues/`;
@@ -511,7 +514,8 @@ const OrganizationStream = createReactClass({
   },
 
   renderGroupNodes(ids, groupStatsPeriod) {
-    // Restrict this guide to only show for new users (joined<30 days) and add guide anhor only to the first issue
+    // Restrict this guide to only show for new users (joined < 30 days)
+    // and add guide anchor only to the first issue
     const userDateJoined = new Date(ConfigStore.get('user').dateJoined);
     const dateCutoff = new Date();
     dateCutoff.setDate(dateCutoff.getDate() - 30);
@@ -583,17 +587,8 @@ const OrganizationStream = createReactClass({
   },
 
   fetchSavedSearches() {
-    const {orgId} = this.props.params;
-    const {organization, useOrgSavedSearches} = this.props;
-    const projectMap = organization.projects.reduce((acc, project) => {
-      acc[project.id] = project.slug;
-      return acc;
-    }, {});
-
-    fetchSavedSearches(this.api, orgId, projectMap, useOrgSavedSearches).then(
-      data => {},
-      error => {}
-    );
+    const {organization} = this.props;
+    fetchSavedSearches(this.api, organization.slug).then(data => {}, error => {});
   },
 
   onSavedSearchCreate(newSavedSearch) {
