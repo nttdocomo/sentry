@@ -343,6 +343,7 @@ class EventManager(object):
         key=None,
         content_encoding=None,
         is_renormalize=False,
+        remove_other=None
     ):
         self._data = _decode_event(data, content_encoding=content_encoding)
         self.version = version
@@ -355,6 +356,7 @@ class EventManager(object):
         self._auth = auth
         self._key = key
         self._is_renormalize = is_renormalize
+        self._remove_other = remove_other
         self._normalized = False
 
     def process_csp_report(self):
@@ -408,21 +410,12 @@ class EventManager(object):
         self._data = data
 
     def normalize(self):
-        tags = {
-            'use_rust_normalize': True
-        }
-
-        with metrics.timer('events.store.normalize.duration', tags=tags):
+        with metrics.timer('events.store.normalize.duration'):
             self._normalize_impl()
-
-        data = self.get_data()
-
-        data['use_rust_normalize'] = True
 
         metrics.timing(
             'events.store.normalize.errors',
-            len(data.get("errors") or ()),
-            tags=tags,
+            len(self._data.get("errors") or ()),
         )
 
     def _normalize_impl(self):
@@ -445,7 +438,8 @@ class EventManager(object):
             max_secs_in_future=MAX_SECS_IN_FUTURE,
             max_secs_in_past=MAX_SECS_IN_PAST,
             enable_trimming=True,
-            is_renormalize=self._is_renormalize
+            is_renormalize=self._is_renormalize,
+            remove_other=self._remove_other,
         )
 
         self._data = CanonicalKeyDict(

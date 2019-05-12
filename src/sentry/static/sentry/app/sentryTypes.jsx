@@ -411,6 +411,17 @@ export const Incident = PropTypes.shape({
       likelihood: PropTypes.string,
     })
   ).isRequired,
+  isSubscribed: PropTypes.bool.isRequired,
+});
+
+export const Activity = PropTypes.shape({
+  id: PropTypes.string.isRequired,
+  type: PropTypes.string.isRequired,
+  dateCreated: PropTypes.string.isRequired,
+  user: User,
+  data: PropTypes.shape({
+    text: PropTypes.string,
+  }),
 });
 
 export const GlobalSelection = PropTypes.shape({
@@ -931,6 +942,7 @@ const SentryTypes = {
     id: PropTypes.string.isRequired,
   }),
   Actor,
+  Activity,
   AuthProvider,
   Config,
   Deploy,
