@@ -1,7 +1,6 @@
 import $ from 'jquery';
 import PropTypes from 'prop-types';
 import React from 'react';
-import ReactDOMServer from 'react-dom/server';
 import createReactClass from 'create-react-class';
 import moment from 'moment';
 
@@ -142,7 +141,7 @@ const ProjectFiltersChart = createReactClass({
     }
     const {formattedData} = this.state;
 
-    return ReactDOMServer.renderToStaticMarkup(
+    return (
       <div style={{width: '175px'}}>
         <div className="time-label">
           <span>{timeLabel}</span>
@@ -192,7 +191,7 @@ const ProjectFiltersChart = createReactClass({
               barClasses={classes}
               className="standard-barchart filtered-stats-barchart"
               tooltip={this.renderTooltip}
-              minHeights={classes.map(p => (p == 'legacy-browsers' ? 1 : 0))}
+              minHeights={classes.map(p => (p === 'legacy-browsers' ? 1 : 0))}
             />
           )}
           {hasLoaded && this.state.blankStats && (

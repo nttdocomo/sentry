@@ -6,7 +6,7 @@ import {assignToUser, assignToActor} from 'app/actionCreators/group';
 import {openCreateOwnershipRule} from 'app/actionCreators/modal';
 import {t} from 'app/locale';
 import Access from 'app/components/acl/access';
-import ActorAvatar from 'app/components/actorAvatar';
+import ActorAvatar from 'app/components/avatar/actorAvatar';
 import Button from 'app/components/button';
 import GuideAnchor from 'app/components/assistant/guideAnchor';
 import SentryTypes from 'app/sentryTypes';
@@ -221,8 +221,8 @@ export default withApi(withOrganization(SuggestedOwners));
  */
 function findMatchedRules(rules, owner) {
   const matchOwner = (actorType, key) =>
-    (actorType == 'user' && key === owner.email) ||
-    (actorType == 'team' && key == owner.name);
+    (actorType === 'user' && key === owner.email) ||
+    (actorType === 'team' && key === owner.name);
 
   const actorHasOwner = ([actorType, key]) =>
     actorType === owner.type && matchOwner(actorType, key);

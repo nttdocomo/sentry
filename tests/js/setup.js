@@ -65,6 +65,7 @@ jest.mock('react-router', () => {
     Route: ReactRouter.Route,
     withRouter: ReactRouter.withRouter,
     browserHistory: {
+      goBack: jest.fn(),
       push: jest.fn(),
       replace: jest.fn(),
       listen: jest.fn(() => {}),
@@ -113,6 +114,21 @@ jest.mock('@sentry/browser', () => {
     lastEventId: jest.fn(),
     getCurrentHub: jest.spyOn(SentryBrowser, 'getCurrentHub'),
     withScope: jest.spyOn(SentryBrowser, 'withScope'),
+  };
+});
+
+jest.mock('popper.js', () => {
+  const PopperJS = jest.requireActual('popper.js');
+
+  return class {
+    static placements = PopperJS.placements;
+
+    constructor() {
+      return {
+        destroy: () => {},
+        scheduleUpdate: () => {},
+      };
+    }
   };
 });
 

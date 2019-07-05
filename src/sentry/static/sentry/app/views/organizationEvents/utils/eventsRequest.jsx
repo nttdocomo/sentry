@@ -46,6 +46,7 @@ class EventsRequest extends React.PureComponent {
      * Absolute start date for query
      */
     start: PropTypes.instanceOf(Date),
+
     /**
      * Absolute end date for query
      */
@@ -84,16 +85,32 @@ class EventsRequest extends React.PureComponent {
      */
     timeAggregationSeriesName: PropTypes.string,
 
-    // Initial loading state
+    /**
+     * Initial loading state
+     */
     loading: PropTypes.bool,
 
+    /**
+     * Should loading be shown.
+     */
     showLoading: PropTypes.bool,
+
+    /**
+     * The yAxis being plotted
+     */
+    yAxis: PropTypes.string,
+
+    /**
+     * issue group id or groupids to filter results by.
+     */
+    groupId: PropTypes.oneOfType([PropTypes.string, PropTypes.array]),
   };
 
   static defaultProps = {
     period: null,
     start: null,
     end: null,
+    groupId: null,
     interval: '1d',
     limit: 15,
     getCategory: i => i,
@@ -229,7 +246,7 @@ class EventsRequest extends React.PureComponent {
   transformTimeseriesData = data => {
     return [
       {
-        seriesName: 'Events',
+        seriesName: 'Current Period',
         data: data.map(([timestamp, countsForTimestamp]) => ({
           name: timestamp * 1000,
           value: countsForTimestamp.reduce((acc, {count}) => acc + count, 0),

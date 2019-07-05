@@ -76,6 +76,7 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
         "webhookUrl": "https://example.com/webhook",
       }
     }
+    isInternal={false}
     key="123456123456123456123456"
     onInstall={[Function]}
     onUninstall={[Function]}
@@ -156,7 +157,7 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
                         >
                           Sample App
                           <BetaTag>
-                            <Tooltip2
+                            <Tooltip
                               containerDisplayMode="inline-block"
                               position="right"
                               title="This feature is in beta and may change in the future."
@@ -177,7 +178,7 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
                                     >
                                       <span
                                         aria-describedby="tooltip-123456"
-                                        className="css-1m3e0hg-Container e7ebgxc0"
+                                        className="css-1m3e0hg-Container erna86q0"
                                         onBlur={[Function]}
                                         onFocus={[Function]}
                                         onMouseEnter={[Function]}
@@ -225,7 +226,7 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
                                   </InnerReference>
                                 </Reference>
                               </Manager>
-                            </Tooltip2>
+                            </Tooltip>
                           </BetaTag>
                         </div>
                       </SentryAppName>
@@ -237,22 +238,21 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
                             className="css-f0t6d-SentryAppDetails eac2pqx3"
                             is={null}
                           >
-                            <Status>
+                            <Status
+                              isInternal={false}
+                            >
                               <WithTheme(Component)
                                 className="css-lk5f1o-Status eac2pqx8"
+                                isInternal={false}
                               >
                                 <Component
                                   className="css-lk5f1o-Status eac2pqx8"
+                                  isInternal={false}
                                   theme={
                                     Object {
                                       "alert": Object {
                                         "beta": Object {
                                           "background": "linear-gradient(90deg, #F868BC, #6C5FC7)",
-                                        },
-                                        "default": Object {
-                                          "background": "#BDB4C7",
-                                          "backgroundLight": "#FAF9FB",
-                                          "border": "#E2DBE8",
                                         },
                                         "error": Object {
                                           "background": "#e03e2f",
@@ -266,6 +266,11 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
                                           "backgroundLight": "#F5FAFE",
                                           "border": "#628BD6",
                                           "iconColor": "#3B6ECC",
+                                        },
+                                        "muted": Object {
+                                          "background": "#BDB4C7",
+                                          "backgroundLight": "#FAF9FB",
+                                          "border": "#AFA3BB",
                                         },
                                         "success": Object {
                                           "background": "#57be8c",
@@ -408,6 +413,7 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
                                       "pink": "#F868BC",
                                       "pinkDark": "#DF4FA3",
                                       "pinkLight": "#FF82D6",
+                                      "placeholderBackground": "#f5f5f5",
                                       "purple": "#6C5FC7",
                                       "purple2": "#6f617c",
                                       "purpleDark": "#5346AE",
@@ -480,7 +486,7 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
                                         "sentryErrorEmbed": 1090,
                                         "sidebar": 1010,
                                         "toast": 10001,
-                                        "tooltip": 1070,
+                                        "tooltip": 10002,
                                       },
                                     }
                                   }
@@ -521,11 +527,6 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
                                                 "beta": Object {
                                                   "background": "linear-gradient(90deg, #F868BC, #6C5FC7)",
                                                 },
-                                                "default": Object {
-                                                  "background": "#BDB4C7",
-                                                  "backgroundLight": "#FAF9FB",
-                                                  "border": "#E2DBE8",
-                                                },
                                                 "error": Object {
                                                   "background": "#e03e2f",
                                                   "backgroundLight": "#FDF6F5",
@@ -538,6 +539,11 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
                                                   "backgroundLight": "#F5FAFE",
                                                   "border": "#628BD6",
                                                   "iconColor": "#3B6ECC",
+                                                },
+                                                "muted": Object {
+                                                  "background": "#BDB4C7",
+                                                  "backgroundLight": "#FAF9FB",
+                                                  "border": "#AFA3BB",
                                                 },
                                                 "success": Object {
                                                   "background": "#57be8c",
@@ -680,6 +686,7 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
                                               "pink": "#F868BC",
                                               "pinkDark": "#DF4FA3",
                                               "pinkLight": "#FF82D6",
+                                              "placeholderBackground": "#f5f5f5",
                                               "purple": "#6C5FC7",
                                               "purple2": "#6f617c",
                                               "purpleDark": "#5346AE",
@@ -752,7 +759,7 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
                                                 "sentryErrorEmbed": 1090,
                                                 "sidebar": 1010,
                                                 "toast": 10001,
-                                                "tooltip": 1070,
+                                                "tooltip": 10002,
                                               },
                                             }
                                           }
@@ -818,7 +825,7 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
                           <ForwardRef
                             aria-disabled={false}
                             aria-label="Install"
-                            className="btn btn-default css-o6814l-StyledButton-getColors e12ma6z0"
+                            className="btn btn-default css-1uhlusb-StyledButton-getColors e12ma6z0"
                             disabled={false}
                             onClick={[Function]}
                             role="button"
@@ -827,7 +834,7 @@ exports[`Sentry App Installations when Apps exist displays all Apps owned by the
                             <button
                               aria-disabled={false}
                               aria-label="Install"
-                              className="btn btn-default css-o6814l-StyledButton-getColors e12ma6z0"
+                              className="btn btn-default css-1uhlusb-StyledButton-getColors e12ma6z0"
                               onClick={[Function]}
                               role="button"
                               size="small"

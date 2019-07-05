@@ -10,6 +10,7 @@ from sentry.plugins.bases.notify import NotificationPlugin
 from sentry.receivers.rules import DEFAULT_RULE_LABEL, DEFAULT_RULE_DATA
 from sentry.signals import (
     advanced_search,
+    advanced_search_feature_gated,
     alert_rule_created,
     data_scrubber_enabled,
     deploy_created,
@@ -49,7 +50,7 @@ DEFAULT_TAGS = frozenset(
 
 # First Event
 @first_event_received.connect(weak=False)
-def record_first_event(project, group, **kwargs):
+def record_first_event(project, **kwargs):
     FeatureAdoption.objects.record(
         organization_id=project.organization_id, feature_slug="first_event", complete=True
     )
@@ -182,6 +183,22 @@ def record_issue_resolved(organization_id, project, group, user, resolution_type
 def record_advanced_search(project, **kwargs):
     FeatureAdoption.objects.record(
         organization_id=project.organization_id, feature_slug="advanced_search", complete=True
+    )
+
+
+@advanced_search_feature_gated.connect(weak=False)
+def record_advanced_search_feature_gated(user, organization, **kwargs):
+    if user and user.is_authenticated():
+        user_id = default_user_id = user.id
+    else:
+        user_id = None
+        default_user_id = organization.get_default_owner().id
+
+    analytics.record(
+        'advanced_search.feature_gated',
+        user_id=user_id,
+        default_user_id=default_user_id,
+        organization_id=organization.id,
     )
 
 

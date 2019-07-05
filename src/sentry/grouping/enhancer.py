@@ -10,9 +10,13 @@ from itertools import izip
 from parsimonious.grammar import Grammar, NodeVisitor
 from parsimonious.exceptions import ParseError
 
+from sentry import projectoptions
+from sentry.stacktraces.functions import set_in_app
 from sentry.stacktraces.platform import get_behavior_family_for_platform
+from sentry.grouping.utils import get_rule_bool
 from sentry.utils.compat import implements_to_string
 from sentry.utils.glob import glob_match
+from sentry.utils.safe import get_path
 
 
 # Grammar is defined in EBNF syntax.
@@ -24,21 +28,26 @@ line = _ (comment / rule / empty) newline?
 
 rule = _ matchers actions
 
-matchers       = matcher+
-matcher        = _ matcher_type sep argument
-matcher_type   = "path" / "function" / "module" / "family" / "package"
+matchers         = matcher+
+matcher          = _ matcher_type sep argument
+matcher_type     = "path" / "function" / "module" / "family" / "package" / "app"
 
-actions        = action+
-action         = _ range? flag action_name
-action_name    = "group" / "app"
-flag           = "+" / "-"
-range          = "^" / "v"
+actions          = action+
+action           = flag_action / var_action
+var_action       = _ var_name _ "=" _ expr
+var_name         = "max-frames"
+flag_action      = _ range? flag flag_action_name
+flag_action_name = "group" / "app"
+flag             = "+" / "-"
+range            = "^" / "v"
+expr             = int
+int              = ~r"[0-9]+"
 
-comment        = ~r"#[^\r\n]*"
+comment          = ~r"#[^\r\n]*"
 
-argument       = quoted / unquoted
-quoted         = ~r'"([^"\\]*(?:\\.[^"\\]*)*)"'
-unquoted       = ~r"\S+"
+argument         = quoted / unquoted
+quoted           = ~r'"([^"\\]*(?:\\.[^"\\]*)*)"'
+unquoted         = ~r"\S+"
 
 sep     = ":"
 space   = " "
@@ -63,6 +72,7 @@ MATCH_KEYS = {
     'module': 'm',
     'family': 'F',
     'package': 'P',
+    'app': 'a',
 }
 SHORT_MATCH_KEYS = dict((v, k) for k, v in six.iteritems(MATCH_KEYS))
 
@@ -118,6 +128,11 @@ class Match(object):
             family = get_behavior_family_for_platform(frame_data.get('platform') or platform)
             return family in flags
 
+        # in-app matching is just a bool
+        if self.key == 'app':
+            ref_val = get_rule_bool(self.pattern)
+            return ref_val is not None and ref_val == frame_data.get('in_app')
+
         # all other matches are case sensitive
         if self.key == 'function':
             from sentry.stacktraces.functions import get_function_name_for_frame
@@ -132,6 +147,8 @@ class Match(object):
     def _to_config_structure(self):
         if self.key == 'family':
             arg = ''.join(filter(None, [FAMILIES.get(x) for x in self.pattern.split(',')]))
+        elif self.key == 'app':
+            arg = {True: '1', False: '0'}.get(get_rule_bool(self.pattern), '')
         else:
             arg = self.pattern
         return MATCH_KEYS[self.key] + arg
@@ -146,8 +163,27 @@ class Match(object):
         return cls(key, arg)
 
 
-@implements_to_string
 class Action(object):
+
+    def apply_modifications_to_frame(self, frames, idx):
+        pass
+
+    def update_frame_components_contributions(self, components, frames, idx, rule=None):
+        pass
+
+    def modify_stack_state(self, state, rule):
+        pass
+
+    @classmethod
+    def _from_config_structure(cls, val):
+        if isinstance(val, list):
+            return VarAction(val[0], val[1])
+        flag, range = REVERSE_ACTION_FLAGS[val >> 4]
+        return FlagAction(ACTIONS[val & 0xf], flag, range)
+
+
+@implements_to_string
+class FlagAction(Action):
 
     def __init__(self, key, flag, range):
         self.key = key
@@ -168,10 +204,20 @@ class Action(object):
         if self.range is None:
             return [seq[idx]]
         elif self.range == 'down':
-            return seq[idx + 1:]
-        elif self.range == 'up':
             return seq[:idx]
+        elif self.range == 'up':
+            return seq[idx + 1:]
         return []
+
+    def _in_app_changed(self, frame, component):
+        orig_in_app = get_path(frame, 'data', 'orig_in_app')
+
+        if orig_in_app is not None:
+            if orig_in_app == -1:
+                orig_in_app = None
+            return orig_in_app != frame.get('in_app')
+        else:
+            return self.flag == component.contributes
 
     def apply_modifications_to_frame(self, frames, idx):
         # Grouping is not stored on the frame
@@ -179,9 +225,9 @@ class Action(object):
             return
         for frame in self._slice_to_range(frames, idx):
             if self.key == 'app':
-                frame['in_app'] = self.flag
+                set_in_app(frame, self.flag)
 
-    def update_frame_components_contributions(self, components, idx, rule=None):
+    def update_frame_components_contributions(self, components, frames, idx, rule=None):
         rule_hint = 'grouping enhancement rule'
         if rule:
             rule_hint = '%s (%s)' % (
@@ -189,7 +235,9 @@ class Action(object):
                 rule.matcher_description,
             )
 
-        for component in self._slice_to_range(components, idx):
+        sliced_components = self._slice_to_range(components, idx)
+        sliced_frames = self._slice_to_range(frames, idx)
+        for component, frame in izip(sliced_components, sliced_frames):
             if self.key == 'group' and self.flag != component.contributes:
                 component.update(
                     contributes=self.flag,
@@ -198,18 +246,49 @@ class Action(object):
                 )
             # The in app flag was set by `apply_modifications_to_frame`
             # but we want to add a hint if there is none yet.
-            elif self.key == 'app' and \
-                    self.flag == component.contributes and \
-                    component.hint is None:
+            elif self.key == 'app' and self._in_app_changed(frame, component):
                 component.update(
                     hint='marked %s by %s' % (
                         self.flag and 'in-app' or 'out of app', rule_hint)
                 )
 
-    @classmethod
-    def _from_config_structure(cls, num):
-        flag, range = REVERSE_ACTION_FLAGS[num >> 4]
-        return cls(ACTIONS[num & 0xf], flag, range)
+
+@implements_to_string
+class VarAction(Action):
+    range = None
+
+    def __init__(self, var, value):
+        self.var = var
+        self.value = value
+
+    def __str__(self):
+        return '%s=%s' % (self.var, self.value)
+
+    def _to_config_structure(self):
+        return [self.var, self.value]
+
+    def modify_stack_state(self, state, rule):
+        state.set(self.var, self.value, rule)
+
+
+class StackState(object):
+
+    def __init__(self):
+        self.vars = {'max-frames': 0}
+        self.setters = {}
+
+    def set(self, var, value, rule=None):
+        self.vars[var] = value
+        if rule is not None:
+            self.setters[var] = rule
+
+    def get(self, var):
+        return self.vars.get(var)
+
+    def describe_var_rule(self, var):
+        rule = self.setters.get(var)
+        if rule is not None:
+            return rule.matcher_description
 
 
 class Enhancements(object):
@@ -236,18 +315,43 @@ class Enhancements(object):
                     action.apply_modifications_to_frame(frames, idx)
 
     def update_frame_components_contributions(self, components, frames, platform):
+        stack_state = StackState()
+
+        # Apply direct frame actions and update the stack state alongside
         for rule in self.iter_rules():
             for idx, (component, frame) in enumerate(izip(components, frames)):
                 actions = rule.get_matching_frame_actions(frame, platform)
                 for action in actions or ():
                     action.update_frame_components_contributions(
-                        components, idx, rule=rule)
+                        components, frames, idx, rule=rule)
+                    action.modify_stack_state(stack_state, rule)
+
+        # Use the stack state to update frame contributions again
+        max_frames = stack_state.get('max-frames')
+        if max_frames > 0:
+            ignored = 0
+            for component in reversed(components):
+                if not component.contributes:
+                    continue
+                ignored += 1
+                if ignored <= max_frames:
+                    continue
+                hint = 'ignored because only %d %s considered' % (
+                    max_frames,
+                    'frames are' if max_frames != 1 else 'frame is',
+                )
+                description = stack_state.describe_var_rule('max-frames')
+                if description is not None:
+                    hint = '%s by grouping enhancement rule (%s)' % (hint, description)
+                component.update(hint=hint, contributes=False)
 
     def as_dict(self, with_rules=False):
         rv = {
             'id': self.id,
             'changelog': self.changelog,
             'bases': self.bases,
+            'latest': projectoptions.lookup_well_known_key('sentry:grouping_enhancements_base')
+            .get_default(epoch=projectoptions.LATEST_EPOCH) == self.id,
         }
         if with_rules:
             rv['rules'] = [x.as_dict() for x in self.rules]
@@ -313,7 +417,10 @@ class Rule(object):
 
     @property
     def matcher_description(self):
-        return ' '.join(x.description for x in self.matchers)
+        rv = ' '.join(x.description for x in self.matchers)
+        for action in self.actions:
+            rv = '%s %s' % (rv, action)
+        return rv
 
     def as_dict(self):
         matchers = {}
@@ -393,11 +500,25 @@ class EnhancmentsVisitor(NodeVisitor):
     def visit_argument(self, node, children):
         return children[0]
 
-    def visit_action(self, node, children):
-        _, rng, flag, action_name = children
-        return Action(action_name, flag, rng[0] if rng else None)
+    def visit_var(self, node, children):
+        _, var_name, _, _, _, arg = children
+        return Action('set_var', (var_name, arg))
 
-    def visit_action_name(self, node, children):
+    def visit_action(self, node, children):
+        return children[0]
+
+    def visit_flag_action(self, node, children):
+        _, rng, flag, action_name = children
+        return FlagAction(action_name, flag, rng[0] if rng else None)
+
+    def visit_flag_action_name(self, node, children):
+        return node.text
+
+    def visit_var_action(self, node, children):
+        _, var_name, _, _, _, arg = children
+        return VarAction(var_name, arg)
+
+    def visit_var_name(self, node, children):
         return node.text
 
     def visit_flag(self, node, children):
@@ -407,6 +528,12 @@ class EnhancmentsVisitor(NodeVisitor):
         if node.text == '^':
             return 'up'
         return 'down'
+
+    def visit_expr(self, node, children):
+        return children[0]
+
+    def visit_int(self, node, children):
+        return int(node.text)
 
     def visit_quoted(self, node, children):
         return node.text[1:-1] \
@@ -426,14 +553,12 @@ def _load_configs():
     for fn in os.listdir(base):
         if fn.endswith('.txt'):
             with open(os.path.join(base, fn)) as f:
+                # We cannot use `:` in filenames on Windows but we already have ids with
+                # `:` in their names hence this trickery.
+                fn = fn.replace('@', ':')
                 rv[fn[:-4]] = Enhancements.from_config_string(f.read().decode('utf-8'), id=fn[:-4])
     return rv
 
 
 ENHANCEMENT_BASES = _load_configs()
-LATEST_ENHANCEMENT_BASE = sorted(x for x in ENHANCEMENT_BASES
-                                 if x.startswith('common:'))[-1]
-DEFAULT_ENHANCEMENT_BASE = 'legacy:2019-03-12'
-DEFAULT_ENHANCEMENTS_CONFIG = Enhancements(rules=[], bases=[DEFAULT_ENHANCEMENT_BASE]).dumps()
-assert DEFAULT_ENHANCEMENT_BASE in ENHANCEMENT_BASES
 del _load_configs

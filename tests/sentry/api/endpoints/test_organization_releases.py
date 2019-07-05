@@ -10,13 +10,19 @@ from datetime import (
 from django.core.urlresolvers import reverse
 from exam import fixture
 
-from sentry.api.endpoints.organization_releases import ReleaseSerializerWithProjects
-from sentry.constants import VERSION_LENGTH
+from sentry.api.endpoints.organization_releases import (
+    ReleaseHeadCommitSerializer,
+    ReleaseSerializerWithProjects,
+)
+from sentry.constants import (
+    BAD_RELEASE_CHARS,
+    MAX_COMMIT_LENGTH,
+    MAX_VERSION_LENGTH,
+)
 from sentry.models import (
     Activity,
     ApiKey,
     ApiToken,
-    BAD_RELEASE_CHARS,
     Commit,
     CommitAuthor,
     CommitFileChange,
@@ -1447,24 +1453,24 @@ class ReleaseSerializerWithProjectsTest(TestCase):
         serializer = ReleaseSerializerWithProjects(data={
             'version': self.version,
             'projects': self.projects,
-            'ref': 'a' * VERSION_LENGTH,
+            'ref': 'a' * MAX_VERSION_LENGTH,
         })
         assert serializer.is_valid()
         serializer = ReleaseSerializerWithProjects(data={
             'version': self.version,
             'projects': self.projects,
-            'ref': 'a' * (VERSION_LENGTH + 1),
+            'ref': 'a' * (MAX_VERSION_LENGTH + 1),
         })
         assert not serializer.is_valid()
 
     def test_version_limited_by_max_version_length(self):
         serializer = ReleaseSerializerWithProjects(data={
-            'version': 'a' * VERSION_LENGTH,
+            'version': 'a' * MAX_VERSION_LENGTH,
             'projects': self.projects,
         })
         assert serializer.is_valid()
         serializer = ReleaseSerializerWithProjects(data={
-            'version': 'a' * (VERSION_LENGTH + 1),
+            'version': 'a' * (MAX_VERSION_LENGTH + 1),
             'projects': self.projects,
         })
         assert not serializer.is_valid()
@@ -1505,5 +1511,116 @@ class ReleaseSerializerWithProjectsTest(TestCase):
         serializer = ReleaseSerializerWithProjects(data={
             'version': 'Latest',
             'projects': self.projects,
+        })
+        assert not serializer.is_valid()
+
+
+class ReleaseHeadCommitSerializerTest(TestCase):
+    def setUp(self):
+        super(ReleaseHeadCommitSerializerTest, self).setUp()
+        self.repo_name = 'repo/name'
+        self.commit = 'b' * 40
+        self.commit_range = '%s..%s' % ('a' * 40, 'b' * 40)
+        self.prev_commit = 'a' * 40
+
+    def test_simple(self):
+        serializer = ReleaseHeadCommitSerializer(data={
+            'commit': self.commit,
+            'previousCommit': self.prev_commit,
+            'repository': self.repo_name
+        })
+
+        assert serializer.is_valid()
+        assert sorted(serializer.fields.keys()) == sorted(
+            ['commit', 'previousCommit', 'repository'])
+        result = serializer.object
+        assert result['commit'] == self.commit
+        assert result['previousCommit'] == self.prev_commit
+        assert result['repository'] == self.repo_name
+
+    def test_prev_commit_not_required(self):
+        serializer = ReleaseHeadCommitSerializer(data={
+            'commit': self.commit,
+            'previousCommit': None,
+            'repository': self.repo_name
+        })
+        assert serializer.is_valid()
+
+    def test_do_not_allow_null_or_empty_commit_or_repo(self):
+        serializer = ReleaseHeadCommitSerializer(data={
+            'commit': None,
+            'previousCommit': self.prev_commit,
+            'repository': self.repo_name
+        })
+        assert not serializer.is_valid()
+        serializer = ReleaseHeadCommitSerializer(data={
+            'commit': '',
+            'previousCommit': self.prev_commit,
+            'repository': self.repo_name
+        })
+        assert not serializer.is_valid()
+        serializer = ReleaseHeadCommitSerializer(data={
+            'commit': self.commit,
+            'previousCommit': self.prev_commit,
+            'repository': None
+        })
+        assert not serializer.is_valid()
+        serializer = ReleaseHeadCommitSerializer(data={
+            'commit': self.commit,
+            'previousCommit': self.prev_commit,
+            'repository': ''
+        })
+        assert not serializer.is_valid()
+
+    def test_single_commit_limited_by_max_commit_length(self):
+        serializer = ReleaseHeadCommitSerializer(data={
+            'commit': 'b' * MAX_COMMIT_LENGTH,
+            'repository': self.repo_name,
+        })
+        assert serializer.is_valid()
+        serializer = ReleaseHeadCommitSerializer(data={
+            'commit': self.commit,
+            'previousCommit': 'a' * MAX_COMMIT_LENGTH,
+            'repository': self.repo_name,
+        })
+        assert serializer.is_valid()
+        serializer = ReleaseHeadCommitSerializer(data={
+            'commit': 'b' * (MAX_COMMIT_LENGTH + 1),
+            'repository': self.repo_name,
+        })
+        assert not serializer.is_valid()
+        serializer = ReleaseHeadCommitSerializer(data={
+            'commit': self.commit,
+            'previousCommit': 'a' * (MAX_COMMIT_LENGTH + 1),
+            'repository': self.repo_name,
+        })
+        assert not serializer.is_valid()
+
+    def test_commit_range_does_not_allow_empty_commits(self):
+        serializer = ReleaseHeadCommitSerializer(data={
+            'commit': '%s..%s' % ('', 'b' * MAX_COMMIT_LENGTH),
+            'repository': self.repo_name,
+        })
+        assert not serializer.is_valid()
+        serializer = ReleaseHeadCommitSerializer(data={
+            'commit': '%s..%s' % ('a' * MAX_COMMIT_LENGTH, ''),
+            'repository': self.repo_name,
+        })
+        assert not serializer.is_valid()
+
+    def test_commit_range_limited_by_max_commit_length(self):
+        serializer = ReleaseHeadCommitSerializer(data={
+            'commit': '%s..%s' % ('a' * MAX_COMMIT_LENGTH, 'b' * MAX_COMMIT_LENGTH),
+            'repository': self.repo_name,
+        })
+        assert serializer.is_valid()
+        serializer = ReleaseHeadCommitSerializer(data={
+            'commit': '%s..%s' % ('a' * (MAX_COMMIT_LENGTH + 1), 'b' * MAX_COMMIT_LENGTH),
+            'repository': self.repo_name,
+        })
+        assert not serializer.is_valid()
+        serializer = ReleaseHeadCommitSerializer(data={
+            'commit': '%s..%s' % ('a' * MAX_COMMIT_LENGTH, 'b' * (MAX_COMMIT_LENGTH + 1)),
+            'repository': self.repo_name,
         })
         assert not serializer.is_valid()

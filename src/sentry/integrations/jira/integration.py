@@ -433,17 +433,27 @@ class JiraIntegration(IntegrationInstallation, IssueSyncMixin):
         # all project metadata is expensive and wasteful. In the first run experience,
         # the user won't have a 'last used' project id so we need to iterate available
         # projects until we find one that we can get metadata for.
+        attempts = 0
         if len(jira_projects):
-            attempts = 0
             for fallback in jira_projects:
                 attempts += 1
                 meta = self.fetch_issue_create_meta(client, fallback['id'])
                 if meta:
-                    logging.info('jira.issue-create-meta.attempts', extra={
+                    logger.info('jira.get-issue-create-meta.attempts', extra={
                         'organization_id': self.organization_id,
                         'attempts': attempts,
                     })
                     return meta
+
+        jira_project_ids = 'no projects'
+        if len(jira_projects):
+            jira_project_ids = ','.join([project['key'] for project in jira_projects])
+
+        logger.info('jira.get-issue-create-meta.no-metadata', extra={
+            'organization_id': self.organization_id,
+            'attempts': attempts,
+            'jira_projects': jira_project_ids,
+        })
         raise IntegrationError(
             'Could not get issue create metadata for any Jira projects. '
             'Ensure that your project permissions are correct.'
@@ -453,16 +463,21 @@ class JiraIntegration(IntegrationInstallation, IssueSyncMixin):
         try:
             meta = client.get_create_meta_for_project(project_id)
         except ApiUnauthorized:
+            logger.info('jira.fetch-issue-create-meta.unauthorized', extra={
+                'organization_id': self.organization_id,
+                'jira_project': project_id,
+            })
             raise IntegrationError(
                 'Jira returned: Unauthorized. '
                 'Please check your configuration settings.'
             )
         except ApiError as exc:
             logger.info(
-                'jira.error-fetching-issue-config',
+                'jira.fetch-issue-create-meta.error',
                 extra={
                     'integration_id': self.model.id,
                     'organization_id': self.organization_id,
+                    'jira_project': project_id,
                     'error': exc.message,
                 }
             )
@@ -481,7 +496,22 @@ class JiraIntegration(IntegrationInstallation, IssueSyncMixin):
         project_id = params.get('project', defaults.get('project'))
 
         client = self.get_client()
-        jira_projects = client.get_projects_list()
+        try:
+            jira_projects = client.get_projects_list()
+        except ApiError as exc:
+            logger.info(
+                'jira.get-create-issue-config.no-projects',
+                extra={
+                    'integration_id': self.model.id,
+                    'organization_id': self.organization_id,
+                    'error': exc.message,
+                }
+            )
+            raise IntegrationError(
+                'Could not fetch project list from Jira'
+                'Ensure that jira is available and your account is still active.'
+            )
+
         meta = self.get_issue_create_meta(client, project_id, jira_projects)
         if not meta:
             raise IntegrationError(
@@ -578,6 +608,7 @@ class JiraIntegration(IntegrationInstallation, IssueSyncMixin):
             raise IntegrationError('Could not fetch issue create configuration from Jira.')
 
         issue_type_meta = self.get_issue_type_meta(data['issuetype'], meta)
+        user_id_field = client.user_id_field()
 
         fs = issue_type_meta['fields']
         for field in fs.keys():
@@ -607,10 +638,10 @@ class JiraIntegration(IntegrationInstallation, IssueSyncMixin):
                         cleaned_data[field] = v
                         continue
                     if schema['type'] == 'user' or schema.get('items') == 'user':
-                        v = {'name': v}
+                        v = {user_id_field: v}
                     elif schema.get('custom') == JIRA_CUSTOM_FIELD_TYPES.get('multiuserpicker'):
                         # custom multi-picker
-                        v = [{'name': v}]
+                        v = [{user_id_field: v}]
                     elif schema['type'] == 'array' and schema.get('items') == 'option':
                         v = [{'value': vx} for vx in v]
                     elif schema['type'] == 'array' and schema.get('items') == 'string':
@@ -676,7 +707,8 @@ class JiraIntegration(IntegrationInstallation, IssueSyncMixin):
                     continue
                 try:
                     jira_user = [
-                        r for r in res if r['emailAddress'] and r['emailAddress'].lower() == ue.email.lower()
+                        r for r in res
+                        if r.get('emailAddress') and r['emailAddress'].lower() == ue.email.lower()
                     ][0]
                 except IndexError:
                     pass
@@ -696,7 +728,8 @@ class JiraIntegration(IntegrationInstallation, IssueSyncMixin):
                 return
 
         try:
-            client.assign_issue(external_issue.key, jira_user and jira_user['name'])
+            id_field = client.user_id_field()
+            client.assign_issue(external_issue.key, jira_user and jira_user.get(id_field))
         except (ApiUnauthorized, ApiError):
             # TODO(jess): do we want to email people about these types of failures?
             logger.info(

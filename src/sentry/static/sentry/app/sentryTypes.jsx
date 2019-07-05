@@ -49,7 +49,6 @@ export const Config = PropTypes.shape({
   invitesEnabled: PropTypes.bool,
   isAuthenticated: PropTypes.bool,
   isOnPremise: PropTypes.bool,
-  mediaUrl: PropTypes.string,
   messages: PropTypes.array,
   needsUpgrade: PropTypes.bool,
   privacyUrl: PropTypes.string,
@@ -110,6 +109,17 @@ const DiscoverResultsShape = {
 };
 
 export const DiscoverResults = PropTypes.arrayOf(PropTypes.shape(DiscoverResultsShape));
+
+export const EventView = PropTypes.shape({
+  id: PropTypes.string.isRequired,
+  name: PropTypes.string.isRequired,
+  data: PropTypes.shape({
+    fields: PropTypes.arrayOf(PropTypes.string),
+    groupby: PropTypes.arrayOf(PropTypes.string),
+    orderby: PropTypes.arrayOf(PropTypes.string),
+  }).isRequired,
+  tags: PropTypes.arrayOf(PropTypes.string).isRequired,
+});
 
 /**
  * A Member is someone that was invited to Sentry but may
@@ -196,6 +206,16 @@ export const Event = PropTypes.shape({
   ),
   type: PropTypes.oneOf(['error', 'csp', 'default']),
   user: PropTypes.object,
+});
+
+export const EventAttachment = PropTypes.shape({
+  id: PropTypes.string.isRequired,
+  name: PropTypes.string.isRequired,
+  headers: PropTypes.object,
+  size: PropTypes.number.isRequired,
+  sha1: PropTypes.string.isRequired,
+  dateCreated: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(Date)]),
+  type: PropTypes.string.isRequired,
 });
 
 export const EventError = PropTypes.shape({
@@ -398,20 +418,37 @@ export const SavedSearch = PropTypes.shape({
 export const Incident = PropTypes.shape({
   id: PropTypes.string.isRequired,
   identifier: PropTypes.string.isRequired,
+  organizationId: PropTypes.string.isRequired,
   title: PropTypes.string.isRequired,
   status: PropTypes.number.isRequired,
   query: PropTypes.string,
   projects: PropTypes.array.isRequired,
-  eventCount: PropTypes.number.isRequired,
-  usersAffected: PropTypes.number.isRequired,
-  suspects: PropTypes.arrayOf(
-    PropTypes.shape({
-      id: PropTypes.string,
-      type: PropTypes.string,
-      likelihood: PropTypes.string,
-    })
-  ).isRequired,
-  isSubscribed: PropTypes.bool.isRequired,
+  eventStats: PropTypes.shape({
+    data: PropTypes.arrayOf(
+      PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.number, PropTypes.array]))
+    ),
+  }),
+  totalEvents: PropTypes.number.isRequired,
+  uniqueUsers: PropTypes.number.isRequired,
+  isSubscribed: PropTypes.bool,
+  dateClosed: PropTypes.string,
+  dateStarted: PropTypes.string.isRequired,
+  dateDetected: PropTypes.string.isRequired,
+  dateAdded: PropTypes.string.isRequired,
+});
+
+export const IncidentSuspectData = PropTypes.shape({
+  author: User,
+  dateCreated: PropTypes.string.isRequired,
+  id: PropTypes.string.isRequired,
+  message: PropTypes.string,
+  repository: Repository,
+  score: PropTypes.number,
+});
+
+export const IncidentSuspect = PropTypes.shape({
+  type: PropTypes.oneOf(['commit']).isRequired,
+  data: IncidentSuspectData.isRequired,
 });
 
 export const Activity = PropTypes.shape({
@@ -422,6 +459,17 @@ export const Activity = PropTypes.shape({
   data: PropTypes.shape({
     text: PropTypes.string,
   }),
+});
+
+export const IncidentActivity = PropTypes.shape({
+  id: PropTypes.string.isRequired,
+  type: PropTypes.number.isRequired,
+  dateCreated: PropTypes.oneOfType([PropTypes.instanceOf(Date), PropTypes.string])
+    .isRequired,
+  user: User,
+  comment: PropTypes.string,
+  value: PropTypes.string,
+  previousValue: PropTypes.string,
 });
 
 export const GlobalSelection = PropTypes.shape({
@@ -951,12 +999,17 @@ const SentryTypes = {
   DiscoverResults,
   Environment,
   Event,
+  EventAttachment,
+  EventView,
   Organization: PropTypes.shape({
     id: PropTypes.string.isRequired,
   }),
   GlobalSelection,
   Group,
   Incident,
+  IncidentActivity,
+  IncidentSuspect,
+  IncidentSuspectData,
   Tag,
   Monitor,
   PageLinks,

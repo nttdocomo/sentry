@@ -215,7 +215,7 @@ class SnubaEventSerializerTest(TestCase):
             'location': 'somewhere',
             'culprit': 'foo',
             'timestamp': '2011-01-01T00:00:00Z',
-            'user_id': 123,
+            'user_id': '123',
             'email': 'test@test.com',
             'username': 'test',
             'ip_address': '192.168.0.1',
@@ -238,7 +238,7 @@ class SnubaEventSerializerTest(TestCase):
         assert result['location'] == event.location
         assert result['culprit'] == event.culprit
         assert result['dateCreated'] == event.datetime
-        assert result['user']['id'] == six.text_type(event.user_id)
+        assert result['user']['id'] == event.user_id
         assert result['user']['email'] == event.email
         assert result['user']['username'] == event.username
         assert result['user']['ip_address'] == event.ip_address
@@ -247,3 +247,29 @@ class SnubaEventSerializerTest(TestCase):
             'value': 'email:test@test.com',
             'query': 'user.email:test@test.com',
         }]
+
+    def test_no_group(self):
+        """
+        Use the SimpleEventSerializer to serialize an event without group
+        """
+
+        event = SnubaEvent({
+            'event_id': 'a',
+            'project_id': 1,
+            'message': 'hello there',
+            'title': 'hi',
+            'type': 'default',
+            'location': 'somewhere',
+            'culprit': 'foo',
+            'timestamp': '2011-01-01T00:00:00Z',
+            'user_id': '123',
+            'email': 'test@test.com',
+            'username': 'test',
+            'ip_address': '192.168.0.1',
+            'platform': 'asdf',
+            'group_id': None,
+            'tags.key': ['sentry:user'],
+            'tags.value': ['email:test@test.com'],
+        })
+        result = serialize(event, None, SimpleEventSerializer())
+        assert result['groupID'] is None

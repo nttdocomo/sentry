@@ -15,6 +15,7 @@ from sentry.incidents.logic import create_incident
 from sentry.incidents.models import (
     Incident,
     IncidentStatus,
+    IncidentType,
 )
 from sentry.models.group import Group
 from sentry.models.project import Project
@@ -80,10 +81,17 @@ class OrganizationIncidentIndexEndpoint(OrganizationEndpoint):
             self.get_projects(request, organization),
         )
 
+        query_status = request.GET.get('status')
+
+        if query_status == 'open':
+            incidents = incidents.filter(status=IncidentStatus.OPEN.value)
+        elif query_status == 'closed':
+            incidents = incidents.filter(status=IncidentStatus.CLOSED.value)
+
         return self.paginate(
             request,
             queryset=incidents,
-            order_by='date_started',
+            order_by='-date_started',
             paginator_cls=OffsetPaginator,
             on_results=lambda x: serialize(x, request.user),
         )
@@ -107,13 +115,14 @@ class OrganizationIncidentIndexEndpoint(OrganizationEndpoint):
 
             incident = create_incident(
                 organization=organization,
-                status=IncidentStatus.CREATED,
+                type=IncidentType.CREATED,
                 title=result['title'],
                 query=result.get('query', ''),
                 date_started=result['dateStarted'],
                 date_detected=result.get('dateDetected', result['dateStarted']),
                 projects=result['projects'],
                 groups=groups,
+                user=request.user,
             )
             return Response(serialize(incident, request.user), status=201)
         return Response(serializer.errors, status=400)

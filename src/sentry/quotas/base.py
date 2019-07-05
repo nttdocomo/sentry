@@ -10,10 +10,10 @@ from __future__ import absolute_import
 import six
 
 from django.conf import settings
+from django.core.cache import cache
 
 from sentry import options
 from sentry.utils.services import Service
-from sentry.utils.cache import default_cache
 
 
 class RateLimit(object):
@@ -27,6 +27,20 @@ class RateLimit(object):
         self.reason = reason
         # machine readable description
         self.reason_code = reason_code
+
+    def to_dict(self):
+        """
+        Converts the object into a plain dictionary
+        :return: a dict containing the non None elm of the RateLimit
+
+        >>> x = RateLimit(is_limited = False, retry_after = 33)
+        >>> x.to_dict() == {'is_limited': False, 'retry_after': 33}
+        True
+
+        """
+        return {
+            name: getattr(self, name, None) for name in self.__slots__ if getattr(self, name, None) is not None
+        }
 
 
 class NotRateLimited(RateLimit):
@@ -76,16 +90,14 @@ class Quota(Service):
         # XXX(epurkhiser): Avoid excessive feature manager checks (which can be
         # expensive depending on feature handlers) for project rate limits.
         # This happens on /store.
-        cache_key = u'project:{}:rate-limits'.format(key.project.id)
+        cache_key = u'project:{}:features:rate-limits'.format(key.project.id)
 
-        rate_limit = default_cache.get(cache_key)
-        if rate_limit is None:
+        has_rate_limits = cache.get(cache_key)
+        if has_rate_limits is None:
             has_rate_limits = features.has('projects:rate-limits', key.project)
-            rate_limit = key.rate_limit if has_rate_limits else (0, 0)
+            cache.set(cache_key, has_rate_limits, 600)
 
-            default_cache.set(cache_key, rate_limit, 600)
-
-        return rate_limit
+        return key.rate_limit if has_rate_limits else (0, 0)
 
     def get_project_quota(self, project):
         from sentry.models import Organization, OrganizationOption

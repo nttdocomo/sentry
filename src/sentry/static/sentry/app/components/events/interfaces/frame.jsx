@@ -12,11 +12,12 @@ import ExternalLink from 'app/components/links/externalLink';
 import FrameRegisters from 'app/components/events/interfaces/frameRegisters';
 import FrameVariables from 'app/components/events/interfaces/frameVariables';
 import StrictClick from 'app/components/strictClick';
-import Tooltip2 from 'app/components/tooltip2';
+import Tooltip from 'app/components/tooltip';
 import Truncate from 'app/components/truncate';
 import OpenInContextLine from 'app/components/events/interfaces/openInContextLine';
 import SentryAppComponentsStore from 'app/stores/sentryAppComponentsStore';
 import space from 'app/styles/space';
+import ErrorBoundary from 'app/components/errorBoundary';
 
 export function trimPackage(pkg) {
   const pieces = pkg.split(/^([a-z]:\\|\\\\)/i.test(pkg) ? '\\' : '/');
@@ -183,11 +184,11 @@ const Frame = createReactClass({
       // we want to show a litle (?) icon that on hover shows the actual filename
       if (shouldPrioritizeModuleName && data.filename) {
         title.push(
-          <Tooltip2 title={data.filename}>
+          <Tooltip title={data.filename}>
             <a className="in-at real-filename">
               <span className="icon-question" />
             </a>
-          </Tooltip2>
+          </Tooltip>
         );
       }
 
@@ -218,7 +219,7 @@ const Frame = createReactClass({
     // we don't want to render out zero line numbers which are used to
     // indicate lack of source information for native setups.  We could
     // TODO(mitsuhiko): only do this for events from native platforms?
-    if (defined(data.lineNo) && data.lineNo != 0) {
+    if (defined(data.lineNo) && data.lineNo !== 0) {
       title.push(
         <span className="in-at in-at-line" key="no">
           {' '}
@@ -248,11 +249,11 @@ const Frame = createReactClass({
 
     if (defined(data.origAbsPath)) {
       title.push(
-        <Tooltip2 key="info-tooltip" title={this.renderOriginalSourceInfo()}>
+        <Tooltip key="info-tooltip" title={this.renderOriginalSourceInfo()}>
           <a className="in-at original-src">
             <span className="icon-question" />
           </a>
-        </Tooltip2>
+        </Tooltip>
       );
     }
 
@@ -312,12 +313,14 @@ const Frame = createReactClass({
                   className={className}
                 >
                   {hasComponents && (
-                    <OpenInContextLine
-                      key={index}
-                      lineNo={line[0]}
-                      filename={data.filename}
-                      components={components}
-                    />
+                    <ErrorBoundary mini>
+                      <OpenInContextLine
+                        key={index}
+                        lineNo={line[0]}
+                        filename={data.filename}
+                        components={components}
+                      />
+                    </ErrorBoundary>
                   )}
                 </ContextLine>
               );
@@ -367,8 +370,8 @@ const Frame = createReactClass({
   isInlineFrame() {
     return (
       this.props.prevFrame &&
-      this.getPlatform() == (this.props.prevFrame.platform || this.props.platform) &&
-      this.props.data.instructionAddr == this.props.prevFrame.instructionAddr
+      this.getPlatform() === (this.props.prevFrame.platform || this.props.platform) &&
+      this.props.data.instructionAddr === this.props.prevFrame.instructionAddr
     );
   },
 
@@ -379,7 +382,7 @@ const Frame = createReactClass({
     if (this.props.data.trust === 'scan' || this.props.data.trust === 'cfi-scan') {
       return t('Found by stack scanning');
     }
-    if (this.getPlatform() == 'cocoa') {
+    if (this.getPlatform() === 'cocoa') {
       const func = this.props.data.function || '<unknown>';
       if (func.match(/^@objc\s/)) {
         return t('Objective-C -> Swift shim frame');
@@ -465,11 +468,11 @@ const Frame = createReactClass({
                 </span>
               )}
               {hint !== null ? (
-                <Tooltip2 title={hint}>
+                <Tooltip title={hint}>
                   <a key="inline">
                     <span className="icon-question" />
                   </a>
-                </Tooltip2>
+                </Tooltip>
               ) : null}
             </span>
           </NativeLineContent>

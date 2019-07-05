@@ -130,6 +130,11 @@ def get_module_component_v1(abs_path, module, platform):
                 values=['sun.reflect.GeneratedMethodAccessor'],
                 hint='removed reflection marker',
             )
+        elif module[:44] == 'jdk.internal.reflect.GeneratedMethodAccessor':
+            module_component.update(
+                values=['jdk.internal.reflect.GeneratedMethodAccessor'],
+                hint='removed reflection marker',
+            )
         else:
             old_module = module
             module = _java_reflect_enhancer_re.sub(r'\1<auto>', module)
@@ -213,7 +218,8 @@ def get_function_component(function, platform, legacy_function_logic,
                 hint='ignored unknown function'
             )
         elif legacy_function_logic:
-            new_function = trim_function_name(func, platform)
+            new_function = trim_function_name(func, platform,
+                                              normalize_lambdas=False)
             if new_function != func:
                 function_component.update(
                     values=[new_function],

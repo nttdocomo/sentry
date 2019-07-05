@@ -1,16 +1,18 @@
 from __future__ import absolute_import
 
-from sentry.models import Project
-from sentry.filters.web_crawlers import WebCrawlersFilter
+from sentry.models.project import Project
 from unittest import TestCase
+
+from sentry.message_filters import _web_crawlers_filter
+from sentry.web.relay_config import FullRelayConfig
 
 
 class WebCrawlersFilterTest(TestCase):
-    filter_cls = WebCrawlersFilter
 
     def apply_filter(self, data):
         project = Project()
-        return self.filter_cls(project).test(data)
+        relay_config = FullRelayConfig(project)
+        return _web_crawlers_filter(relay_config, data)
 
     def get_mock_data(self, user_agent):
         return {
@@ -67,8 +69,19 @@ class WebCrawlersFilterTest(TestCase):
 
     def test_filters_calypso_appcrawler(self):
         data = self.get_mock_data(
-            'Mozilla/5.0 (Linux; Android 6.0.1; Calypso AppCrawler Build/MMB30Y; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/53.0.2785.124 Mobile Safari/537.36'
+            'Mozilla/5.0 (Linux; Android 6.0.1; Calypso AppCrawler Build/MMB30Y; wv) AppleWebKit/537.36 (KHTML, '
+            'like Gecko) Version/4.0 Chrome/53.0.2785.124 Mobile Safari/537.36'
         )
+        assert self.apply_filter(data)
+
+    def test_filters_pingdom_bot(self):
+        data = self.get_mock_data(
+            'Mozilla/5.0 (Unknown; Linux x86_64) AppleWebKit/534.34 (KHTML, like Gecko) PingdomTMS/0.8.5 Safari/534.34'
+        )
+        assert self.apply_filter(data)
+
+    def test_filters_lytics_bot(self):
+        data = self.get_mock_data('lyticsbot-external')
         assert self.apply_filter(data)
 
     def test_filters_google_apis(self):

@@ -1,5 +1,5 @@
 ---
-created: '2019-05-08T12:46:10.449505Z'
+created: '2019-06-12T09:33:12.372012Z'
 creator: sentry
 source: tests/symbolicator/test_minidump_full.py
 ---
@@ -137,37 +137,49 @@ debug_meta:
 errors:
 - name: timestamp
   type: past_timestamp
-  value: 1521713273.0
+  value: 1521713273
 exception:
   values:
   - mechanism:
       handled: false
       synthetic: true
       type: minidump
+    raw_stacktrace: null
     stacktrace:
       frames:
       - data:
+          orig_in_app: -1
           symbolicator_status: missing
+        function: null
         in_app: false
         instruction_addr: '0x771d0f44'
+        lineno: null
         package: C:\Windows\System32\ntdll.dll
+        symbol: null
         trust: fp
       - data:
+          orig_in_app: -1
           symbolicator_status: missing
+        function: null
         in_app: false
         instruction_addr: '0x771d0f79'
+        lineno: null
         package: C:\Windows\System32\ntdll.dll
+        symbol: null
         trust: fp
       - data:
+          orig_in_app: -1
           symbolicator_status: missing
+        function: null
         in_app: false
         instruction_addr: '0x750662c4'
+        lineno: null
         package: C:\Windows\System32\kernel32.dll
+        symbol: null
         trust: cfi
-      - abs_path: f:\dd\vctools\crt\vcstartup\src\startup\exe_common.inl
-        data:
+      - data:
+          orig_in_app: -1
           symbolicator_status: symbolicated
-        filename: exe_common.inl
         function: __scrt_common_main_seh
         in_app: false
         instruction_addr: '0x2a2d96'
@@ -175,10 +187,9 @@ exception:
         package: C:\projects\breakpad-tools\windows\Release\crash.exe
         symbol: __scrt_common_main_seh
         trust: cfi
-      - abs_path: c:\projects\breakpad-tools\windows\crash\main.cpp
-        data:
+      - data:
+          orig_in_app: -1
           symbolicator_status: symbolicated
-        filename: main.cpp
         function: main
         in_app: false
         instruction_addr: '0x2a2a3d'
@@ -205,33 +216,52 @@ threads:
   values:
   - crashed: true
     id: 1636
+    raw_stacktrace: null
+    stacktrace: null
   - crashed: false
     id: 3580
+    raw_stacktrace: null
     stacktrace:
       frames:
       - data:
+          orig_in_app: -1
           symbolicator_status: missing
+        function: null
         in_app: false
         instruction_addr: '0x771d0f44'
+        lineno: null
         package: C:\Windows\System32\ntdll.dll
+        symbol: null
         trust: fp
       - data:
+          orig_in_app: -1
           symbolicator_status: missing
+        function: null
         in_app: false
         instruction_addr: '0x771d0f79'
+        lineno: null
         package: C:\Windows\System32\ntdll.dll
+        symbol: null
         trust: fp
       - data:
+          orig_in_app: -1
           symbolicator_status: missing
+        function: null
         in_app: false
         instruction_addr: '0x750662c4'
+        lineno: null
         package: C:\Windows\System32\kernel32.dll
+        symbol: null
         trust: fp
       - data:
+          orig_in_app: -1
           symbolicator_status: missing
+        function: null
         in_app: false
         instruction_addr: '0x771e016c'
+        lineno: null
         package: C:\Windows\System32\ntdll.dll
+        symbol: null
         trust: context
       registers:
         eax: '0x0'
@@ -246,31 +276,48 @@ threads:
         esp: '0x159f900'
   - crashed: false
     id: 2600
+    raw_stacktrace: null
     stacktrace:
       frames:
       - data:
+          orig_in_app: -1
           symbolicator_status: missing
+        function: null
         in_app: false
         instruction_addr: '0x771d0f44'
+        lineno: null
         package: C:\Windows\System32\ntdll.dll
+        symbol: null
         trust: fp
       - data:
+          orig_in_app: -1
           symbolicator_status: missing
+        function: null
         in_app: false
         instruction_addr: '0x771d0f79'
+        lineno: null
         package: C:\Windows\System32\ntdll.dll
+        symbol: null
         trust: fp
       - data:
+          orig_in_app: -1
           symbolicator_status: missing
+        function: null
         in_app: false
         instruction_addr: '0x750662c4'
+        lineno: null
         package: C:\Windows\System32\kernel32.dll
+        symbol: null
         trust: fp
       - data:
+          orig_in_app: -1
           symbolicator_status: missing
+        function: null
         in_app: false
         instruction_addr: '0x771e016c'
+        lineno: null
         package: C:\Windows\System32\ntdll.dll
+        symbol: null
         trust: context
       registers:
         eax: '0x0'
@@ -285,13 +332,18 @@ threads:
         esp: '0x169f9f4'
   - crashed: false
     id: 2920
+    raw_stacktrace: null
     stacktrace:
       frames:
       - data:
+          orig_in_app: -1
           symbolicator_status: missing
+        function: null
         in_app: false
         instruction_addr: '0x771df3dc'
+        lineno: null
         package: C:\Windows\System32\ntdll.dll
+        symbol: null
         trust: context
       registers:
         eax: '0x0'

@@ -1,11 +1,5 @@
 import _ from 'lodash';
 
-// import/export sub-utils
-import parseLinkHeader from 'app/utils/parseLinkHeader';
-import PendingChangeQueue from 'app/utils/pendingChangeQueue';
-import CursorPoller from 'app/utils/cursorPoller';
-import StreamManager from 'app/utils/streamManager';
-
 function arrayIsEqual(arr, other, deep) {
   // if the other array is a falsy value, return
   if (!arr && !other) {
@@ -17,7 +11,7 @@ function arrayIsEqual(arr, other, deep) {
   }
 
   // compare lengths - can save a lot of time
-  if (arr.length != other.length) {
+  if (arr.length !== other.length) {
     return false;
   }
 
@@ -52,7 +46,7 @@ function objectMatchesSubset(obj, other, deep) {
 
   if (deep !== true) {
     for (k in other) {
-      if (obj[k] != other[k]) {
+      if (obj[k] !== other[k]) {
         return false;
       }
     }
@@ -245,53 +239,15 @@ export function isWebpackChunkLoadingError(error) {
   );
 }
 
-/**
- * This parses our period shorthand strings (e.g. <int><unit>)
- * and converts it into hours
- */
-export function parsePeriodToHours(str) {
-  const [, periodNumber, periodLength] = str.match(/([0-9]+)([smhdw])/);
+export function deepFreeze(object) {
+  // Retrieve the property names defined on object
+  const propNames = Object.getOwnPropertyNames(object);
+  // Freeze properties before freezing self
+  for (const name of propNames) {
+    const value = object[name];
 
-  switch (periodLength) {
-    case 's':
-      return periodNumber / (60 * 60);
-    case 'm':
-      return periodNumber / 60;
-    case 'h':
-      return periodNumber;
-    case 'd':
-      return periodNumber * 24;
-    case 'w':
-      return periodNumber * 24 * 7;
-    default:
-      return -1;
+    object[name] = value && typeof value === 'object' ? deepFreeze(value) : value;
   }
+
+  return Object.freeze(object);
 }
-
-// re-export under utils
-export {parseLinkHeader, PendingChangeQueue, CursorPoller};
-
-// backwards compatible default export for use w/ getsentry (exported
-// as a single object w/ function refs for consumption by getsentry)
-export default {
-  sortArray,
-  objectIsEmpty,
-  defined,
-  nl2br,
-  isUrl,
-  escape,
-  percent,
-  toTitleCase,
-  intcomma,
-  valueIsEqual,
-  parseLinkHeader,
-  buildUserId,
-  buildTeamId,
-  descopeFeatureName,
-
-  // external imports
-  objectToArray,
-  PendingChangeQueue,
-  StreamManager,
-  CursorPoller,
-};

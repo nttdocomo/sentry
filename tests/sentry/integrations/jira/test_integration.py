@@ -4,8 +4,10 @@ import json
 import mock
 import responses
 import six
+import pytest
 
 from django.core.urlresolvers import reverse
+from django.utils import timezone
 from exam import fixture
 from mock import Mock
 
@@ -411,6 +413,9 @@ class MockJiraApiClient(object):
     def transition_issue(self, issue_key, transition_id):
         pass
 
+    def user_id_field(self):
+        return 'accountId'
+
 
 class JiraIntegrationTest(APITestCase):
     @fixture
@@ -593,6 +598,68 @@ class JiraIntegrationTest(APITestCase):
                 'default': label_default,
             }
 
+    @responses.activate
+    def test_get_create_issue_config__no_projects(self):
+        org = self.organization
+        self.login_as(self.user)
+
+        event = self.store_event(
+            data={
+                'message': 'oh no',
+                'timestamp': timezone.now().isoformat()
+            },
+            project_id=self.project.id
+        )
+
+        installation = self.integration.get_installation(org.id)
+
+        # Simulate no projects available.
+        responses.add(
+            responses.GET,
+            'https://example.atlassian.net/rest/api/2/project',
+            content_type='json',
+            match_querystring=False,
+            body='{}'
+        )
+        with pytest.raises(IntegrationError):
+            installation.get_create_issue_config(event.group)
+
+    @responses.activate
+    def test_get_create_issue_config__no_issue_config(self):
+        org = self.organization
+        self.login_as(self.user)
+
+        event = self.store_event(
+            data={
+                'message': 'oh no',
+                'timestamp': timezone.now().isoformat()
+            },
+            project_id=self.project.id
+        )
+
+        installation = self.integration.get_installation(org.id)
+
+        responses.add(
+            responses.GET,
+            'https://example.atlassian.net/rest/api/2/project',
+            content_type='json',
+            match_querystring=False,
+            body="""[
+                {"id": "10000", "key": "SAMP"}
+            ]"""
+        )
+        # Fail to return metadata
+        responses.add(
+            responses.GET,
+            'https://example.atlassian.net/rest/api/2/issue/createmeta',
+            content_type='json',
+            match_querystring=False,
+            status=401,
+            body='',
+        )
+        with pytest.raises(IntegrationError):
+            installation.get_create_issue_config(event.group)
+
     def test_get_link_issue_config(self):
         org = self.organization
         self.login_as(self.user)
@@ -739,8 +806,8 @@ class JiraIntegrationTest(APITestCase):
             responses.GET,
             'https://example.atlassian.net/rest/api/2/user/assignable/search',
             json=[{
+                'accountId': 'deadbeef123',
                 'emailAddress': 'Bob@example.com',
-                'name': 'Bob Example'
             }],
             match_querystring=False,
         )
@@ -758,7 +825,31 @@ class JiraIntegrationTest(APITestCase):
         assign_issue_response = responses.calls[1][1]
         assert assign_issue_url in assign_issue_response.url
         assert assign_issue_response.status_code == 200
-        assert assign_issue_response.request.body == '{"name": "Bob Example"}'
+        assert assign_issue_response.request.body == '{"accountId": "deadbeef123"}'
+
+    @responses.activate
+    def test_sync_assignee_outbound_no_email(self):
+        self.user = self.create_user(email='bob@example.com')
+        issue_id = 'APP-123'
+        installation = self.integration.get_installation(self.organization.id)
+        external_issue = ExternalIssue.objects.create(
+            organization_id=self.organization.id,
+            integration_id=installation.model.id,
+            key=issue_id,
+        )
+        responses.add(
+            responses.GET,
+            'https://example.atlassian.net/rest/api/2/user/assignable/search',
+            json=[{
+                'accountId': 'deadbeef123',
+                'displayName': 'Dead Beef',
+            }],
+            match_querystring=False,
+        )
+        installation.sync_assignee_outbound(external_issue, self.user)
+
+        # No sync made as jira users don't have email addresses
+        assert len(responses.calls) == 1
 
     def test_update_organization_config(self):
         org = self.organization

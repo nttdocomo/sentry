@@ -1088,6 +1088,7 @@ ul.faces {
     .btn-group {
       float: right;
       position: relative;
+      margin-bottom: 8px;
     }
 
     .nav-tabs {
@@ -1269,7 +1270,6 @@ ul.faces {
 * ============================================================================
 */
 
-.sub-header + .alert,
 header + .alert {
   margin-top: -31px;
   position: relative;
@@ -1761,15 +1761,6 @@ header + .alert {
 * ============================================================================
 */
 
-.repo-label {
-  .label;
-  display: inline-block;
-  vertical-align: text-bottom;
-  padding: 5px 8px;
-  line-height: 1;
-  background: @40;
-}
-
 /**
 * Project nav
 * ============================================================================
@@ -1807,6 +1798,13 @@ ul.radio-inputs {
 */
 .modal-backdrop {
   background-color: @gray-dark;
+  // Match zIndex.modal in theme.jsx
+  z-index: 10000;
+}
+
+.modal {
+  // Match zIndex.modal in theme.jsx
+  z-index: 10000;
 }
 
 .modal-container {

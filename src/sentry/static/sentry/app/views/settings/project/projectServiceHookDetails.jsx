@@ -44,10 +44,10 @@ class HookStats extends AsyncComponent {
     const value = `${total.toLocaleString()} events`;
 
     return (
-      '<div style="width:150px">' +
-      `<div class="time-label">${timeLabel}</div>` +
-      `<div class="value-label">${value}</div>` +
-      '</div>'
+      <div style={{width: '150px'}}>
+        <div className="time-label">{timeLabel}</div>
+        <div className="value-label">{value}</div>
+      </div>
     );
   }
 
@@ -135,7 +135,7 @@ export default class ProjectServiceHookDetails extends AsyncView {
           hookId={hookId}
           initialData={{
             ...hook,
-            isActive: hook.status != 'disabled',
+            isActive: hook.status !== 'disabled',
           }}
         />
         <Panel>

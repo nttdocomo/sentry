@@ -1,4 +1,4 @@
-import {isUndefined, isNil} from 'lodash';
+import {isUndefined, isNil, get} from 'lodash';
 import $ from 'jquery';
 import * as Sentry from '@sentry/browser';
 
@@ -35,7 +35,7 @@ export function paramsToQueryArgs(params) {
     ? {id: params.itemIds} // items matching array of itemids
     : params.query
     ? {query: params.query} // items matching search query
-    : undefined; // all items
+    : {}; // all items
 
   // only include environment if it is not null/undefined
   if (params.query && !isNil(params.environment)) {
@@ -43,7 +43,7 @@ export function paramsToQueryArgs(params) {
   }
 
   // only include projects if it is not null/undefined/an empty array
-  if (params.query && params.project && params.project.length) {
+  if (params.project && params.project.length) {
     p.project = params.project;
   }
 
@@ -72,7 +72,7 @@ export class Client {
    * If so, redirect user to new project slug
    */
   hasProjectBeenRenamed(response) {
-    const code = response?.responseJSON?.detail?.code;
+    const code = get(response, 'responseJSON.detail.code');
 
     // XXX(billy): This actually will never happen because we can't intercept the 302
     // jQuery ajax will follow the redirect by default...
@@ -80,7 +80,7 @@ export class Client {
       return false;
     }
 
-    const slug = response?.responseJSON?.detail?.extra?.slug;
+    const slug = get(response, 'responseJSON.detail.extra.slug');
 
     redirectToProject(slug);
     return true;
@@ -120,7 +120,7 @@ export class Client {
   }
 
   handleRequestError({id, path, requestOptions}, response, ...responseArgs) {
-    const code = response?.responseJSON?.detail?.code;
+    const code = get(response, 'responseJSON.detail.code');
     const isSudoRequired = code === SUDO_REQUIRED || code === SUPERUSER_REQUIRED;
 
     if (isSudoRequired) {
@@ -209,12 +209,12 @@ export class Client {
           Accept: 'application/json; charset=utf-8',
         },
         success: (...args) => {
-          const [resp] = args || [];
+          const [, , xhr] = args || [];
           metric.measure({
             name: 'app.api.request-success',
             start: `api-request-start-${id}`,
             data: {
-              status: resp && resp.status,
+              status: xhr && xhr.status,
             },
           });
           if (!isUndefined(options.success)) {

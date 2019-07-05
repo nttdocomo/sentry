@@ -66,7 +66,7 @@ event_saved = BetterSignal(providing_args=["project"])
 # Organization Onboarding Signals
 project_created = BetterSignal(providing_args=["project", "user"])
 first_event_pending = BetterSignal(providing_args=["project", "user"])
-first_event_received = BetterSignal(providing_args=["project", "group"])
+first_event_received = BetterSignal(providing_args=["project", "event"])
 member_invited = BetterSignal(providing_args=["member", "user"])
 member_joined = BetterSignal(providing_args=["member", "organization"])
 issue_tracker_used = BetterSignal(providing_args=["plugin", "project", "user"])
@@ -88,6 +88,7 @@ issue_resolved = BetterSignal(
         "resolution_type"])
 
 advanced_search = BetterSignal(providing_args=["project"])
+advanced_search_feature_gated = BetterSignal(providing_args=["organization", "user"])
 save_search_created = BetterSignal(providing_args=["project", "user"])
 inbound_filter_toggled = BetterSignal(providing_args=["project"])
 sso_enabled = BetterSignal(providing_args=["organization", "user", "provider"])

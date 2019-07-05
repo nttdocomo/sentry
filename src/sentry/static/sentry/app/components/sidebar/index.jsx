@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import {ThemeProvider} from 'emotion-theming';
 import {isEqual} from 'lodash';
 import {withRouter, browserHistory} from 'react-router';
@@ -56,21 +55,10 @@ class Sidebar extends React.Component {
   }
 
   componentDidMount() {
-    const {router} = this.props;
     document.body.classList.add('body-sidebar');
     document.addEventListener('click', this.documentClickHandler);
 
     loadIncidents();
-
-    // router can potentially not exist in server side (django) views
-    // Otherwise when we change routes using collapsed sidebar, the tooltips will remain after
-    // route changes.
-    this.routerListener =
-      router &&
-      router.listen(() => {
-        this.hashChangeHandler();
-        $('.tooltip').tooltip('hide');
-      });
 
     this.hashChangeHandler();
     this.doCollapse(this.props.collapsed);
@@ -141,7 +129,7 @@ class Sidebar extends React.Component {
   };
 
   hashChangeHandler = () => {
-    if (window.location.hash == '#welcome') {
+    if (window.location.hash === '#welcome') {
       this.togglePanel('todos');
     }
   };
@@ -231,11 +219,9 @@ class Sidebar extends React.Component {
     };
     const hasOrganization = !!organization;
 
-    const hasSentry10 = hasOrganization && new Set(organization.features).has('sentry10');
-
     return (
       <StyledSidebar innerRef={this.sidebarRef} collapsed={collapsed}>
-        <SidebarSectionGroup>
+        <SidebarSectionGroupPrimary>
           <SidebarSection>
             <SidebarDropdown
               onClick={this.hidePanel}
@@ -247,22 +233,18 @@ class Sidebar extends React.Component {
             />
           </SidebarSection>
 
-          {hasOrganization && (
-            <React.Fragment>
-              <SidebarSection>
-                <SidebarItem
-                  {...sidebarItemProps}
-                  index
-                  onClick={this.hidePanel}
-                  icon={<InlineSvg src="icon-projects" />}
-                  label={t('Projects')}
-                  to={
-                    hasSentry10
-                      ? `/organizations/${organization.slug}/projects/`
-                      : `/${organization.slug}/`
-                  }
-                />
-                <Feature features={['sentry10']} organization={organization}>
+          <PrimaryItems>
+            {hasOrganization && (
+              <React.Fragment>
+                <SidebarSection>
+                  <SidebarItem
+                    {...sidebarItemProps}
+                    index
+                    onClick={this.hidePanel}
+                    icon={<InlineSvg src="icon-projects" />}
+                    label={t('Projects')}
+                    to={`/organizations/${organization.slug}/projects/`}
+                  />
                   <SidebarItem
                     {...sidebarItemProps}
                     onClick={(_id, evt) =>
@@ -276,77 +258,89 @@ class Sidebar extends React.Component {
                     to={`/organizations/${organization.slug}/issues/`}
                     id="issues"
                   />
-                </Feature>
 
-                <Feature
-                  features={['events']}
-                  hookName="events-sidebar-item"
-                  organization={organization}
-                >
-                  <SidebarItem
-                    {...sidebarItemProps}
-                    onClick={(_id, evt) =>
-                      this.navigateWithGlobalSelection(
-                        `/organizations/${organization.slug}/events/`,
-                        evt
-                      )
-                    }
-                    icon={<InlineSvg src="icon-stack" />}
-                    label={t('Events')}
-                    to={`/organizations/${organization.slug}/events/`}
-                    id="events"
-                  />
-                </Feature>
-
-                <Feature features={['incidents']} organization={organization}>
-                  <SidebarItem
-                    {...sidebarItemProps}
-                    onClick={(_id, evt) =>
-                      this.navigateWithGlobalSelection(
-                        `/organizations/${organization.slug}/incidents/`,
-                        evt
-                      )
-                    }
-                    icon={<InlineSvg src="icon-incidents" />}
-                    label={t('Incidents')}
-                    to={`/organizations/${organization.slug}/incidents/`}
-                    id="incidents"
-                  />
-                </Feature>
-
-                {hasSentry10 && (
-                  <React.Fragment>
+                  <Feature
+                    features={['events', 'events-v2']}
+                    requireAll={false}
+                    hookName="events-sidebar-item"
+                    organization={organization}
+                  >
                     <SidebarItem
                       {...sidebarItemProps}
                       onClick={(_id, evt) =>
                         this.navigateWithGlobalSelection(
-                          `/organizations/${organization.slug}/releases/`,
+                          `/organizations/${organization.slug}/events/`,
                           evt
                         )
                       }
-                      icon={<InlineSvg src="icon-releases" />}
-                      label={t('Releases')}
-                      to={`/organizations/${organization.slug}/releases/`}
-                      id="releases"
+                      icon={<InlineSvg src="icon-stack" />}
+                      label={t('Events')}
+                      to={`/organizations/${organization.slug}/events/`}
+                      id="events"
                     />
+                  </Feature>
+
+                  <Feature features={['incidents']} organization={organization}>
                     <SidebarItem
                       {...sidebarItemProps}
                       onClick={(_id, evt) =>
                         this.navigateWithGlobalSelection(
-                          `/organizations/${organization.slug}/user-feedback/`,
+                          `/organizations/${organization.slug}/incidents/`,
                           evt
                         )
                       }
-                      icon={<InlineSvg src="icon-support" />}
-                      label={t('User Feedback')}
-                      to={`/organizations/${organization.slug}/user-feedback/`}
-                      id="user-feedback"
+                      icon={<InlineSvg src="icon-siren" size="22" />}
+                      label={t('Incidents')}
+                      to={`/organizations/${organization.slug}/incidents/`}
+                      id="incidents"
                     />
-                  </React.Fragment>
-                )}
+                  </Feature>
 
-                {!hasSentry10 && (
+                  <SidebarItem
+                    {...sidebarItemProps}
+                    onClick={(_id, evt) =>
+                      this.navigateWithGlobalSelection(
+                        `/organizations/${organization.slug}/releases/`,
+                        evt
+                      )
+                    }
+                    icon={<InlineSvg src="icon-releases" />}
+                    label={t('Releases')}
+                    to={`/organizations/${organization.slug}/releases/`}
+                    id="releases"
+                  />
+                  <SidebarItem
+                    {...sidebarItemProps}
+                    onClick={(_id, evt) =>
+                      this.navigateWithGlobalSelection(
+                        `/organizations/${organization.slug}/user-feedback/`,
+                        evt
+                      )
+                    }
+                    icon={<InlineSvg src="icon-support" size="22" />}
+                    label={t('User Feedback')}
+                    to={`/organizations/${organization.slug}/user-feedback/`}
+                    id="user-feedback"
+                  />
+                </SidebarSection>
+
+                <SidebarSection>
                   <Feature features={['discover']} organization={organization}>
+                    <SidebarItem
+                      {...sidebarItemProps}
+                      index
+                      onClick={this.hidePanel}
+                      icon={<InlineSvg src="icon-health" />}
+                      label={t('Dashboards')}
+                      to={`/organizations/${organization.slug}/dashboards/`}
+                      id="customizable-dashboards"
+                    />
+                  </Feature>
+                  <Feature
+                    features={['discover']}
+                    hookName="discover-sidebar-item"
+                    organization={organization}
+                  >
                     <SidebarItem
                       {...sidebarItemProps}
                       onClick={this.hidePanel}
@@ -356,113 +350,55 @@ class Sidebar extends React.Component {
                       id="discover"
                     />
                   </Feature>
-                )}
-              </SidebarSection>
-
-              <SidebarSection>
-                <Feature features={['sentry10', 'discover']} organization={organization}>
-                  <SidebarItem
-                    {...sidebarItemProps}
-                    index
-                    onClick={this.hidePanel}
-                    icon={<InlineSvg src="icon-health" />}
-                    label={t('Dashboards')}
-                    to={`/organizations/${organization.slug}/dashboards/`}
-                    id="customizable-dashboards"
-                  />
-                </Feature>
-                <Feature
-                  features={['sentry10', 'discover']}
-                  hookName="discover-sidebar-item"
-                  organization={organization}
-                >
-                  <SidebarItem
-                    {...sidebarItemProps}
-                    onClick={this.hidePanel}
-                    icon={<InlineSvg src="icon-discover" />}
-                    label={t('Discover')}
-                    to={`/organizations/${organization.slug}/discover/`}
-                    id="discover"
-                  />
-                </Feature>
-                <Feature features={['monitors']} organization={organization}>
-                  <SidebarItem
-                    {...sidebarItemProps}
-                    onClick={(_id, evt) =>
-                      this.navigateWithGlobalSelection(
-                        `/organizations/${organization.slug}/monitors/`,
-                        evt
-                      )
-                    }
-                    icon={<InlineSvg src="icon-labs" />}
-                    label={t('Monitors')}
-                    to={`/organizations/${organization.slug}/monitors/`}
-                    id="monitors"
-                  />
-                </Feature>
-              </SidebarSection>
-
-              {!hasSentry10 && (
+                  <Feature features={['monitors']} organization={organization}>
+                    <SidebarItem
+                      {...sidebarItemProps}
+                      onClick={(_id, evt) =>
+                        this.navigateWithGlobalSelection(
+                          `/organizations/${organization.slug}/monitors/`,
+                          evt
+                        )
+                      }
+                      icon={<InlineSvg src="icon-labs" />}
+                      label={t('Monitors')}
+                      to={`/organizations/${organization.slug}/monitors/`}
+                      id="monitors"
+                    />
+                  </Feature>
+                </SidebarSection>
                 <SidebarSection>
                   <SidebarItem
                     {...sidebarItemProps}
                     onClick={this.hidePanel}
-                    icon={<InlineSvg src="icon-user" />}
-                    label={t('Assigned to me')}
-                    to={`/organizations/${organization.slug}/issues/assigned/`}
-                    id="assigned"
+                    icon={<InlineSvg src="icon-activity" size="22px" />}
+                    label={t('Activity')}
+                    to={`/organizations/${organization.slug}/activity/`}
+                    id="activity"
                   />
                   <SidebarItem
                     {...sidebarItemProps}
                     onClick={this.hidePanel}
-                    icon={<InlineSvg src="icon-star" />}
-                    label={t('Bookmarked issues')}
-                    to={`/organizations/${organization.slug}/issues/bookmarks/`}
-                    id="bookmarks"
-                  />
-                  <SidebarItem
-                    {...sidebarItemProps}
-                    onClick={this.hidePanel}
-                    icon={<InlineSvg src="icon-history" />}
-                    label={t('Recently viewed')}
-                    to={`/organizations/${organization.slug}/issues/history/`}
-                    id="history"
+                    icon={<InlineSvg src="icon-stats" />}
+                    label={t('Stats')}
+                    to={`/organizations/${organization.slug}/stats/`}
+                    id="stats"
                   />
                 </SidebarSection>
-              )}
 
-              <SidebarSection>
-                <SidebarItem
-                  {...sidebarItemProps}
-                  onClick={this.hidePanel}
-                  icon={<InlineSvg src="icon-activity" size="22px" />}
-                  label={t('Activity')}
-                  to={`/organizations/${organization.slug}/activity/`}
-                  id="activity"
-                />
-                <SidebarItem
-                  {...sidebarItemProps}
-                  onClick={this.hidePanel}
-                  icon={<InlineSvg src="icon-stats" />}
-                  label={t('Stats')}
-                  to={`/organizations/${organization.slug}/stats/`}
-                  id="stats"
-                />
-              </SidebarSection>
-
-              <SidebarSection>
-                <SidebarItem
-                  {...sidebarItemProps}
-                  onClick={this.hidePanel}
-                  icon={<InlineSvg src="icon-settings" />}
-                  label={t('Settings')}
-                  to={`/settings/${organization.slug}/`}
-                  id="settings"
-                />
-              </SidebarSection>
-            </React.Fragment>
-          )}
-        </SidebarSectionGroup>
+                <SidebarSection>
+                  <SidebarItem
+                    {...sidebarItemProps}
+                    onClick={this.hidePanel}
+                    icon={<InlineSvg src="icon-settings" />}
+                    label={t('Settings')}
+                    to={`/settings/${organization.slug}/`}
+                    id="settings"
+                  />
+                </SidebarSection>
+              </React.Fragment>
+            )}
+          </PrimaryItems>
+        </SidebarSectionGroupPrimary>
 
         {hasOrganization && (
           <SidebarSectionGroup>
@@ -575,7 +511,7 @@ const StyledSidebar = styled('div')`
   background: linear-gradient(${p => p.theme.gray4}, ${p => p.theme.gray5});
   color: ${p => p.theme.sidebar.color};
   line-height: 1;
-  padding: 12px 19px 2px; /* Allows for 32px avatars  */
+  padding: 12px 0 2px; /* Allows for 32px avatars  */
   width: ${p => p.theme.sidebar.expandedWidth};
   position: fixed;
   top: 0;
@@ -593,20 +529,68 @@ const StyledSidebar = styled('div')`
     height: ${p => p.theme.sidebar.mobileHeight};
     bottom: auto;
     width: auto;
-    padding: 0;
+    padding: 0 ${space(1)};
     align-items: center;
   }
 `;
 
 const SidebarSectionGroup = styled('div')`
   ${responsiveFlex};
-  flex-shrink: 0;
+`;
+
+const SidebarSectionGroupPrimary = styled(SidebarSectionGroup)`
+  /* necessary for child flexing on msedge and ff */
+  min-height: 0;
+  min-width: 0;
+  flex: 1;
+  /* expand to fill the entire height on mobile */
+  @media (max-width: ${p => p.theme.breakpoints[0]}) {
+    height: 100%;
+    align-items: center;
+  }
+`;
+
+const PrimaryItems = styled('div')`
+  overflow: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  -ms-overflow-style: -ms-autohiding-scrollbar;
+  @media (max-height: 600px) and (min-width: ${p => p.theme.breakpoints[0]}) {
+    border-bottom: 1px solid ${p => p.theme.gray3};
+    padding-bottom: ${p => space(1)};
+    box-shadow: rgba(0, 0, 0, 0.15) 0px -10px 10px inset;
+    &::-webkit-scrollbar {
+      background-color: transparent;
+      width: 8px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: ${p => p.theme.gray3};
+      border-radius: 8px;
+    }
+  }
+  @media (max-width: ${p => p.theme.breakpoints[0]}) {
+    overflow-y: visible;
+    flex-direction: row;
+    height: 100%;
+    align-items: center;
+    border-right: 1px solid ${p => p.theme.gray3};
+    padding-right: ${p => space(1)};
+    margin-right: ${p => space(0.5)};
+    box-shadow: rgba(0, 0, 0, 0.15) -10px 0px 10px inset;
+    ::-webkit-scrollbar {
+      display: none;
+    }
+  }
 `;
 
 const SidebarSection = styled(SidebarSectionGroup)`
   ${p => !p.noMargin && `margin: ${space(1)} 0`};
+  padding: 0 19px;
+
   @media (max-width: ${p => p.theme.breakpoints[0]}) {
-    margin: 0 ${space(1)};
+    margin: 0;
+    padding: 0;
   }
 
   &:empty {

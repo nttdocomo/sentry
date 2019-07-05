@@ -7,7 +7,6 @@ import {addErrorMessage, addSuccessMessage} from 'app/actionCreators/indicator';
 import {getUtcDateString} from 'app/utils/dates';
 import {t, tct} from 'app/locale';
 import {updateProjects, updateDateTime} from 'app/actionCreators/globalSelection';
-import BetaTag from 'app/components/betaTag';
 import PageHeading from 'app/components/pageHeading';
 import SentryTypes from 'app/sentryTypes';
 
@@ -225,7 +224,7 @@ export default class OrganizationDiscover extends React.Component {
         if (shouldRedirect) {
           browserHistory.push({
             pathname: `/organizations/${organization.slug}/discover/`,
-            // This is kind of a hack, but this causes a re-render in result where this.props == nextProps after
+            // This is kind of a hack, but this causes a re-render in result where this.props === nextProps after
             // a query has completed... we don't preserve `state` when we update browser history, so
             // if this is present in `Result.shouldComponentUpdate` then should perform a render
             state: 'fetching',
@@ -450,9 +449,7 @@ export default class OrganizationDiscover extends React.Component {
               <React.Fragment>
                 <div>
                   <HeadingContainer>
-                    <PageHeading>
-                      {t('Discover')} <BetaTag />
-                    </PageHeading>
+                    <PageHeading>{t('Discover')}</PageHeading>
                   </HeadingContainer>
                 </div>
                 <Intro updateQuery={this.updateAndRunQuery} />

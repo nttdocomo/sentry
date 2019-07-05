@@ -12,7 +12,6 @@ import {
 } from 'app/actionCreators/sentryAppInstallations';
 import {addQueryParamsToExistingUrl} from 'app/utils/queryString';
 import {openSentryAppPermissionModal} from 'app/actionCreators/modal';
-import withApi from 'app/utils/withApi';
 
 class SentryAppInstallations extends React.Component {
   static propTypes = {
@@ -62,7 +61,7 @@ class SentryAppInstallations extends React.Component {
   uninstall = install => {
     const {api} = this.props;
     const origInstalls = [...this.state.installs];
-    const installs = this.state.installs.filter(i => install.uuid != i.uuid);
+    const installs = this.state.installs.filter(i => install.uuid !== i.uuid);
 
     uninstallSentryApp(api, install).then(
       () => this.setState({installs}),
@@ -107,5 +106,4 @@ class SentryAppInstallations extends React.Component {
   }
 }
 
-export default withApi(SentryAppInstallations);
-export {SentryAppInstallations};
+export default SentryAppInstallations;

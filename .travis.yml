@@ -30,11 +30,10 @@ env:
     - PIP_QUIET=1
     - SENTRY_LIGHT_BUILD=1
     - SENTRY_SKIP_BACKEND_VALIDATION=1
-    - SOUTH_TESTS_MIGRATE=1
-    - DJANGO_VERSION=">=1.6.11,<1.7"
+    - SOUTH_TESTS_MIGRATE=0
+    - DJANGO_VERSION=">=1.8,<1.9"
     # node's version is pinned by .nvmrc and is autodetected by `nvm install`.
     - NODE_DIR="${HOME}/.nvm/versions/node/v$(< .nvmrc)"
-    - YARN_VERSION="1.13.0"
     - NODE_OPTIONS=--max-old-space-size=4096
 
 script:
@@ -52,10 +51,10 @@ after_script:
   - |
       coverage_files=$(ls .artifacts/*coverage.xml || true)
       if [[ -n "$coverage_files" || -f .artifacts/coverage/cobertura-coverage.xml ]]; then
-        pip install codecov
+        pip install -U codecov
         codecov -e TEST_SUITE
       fi
-  - npm install -g @zeus-ci/cli
+  - ./bin/yarn global add @zeus-ci/cli
   - zeus upload -t "text/xml+xunit" .artifacts/*junit.xml
   - zeus upload -t "text/xml+coverage" .artifacts/*coverage.xml
   - zeus upload -t "text/xml+coverage" .artifacts/coverage/cobertura-coverage.xml
@@ -63,6 +62,28 @@ after_script:
   - zeus upload -t "text/plain+pycodestyle" .artifacts/*pycodestyle.log
   - zeus upload -t "text/xml+checkstyle" .artifacts/*checkstyle.xml
   - zeus upload -t "application/webpack-stats+json" .artifacts/*webpack-stats.json
+  # Trigger a build for the `git` image on docker-sentry
+  - >
+      if [ "$TRAVIS_PULL_REQUEST" == "false" -a "$TRAVIS_BRANCH" == "master" ]; then
+      curl -s -X POST
+      -H "Content-Type: application/json"
+      -H "Accept: application/json"
+      -H "Travis-API-Version: 3"
+      -H "Authorization: token $TRAVIS_TOKEN"
+      -d '{
+        "request": {
+          "branch": "master",
+          "config": {
+            "env": {
+              "matrix": [
+                "VERSION=git"
+              ]
+            }
+          },
+          "message": "Build for getsentry/sentry@'"$TRAVIS_COMMIT"'"
+        }
+      }'
+      https://api.travis-ci.org/repo/getsentry%2Fdocker-sentry/requests
 
 base_postgres: &postgres_default
   python: 2.7
@@ -72,7 +93,7 @@ base_postgres: &postgres_default
     - postgresql
   install:
     - python setup.py install_egg_info
-    - pip install -e ".[dev,tests,optional]"
+    - pip install -U -e ".[dev,tests,optional]"
   before_script:
     - psql -c 'create database sentry;' -U postgres
   before_install:
@@ -90,14 +111,13 @@ base_acceptance: &acceptance_default
   before_install:
     - find "$NODE_DIR" -type d -empty -delete
     - nvm install
-    - npm install -g "yarn@${YARN_VERSION}"
     - docker run -d --network host --name clickhouse-server --ulimit nofile=262144:262144 yandex/clickhouse-server:18.14.9
     - docker run -d --network host --name snuba --env SNUBA_SETTINGS=test --env CLICKHOUSE_SERVER=localhost:9000 getsentry/snuba
     - docker ps -a
   install:
-    - yarn install --pure-lockfile
+    - ./bin/yarn install --pure-lockfile
     - python setup.py install_egg_info
-    - pip install -e ".[dev,tests,optional]"
+    - pip install -U -e ".[dev,tests,optional]"
     - wget -N "https://chromedriver.storage.googleapis.com/$(curl https://chromedriver.storage.googleapis.com/LATEST_RELEASE_74)/chromedriver_linux64.zip" -P ~/
     - unzip ~/chromedriver_linux64.zip -d ~/
     - rm ~/chromedriver_linux64.zip
@@ -117,11 +137,10 @@ matrix:
       name: 'Linter'
       env: TEST_SUITE=lint
       install:
+        - SENTRY_LIGHT_BUILD=1 pip install -U -e ".[dev,tests,optional]"
         - find "$NODE_DIR" -type d -empty -delete
         - nvm install
-        - npm install -g "yarn@${YARN_VERSION}"
-        - pip install -r requirements-dev.txt
-        - yarn install --pure-lockfile
+        - ./bin/yarn install --pure-lockfile
 
     - <<: *postgres_default
       name: 'Backend [Postgres] (1/2)'
@@ -129,27 +148,6 @@ matrix:
     - <<: *postgres_default
       name: 'Backend [Postgres] (2/2)'
       env: TEST_SUITE=postgres DB=postgres TOTAL_TEST_GROUPS=2 TEST_GROUP=1
-
-    # django 1.8 compatibility
-    - <<: *postgres_default
-      name: 'Backend [Postgres] (Django 1.8) (1/2)'
-      env: TEST_SUITE=postgres DB=postgres DJANGO_VERSION=">=1.8,<1.9" TOTAL_TEST_GROUPS=2 TEST_GROUP=0
-    - <<: *postgres_default
-      name: 'Backend [Postgres] (Django 1.8) (2/2)'
-      env: TEST_SUITE=postgres DB=postgres DJANGO_VERSION=">=1.8,<1.9" TOTAL_TEST_GROUPS=2 TEST_GROUP=1
-
-    # django 1.8 compatibility with migrations
-    - <<: *postgres_default
-      name: 'Backend [Postgres] (Django 1.8, No migrations) (1/2)'
-      env: TEST_SUITE=postgres DJANGO_VERSION=">=1.8,<1.9" SOUTH_TESTS_MIGRATE=0 TOTAL_TEST_GROUPS=2 TEST_GROUP=0
-    - <<: *postgres_default
-      name: 'Backend [Postgres] (Django 1.8, No migrations) (2/2)'
-      env: TEST_SUITE=postgres DJANGO_VERSION=">=1.8,<1.9" SOUTH_TESTS_MIGRATE=0 TOTAL_TEST_GROUPS=2 TEST_GROUP=1
-
-    # XXX(markus): Remove after rust interfaces are done
-    - <<: *postgres_default
-      name: 'Backend [Postgres] (Rust Interface Renormalization)'
-      env: TEST_SUITE=postgres DB=postgres SENTRY_TEST_USE_RUST_INTERFACE_RENORMALIZATION=1
 
     - python: 2.7
       name: 'Backend [Riak]'
@@ -161,7 +159,7 @@ matrix:
         - riak
       install:
         - python setup.py install_egg_info
-        - pip install -e ".[dev,tests,optional]"
+        - pip install -U -e ".[dev,tests,optional]"
       before_script:
         - psql -c 'create database sentry;' -U postgres
       before_install:
@@ -173,21 +171,14 @@ matrix:
       name: 'Acceptance'
       env: TEST_SUITE=acceptance USE_SNUBA=1
 
-    # XXX(markus): Remove after rust interfaces are done
-    - <<: *acceptance_default
-      python: 2.7
-      name: 'Acceptance (Rust Interface Renormalization)'
-      env: TEST_SUITE=acceptance USE_SNUBA=1 SENTRY_TEST_USE_RUST_INTERFACE_RENORMALIZATION=1 PERCY_ENABLE=0
-
     - python: 2.7
       name: 'Frontend'
       env: TEST_SUITE=js
       before_install:
         - find "$NODE_DIR" -type d -empty -delete
         - nvm install
-        - npm install -g "yarn@${YARN_VERSION}"
       install:
-        - yarn install --pure-lockfile
+        - ./bin/yarn install --pure-lockfile
 
     - python: 2.7
       name: 'Command Line'
@@ -197,7 +188,7 @@ matrix:
         - redis-server
       install:
         - python setup.py install_egg_info
-        - pip install -e .
+        - pip install -U -e .
       before_script:
         - psql -c 'create database sentry;' -U postgres
 
@@ -207,7 +198,6 @@ matrix:
       before_install:
         - find "$NODE_DIR" -type d -empty -delete
         - nvm install
-        - npm install -g "yarn@${YARN_VERSION}"
 
     - <<: *postgres_default
       name: 'Symbolicator Integration'
@@ -235,29 +225,7 @@ matrix:
         - docker ps -a
       install:
         - python setup.py install_egg_info
-        - pip install -e ".[dev,tests,optional]"
-        - pip install confluent-kafka
-      before_script:
-        - psql -c 'create database sentry;' -U postgres
-
-    # XXX(markus): Remove after rust interfaces are done
-    - python: 2.7
-      name: 'Snuba Integration (Rust Interface Renormalization)'
-      env: TEST_SUITE=snuba USE_SNUBA=1 SENTRY_ZOOKEEPER_HOSTS=localhost:2181 SENTRY_KAFKA_HOSTS=localhost:9092 SENTRY_TEST_USE_RUST_INTERFACE_RENORMALIZATION=1
-      services:
-        - docker
-        - memcached
-        - redis-server
-        - postgresql
-      before_install:
-        - docker run -d --network host --name zookeeper -e ZOOKEEPER_CLIENT_PORT=2181 confluentinc/cp-zookeeper:4.1.0
-        - docker run -d --network host --name kafka -e KAFKA_ZOOKEEPER_CONNECT=localhost:2181 -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092 -e KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1 confluentinc/cp-kafka:4.1.0
-        - docker run -d --network host --name clickhouse-server --ulimit nofile=262144:262144 yandex/clickhouse-server:18.14.9
-        - docker run -d --network host --name snuba --env SNUBA_SETTINGS=test --env CLICKHOUSE_SERVER=localhost:9000 getsentry/snuba
-        - docker ps -a
-      install:
-        - python setup.py install_egg_info
-        - pip install -e ".[dev,tests,optional]"
+        - pip install -U -e ".[dev,tests,optional]"
         - pip install confluent-kafka
       before_script:
         - psql -c 'create database sentry;' -U postgres
@@ -274,9 +242,8 @@ matrix:
         - tar -xzf credentials.tar.gz
         # Use the decrypted service account credentials to authenticate the command line tool
         - gcloud auth activate-service-account --key-file client-secret.json
-        - npm install -g "yarn@${YARN_VERSION}"
       install:
-        - yarn install --pure-lockfile
+        - ./bin/yarn install --pure-lockfile
         - gcloud version
       script: bash .travis/deploy-storybook.sh
       after_success: skip
@@ -287,15 +254,6 @@ matrix:
   allow_failures:
     - language: node_js
       env: STORYBOOK_BUILD=1
-
-    # XXX(ja): Should be removed once symbolicator's interface is more stable or
-    # tests have been refactored to be more lenient. At the moment, snapshots
-    # break every time when a new attribute is added or some secondary attribute
-    # is changed.
-    - env: TEST_SUITE=symbolicator
-
-    # XXX(markus): Remove after rust interfaces are done
-    - env: TEST_SUITE=postgres DB=postgres SENTRY_TEST_USE_RUST_INTERFACE_RENORMALIZATION=1
 
 notifications:
   webhooks:

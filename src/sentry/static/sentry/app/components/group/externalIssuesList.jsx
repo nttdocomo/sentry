@@ -15,6 +15,7 @@ import {t} from 'app/locale';
 import SentryAppInstallationStore from 'app/stores/sentryAppInstallationsStore';
 import SentryAppComponentsStore from 'app/stores/sentryAppComponentsStore';
 import ExternalIssueStore from 'app/stores/externalIssueStore';
+import ErrorBoundary from 'app/components/errorBoundary';
 
 class ExternalIssueList extends AsyncComponent {
   static propTypes = {
@@ -67,7 +68,7 @@ class ExternalIssueList extends AsyncComponent {
   };
 
   onSentryAppComponentsChange = sentryAppComponents => {
-    const components = sentryAppComponents.filter(c => c.type == 'issue-link');
+    const components = sentryAppComponents.filter(c => c.type === 'issue-link');
     this.setState({components});
   };
 
@@ -116,28 +117,29 @@ class ExternalIssueList extends AsyncComponent {
     const {externalIssues, sentryAppInstallations, components} = this.state;
     const {group} = this.props;
 
-    if (components.length == 0) {
+    if (components.length === 0) {
       return null;
     }
 
     return components.map(component => {
       const {sentryApp} = component;
-
       const installation = sentryAppInstallations.find(
-        i => i.sentryApp.uuid === sentryApp.uuid
+        i => i.app.uuid === sentryApp.uuid
       );
 
-      const issue = (externalIssues || []).find(i => i.serviceType == sentryApp.slug);
+      const issue = (externalIssues || []).find(i => i.serviceType === sentryApp.slug);
 
       return (
-        <SentryAppExternalIssueActions
-          key={sentryApp.slug}
-          group={group}
-          event={this.props.event}
-          sentryAppComponent={component}
-          sentryAppInstallation={installation}
-          externalIssue={issue}
-        />
+        <ErrorBoundary key={sentryApp.slug} mini>
+          <SentryAppExternalIssueActions
+            key={sentryApp.slug}
+            group={group}
+            event={this.props.event}
+            sentryAppComponent={component}
+            sentryAppInstallation={installation}
+            externalIssue={issue}
+          />
+        </ErrorBoundary>
       );
     });
   }
@@ -182,7 +184,7 @@ class ExternalIssueList extends AsyncComponent {
           </h6>
           <AlertLink
             icon="icon-generic-box"
-            priority="default"
+            priority="muted"
             size="small"
             to={`/settings/${this.props.orgId}/integrations`}
           >

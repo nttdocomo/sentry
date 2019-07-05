@@ -3,6 +3,7 @@
 exports[`StreamGroup renders with anchors 1`] = `
 <Group
   align="center"
+  data-test-id="group"
   onClick={[Function]}
   p={2}
   px={0}
@@ -248,6 +249,7 @@ exports[`StreamGroup renders with anchors 1`] = `
           "userReportCount": 0,
         }
       }
+      height={24}
       id="1337"
       statsPeriod="24h"
     />

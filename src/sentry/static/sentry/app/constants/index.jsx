@@ -126,6 +126,8 @@ export const AVATAR_URL_MAP = {
 
 export const MENU_CLOSE_DELAY = 200;
 
+export const MAX_PICKABLE_DAYS = 90;
+
 export const DEFAULT_STATS_PERIOD = '14d';
 
 export const DEFAULT_USE_UTC = true;
@@ -153,3 +155,5 @@ export const SEARCH_TYPES = {
   EVENT: 1,
 };
 export const MAX_RECENT_SEARCHES = 3;
+
+export const DEFAULT_PER_PAGE = 50;

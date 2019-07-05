@@ -70,6 +70,7 @@ const theme = {
   dropShadowHeavy: '0 1px 4px 1px rgba(47,40,55,0.08), 0 4px 16px 0 rgba(47,40,55,0.12)',
 
   background: '#fff',
+  placeholderBackground: '#f5f5f5',
 
   // Try to keep these ordered plz
   zIndex: {
@@ -90,14 +91,16 @@ const theme = {
     sidebar: 1010,
     orgAndUserMenu: 1011,
 
-    // tooltips and hovercards
-    tooltip: 1070,
-
     // Sentry user feedback modal
     sentryErrorEmbed: 1090,
 
+    // If you change modal also update shared-components.less
+    // as the z-index for bootstrap modals lives there.
     modal: 10000,
     toast: 10001,
+
+    // tooltips and hovercards can be inside modals sometimes.
+    tooltip: 10002,
   },
 
   grid: 8,
@@ -148,10 +151,10 @@ theme.error = theme.red;
 theme.disabled = theme.gray1;
 
 theme.alert = {
-  default: {
+  muted: {
     backgroundLight: theme.offWhite,
     background: theme.gray1,
-    border: theme.borderLight,
+    border: theme.gray6,
   },
   info: {
     backgroundLight: theme.blueLightest,

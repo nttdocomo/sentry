@@ -4,6 +4,8 @@ import six
 import uuid
 import hmac
 import itertools
+import hashlib
+import re
 
 from django.db import models
 from django.utils import timezone
@@ -30,6 +32,9 @@ EVENT_EXPANSION = {
         'issue.ignored',
         'issue.assigned',
     ],
+    'error': [
+        'error.created',
+    ],
 }
 
 # We present Webhook Subscriptions per-resource (Issue, Project, etc.), not
@@ -37,10 +42,12 @@ EVENT_EXPANSION = {
 # resources a Sentry App may subscribe to.
 VALID_EVENT_RESOURCES = (
     'issue',
+    'error',
 )
 
 REQUIRED_EVENT_PERMISSIONS = {
     'issue': 'event:read',
+    'error': 'event:read',
     'project': 'project:read',
     'member': 'member:read',
     'organization': 'org:read',
@@ -143,6 +150,14 @@ class SentryApp(ParanoidModel, HasApiScopes):
     def is_published(self):
         return self.status == SentryAppStatus.PUBLISHED
 
+    @property
+    def is_unpublished(self):
+        return self.status == SentryAppStatus.UNPUBLISHED
+
+    @property
+    def is_internal(self):
+        return self.status == SentryAppStatus.INTERNAL
+
     def save(self, *args, **kwargs):
         self._set_slug()
         self.date_updated = timezone.now()
@@ -161,6 +176,15 @@ class SentryApp(ParanoidModel, HasApiScopes):
         """
         if not self.slug:
             self.slug = slugify(self.name)
+
+        if self.is_internal and not self._has_internal_slug():
+            self.slug = u'{}-{}'.format(
+                self.slug,
+                hashlib.sha1(self.owner.slug).hexdigest()[0:6],
+            )
+
+    def _has_internal_slug(self):
+        return re.match(r'\w+-[0-9a-zA-Z]+', self.slug)
 
     def build_signature(self, body):
         secret = self.application.client_secret

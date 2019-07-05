@@ -121,7 +121,7 @@ export const fields = {
     saveMessage: t('Changing grouping config will apply to future events only.'),
     selectionInfoFunction: args => {
       const {groupingConfigs, value} = args;
-      const selection = groupingConfigs.find(({id}) => id == value);
+      const selection = groupingConfigs.find(({id}) => id === value);
       const changelog = (selection && selection.changelog) || '';
       if (!changelog) {
         return null;
@@ -139,6 +139,7 @@ export const fields = {
       return groupingConfigs.map(({id}) => [id.toString(), <code key={id}>{id}</code>]);
     },
     help: t('Sets the grouping algorithm to be used for new events.'),
+    visible: ({features}) => features.has('set-grouping-config'),
   },
   groupingEnhancementsBase: {
     name: 'groupingEnhancementsBase',
@@ -149,7 +150,7 @@ export const fields = {
     saveMessage: t('Changing grouping enhancements will apply to future events only.'),
     selectionInfoFunction: args => {
       const {groupingEnhancementBases, value} = args;
-      const selection = groupingEnhancementBases.find(({id}) => id == value);
+      const selection = groupingEnhancementBases.find(({id}) => id === value);
       const changelog = (selection && selection.changelog) || '';
       if (!changelog) {
         return null;
@@ -170,6 +171,7 @@ export const fields = {
       ]);
     },
     help: t('The built-in base version of grouping enhancements.'),
+    visible: ({features}) => features.has('set-grouping-config'),
   },
   groupingEnhancements: {
     name: 'groupingEnhancements',
@@ -207,6 +209,8 @@ export const fields = {
     validate: ({id, form}) => {
       return [];
     },
+    visible: ({features}) =>
+      features.has('set-grouping-config') || features.has('tweak-grouping-config'),
   },
   fingerprintingRules: {
     name: 'fingerprintingRules',
@@ -243,6 +247,8 @@ export const fields = {
         </pre>
       </React.Fragment>
     ),
+    visible: ({features}) =>
+      features.has('set-grouping-config') || features.has('tweak-grouping-config'),
   },
 
   dataScrubber: {

@@ -114,7 +114,7 @@ exports[`OrganizationApiKeysList renders 1`] = `
                         <ForwardRef
                           aria-disabled={false}
                           aria-label="New API Key"
-                          className="css-1oc9q3a-StyledButton-getColors e12ma6z0"
+                          className="css-23553w-StyledButton-getColors e12ma6z0"
                           disabled={false}
                           onClick={[Function]}
                           priority="primary"
@@ -124,7 +124,7 @@ exports[`OrganizationApiKeysList renders 1`] = `
                           <button
                             aria-disabled={false}
                             aria-label="New API Key"
-                            className="css-1oc9q3a-StyledButton-getColors e12ma6z0"
+                            className="css-23553w-StyledButton-getColors e12ma6z0"
                             onClick={[Function]}
                             role="button"
                             size="small"
@@ -471,11 +471,18 @@ exports[`OrganizationApiKeysList renders 1`] = `
                                 className="css-1dp2adt"
                                 is={null}
                               >
-                                <div
-                                  className="form-control disabled auto-select"
+                                <AutoSelectText
+                                  className="form-control disabled"
                                 >
-                                  aa624bcc12024702a202cd90be5feda0
-                                </div>
+                                  <div
+                                    className="auto-select-text form-control disabled"
+                                    onClick={[Function]}
+                                  >
+                                    <span>
+                                      aa624bcc12024702a202cd90be5feda0
+                                    </span>
+                                  </div>
+                                </AutoSelectText>
                               </div>
                             </Base>
                           </Box>

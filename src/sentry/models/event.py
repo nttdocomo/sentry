@@ -22,7 +22,7 @@ from hashlib import md5
 
 from semaphore.processing import StoreNormalizer
 
-from sentry import eventtypes, options
+from sentry import eventtypes
 from sentry.constants import EVENT_ORDERING_KEY
 from sentry.db.models import (
     BoundedBigIntegerField,
@@ -34,23 +34,11 @@ from sentry.db.models import (
 )
 from sentry.db.models.manager import EventManager, SnubaEventManager
 from sentry.interfaces.base import get_interfaces
-from sentry.utils import json, metrics
+from sentry.utils import json
 from sentry.utils.cache import memoize
 from sentry.utils.canonical import CanonicalKeyDict, CanonicalKeyView
 from sentry.utils.safe import get_path
 from sentry.utils.strings import truncatechars
-from sentry.utils.sdk import configure_scope
-
-
-def _should_skip_to_python(event_id):
-    if not event_id:
-        return False
-
-    sample_rate = options.get('store.empty-interface-sample-rate')
-    if sample_rate == 0:
-        return False
-
-    return int(md5(event_id).hexdigest(), 16) % (10 ** 8) <= (sample_rate * (10 ** 8))
 
 
 class EventDict(CanonicalKeyDict):
@@ -69,22 +57,12 @@ class EventDict(CanonicalKeyDict):
             (isinstance(data, NodeData) and isinstance(data.data, EventDict))
         )
 
-        with configure_scope() as scope:
-            scope.set_tag("rust.is_renormalized", is_renormalized)
-            scope.set_tag("rust.skip_renormalization", skip_renormalization)
-            scope.set_tag("rust.renormalized", "null")
-
         if not skip_renormalization and not is_renormalized:
-            rust_renormalized = _should_skip_to_python(data.get('event_id'))
-            if rust_renormalized:
-                normalizer = StoreNormalizer(is_renormalize=True)
-                data = normalizer.normalize_event(dict(data))
-
-            metrics.incr('rust.renormalized',
-                         tags={'value': rust_renormalized})
-
-            with configure_scope() as scope:
-                scope.set_tag("rust.renormalized", rust_renormalized)
+            normalizer = StoreNormalizer(
+                is_renormalize=True,
+                enable_trimming=False,
+            )
+            data = normalizer.normalize_event(dict(data))
 
         CanonicalKeyDict.__init__(self, data, **kwargs)
 
@@ -111,6 +89,8 @@ class EventCommon(object):
     @property
     def group(self):
         from sentry.models import Group
+        if not self.group_id:
+            return None
         if not hasattr(self, '_group_cache'):
             self._group_cache = Group.objects.get(id=self.group_id)
         return self._group_cache
@@ -136,12 +116,7 @@ class EventCommon(object):
         self._project_cache = project
 
     def get_interfaces(self):
-        was_renormalized = _should_skip_to_python(self.event_id)
-
-        metrics.incr('event.get_interfaces',
-                     tags={'rust_renormalized': was_renormalized})
-
-        return CanonicalKeyView(get_interfaces(self.data, rust_renormalized=was_renormalized))
+        return CanonicalKeyView(get_interfaces(self.data))
 
     @memoize
     def interfaces(self):
@@ -200,12 +175,19 @@ class EventCommon(object):
         return filter(None, [
             x.get_hash() for x in self.get_grouping_variants(force_config).values()])
 
-    def get_grouping_variants(self, force_config=None):
+    def get_grouping_variants(self, force_config=None, normalize_stacktraces=False):
         """
         This is similar to `get_hashes` but will instead return the
         grouping components for each variant in a dictionary.
+
+        If `normalize_stacktraces` is set to `True` then the event data will be
+        modified for `in_app` in addition to event variants being created.  This
+        means that after calling that function the event data has been modified
+        in place.
         """
-        from sentry.grouping.api import get_grouping_variants_for_event
+        from sentry.grouping.api import get_grouping_variants_for_event, \
+            load_grouping_config
+        from sentry.stacktraces.processing import normalize_stacktraces_for_grouping
 
         # Forcing configs has two separate modes.  One is where just the
         # config ID is given in which case it's merged with the stored or
@@ -224,6 +206,10 @@ class EventCommon(object):
         else:
             config = self.data.get('grouping_config')
 
+        config = load_grouping_config(config)
+        if normalize_stacktraces:
+            normalize_stacktraces_for_grouping(self.data, config)
+
         return get_grouping_variants_for_event(self, config)
 
     def get_primary_hash(self):
@@ -239,7 +225,9 @@ class EventCommon(object):
     @property
     def culprit(self):
         # For a while events did not save the culprit
-        return self.data.get('culprit') or self.group.culprit
+        if self.group_id:
+            return self.data.get('culprit') or self.group.culprit
+        return self.data.get('culprit')
 
     @property
     def location(self):
@@ -369,7 +357,7 @@ class EventCommon(object):
 
         # for a long time culprit was not persisted.  In those cases put
         # the culprit in from the group.
-        if data.get('culprit') is None:
+        if data.get('culprit') is None and self.group_id:
             data['culprit'] = self.group.culprit
 
         # Override title and location with dynamically generated data
@@ -386,12 +374,18 @@ class EventCommon(object):
     def level(self):
         # we might want to move to this:
         # return LOG_LEVELS_MAP.get(self.get_level_display()) or self.group.level
-        return self.group.level
+        if self.group:
+            return self.group.level
+        else:
+            return None
 
     def get_level_display(self):
         # we might want to move to this:
         # return self.get_tag('level') or self.group.get_level_display()
-        return self.group.get_level_display()
+        if self.group:
+            return self.group.get_level_display()
+        else:
+            return None
 
     # deprecated accessors
 
@@ -487,6 +481,7 @@ class SnubaEvent(EventCommon):
                 'project_id': [project_id],
             },
             referrer='SnubaEvent.get_event',
+            limit=1,
         )
         if 'error' not in result and len(result['data']) == 1:
             return SnubaEvent(result['data'][0])
@@ -512,7 +507,7 @@ class SnubaEvent(EventCommon):
         node_id = SnubaEvent.generate_node_id(
             self.snuba_data['project_id'],
             self.snuba_data['event_id'])
-        self.data = NodeData(None, node_id, data=None)
+        self.data = NodeData(None, node_id, data=None, wrapper=EventDict)
 
     def __getattr__(self, name):
         """
@@ -645,7 +640,7 @@ class SnubaEvent(EventCommon):
             conditions=conditions,
             filter_keys={
                 'project_id': [self.project_id],
-                'issue': [self.group_id],
+                'issue': [self.group_id] if self.group_id else [],
             },
             orderby=['timestamp', 'event_id'],
             limit=1,
@@ -675,7 +670,7 @@ class SnubaEvent(EventCommon):
             conditions=conditions,
             filter_keys={
                 'project_id': [self.project_id],
-                'issue': [self.group_id],
+                'issue': [self.group_id] if self.group_id else [],
             },
             orderby=['-timestamp', '-event_id'],
             limit=1,
@@ -793,7 +788,7 @@ class EventSubjectTemplateData(object):
             return self.event.project.get_full_name()
         elif name == 'projectID':
             return self.event.project.slug
-        elif name == 'shortID':
+        elif name == 'shortID' and self.event.group_id:
             return self.event.group.qualified_short_id
         elif name == 'orgID':
             return self.event.organization.slug

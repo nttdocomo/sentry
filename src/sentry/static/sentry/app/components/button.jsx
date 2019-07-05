@@ -7,7 +7,7 @@ import {pickBy} from 'lodash';
 
 import ExternalLink from 'app/components/links/externalLink';
 import InlineSvg from 'app/components/inlineSvg';
-import Tooltip2 from 'app/components/tooltip2';
+import Tooltip from 'app/components/tooltip';
 
 class Button extends React.Component {
   static propTypes = {
@@ -44,6 +44,10 @@ class Button extends React.Component {
      * `children` will be used by default (only if it is a string), but this property takes priority.
      */
     label: PropTypes.string,
+    /**
+     * Passed down to built-in tooltip component
+     */
+    tooltipProps: PropTypes.object,
 
     onClick: PropTypes.func,
   };
@@ -88,6 +92,7 @@ class Button extends React.Component {
       borderless,
       priority,
       disabled,
+      tooltipProps,
 
       // destructure from `buttonProps`
       // not necessary, but just in case someone re-orders props
@@ -132,7 +137,11 @@ class Button extends React.Component {
 
     // Doing this instead of using `Tooltip`'s `disabled` prop so that we can minimize snapshot nesting
     if (title) {
-      return <Tooltip2 title={title}>{button}</Tooltip2>;
+      return (
+        <Tooltip {...tooltipProps} title={title}>
+          {button}
+        </Tooltip>
+      );
     }
 
     return button;
@@ -189,10 +198,9 @@ const getColors = ({priority, disabled, borderless, theme}) => {
     &:active {
       ${colorActive ? 'color: ${colorActive};' : ''};
       background: ${backgroundActive};
-      border: 1px solid
-        ${!borderless && (borderActive || border)
-          ? borderActive || border
-          : 'transparent'};
+      border-color: ${!borderless && (borderActive || border)
+        ? borderActive || border
+        : 'transparent'};
     }
   `;
 };

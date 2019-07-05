@@ -227,6 +227,33 @@ class GroupListTest(APITestCase, SnubaTestCase):
         assert response.data[0]['id'] == six.text_type(group.id)
         assert response.data[0]['matchingEventId'] == event_id
 
+    def test_lookup_by_event_id_incorrect_project_id(self):
+        self.store_event(
+            data={'event_id': 'a' * 32, 'timestamp': self.min_ago.isoformat()[:19]},
+            project_id=self.project.id
+        )
+        event_id = 'b' * 32
+        event = self.store_event(
+            data={'event_id': event_id, 'timestamp': self.min_ago.isoformat()[:19]},
+            project_id=self.project.id
+        )
+
+        other_project = self.create_project(teams=[self.team])
+        user = self.create_user()
+        self.create_member(
+            organization=self.organization,
+            teams=[self.team],
+            user=user,
+        )
+        self.login_as(user=user)
+
+        with self.feature('organizations:global-views'):
+            response = self.get_valid_response(query=event_id, project=[other_project.id])
+        assert response['X-Sentry-Direct-Hit'] == '1'
+        assert len(response.data) == 1
+        assert response.data[0]['id'] == six.text_type(event.group.id)
+        assert response.data[0]['matchingEventId'] == event_id
+
     def test_lookup_by_event_id_with_whitespace(self):
         project = self.project
         project.update_option('sentry:resolve_age', 1)
@@ -296,6 +323,28 @@ class GroupListTest(APITestCase, SnubaTestCase):
 
         response = self.get_valid_response(organization.slug, query=short_id, shortIdLookup=1)
         assert len(response.data) == 0
+
+    def test_lookup_by_group_id(self):
+        self.login_as(user=self.user)
+        response = self.get_valid_response(group=self.group.id)
+        assert len(response.data) == 1
+        assert response.data[0]['id'] == six.text_type(self.group.id)
+        group_2 = self.create_group()
+        response = self.get_valid_response(group=[self.group.id, group_2.id])
+        assert set([g['id'] for g in response.data]) == set([
+            six.text_type(self.group.id),
+            six.text_type(group_2.id),
+        ])
+
+    def test_lookup_by_group_id_no_perms(self):
+        organization = self.create_organization()
+        project = self.create_project(organization=organization)
+        group = self.create_group(project=project)
+        user = self.create_user()
+        self.create_member(organization=organization, user=user, has_global_access=False)
+        self.login_as(user=user)
+        response = self.get_response(group=[group.id])
+        assert response.status_code == 403
 
     def test_lookup_by_first_release(self):
         now = timezone.now()
@@ -423,8 +472,14 @@ class GroupListTest(APITestCase, SnubaTestCase):
             response = self.get_valid_response(statsPeriod='1h')
             assert len(response.data) == 0
 
-    def test_advanced_search_errors(self):
+    @patch('sentry.analytics.record')
+    def test_advanced_search_errors(self, mock_record):
         self.login_as(user=self.user)
+        response = self.get_response(sort_by='date', query='!has:user')
+        assert response.status_code == 200, response.data
+        assert not any(
+            c[0][0] == 'advanced_search.feature_gated' for c in mock_record.call_args_list)
+
         with self.feature({'organizations:advanced-search': False}):
             response = self.get_response(sort_by='date', query='!has:user')
             assert response.status_code == 400, response.data
@@ -433,8 +488,12 @@ class GroupListTest(APITestCase, SnubaTestCase):
                 'search' == response.data['detail']
             )
 
-        response = self.get_response(sort_by='date', query='!has:user')
-        assert response.status_code == 200, response.data
+            mock_record.assert_called_with(
+                'advanced_search.feature_gated',
+                user_id=self.user.id,
+                default_user_id=self.user.id,
+                organization_id=self.organization.id,
+            )
 
 
 class GroupUpdateTest(APITestCase, SnubaTestCase):

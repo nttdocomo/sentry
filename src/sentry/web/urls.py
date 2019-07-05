@@ -48,8 +48,8 @@ from sentry.web.frontend.restore_organization import RestoreOrganizationView
 from sentry.web.frontend.team_avatar import TeamAvatarPhotoView
 from sentry.web.frontend.account_identity import AccountIdentityAssociateView
 from sentry.web.frontend.sudo import SudoView
-from sentry.web.frontend.unsubscribe_issue_notifications import \
-    UnsubscribeIssueNotificationsView
+from sentry.web.frontend.unsubscribe_issue_notifications import UnsubscribeIssueNotificationsView
+from sentry.web.frontend.unsubscribe_incident_notifications import UnsubscribeIncidentNotificationsView
 from sentry.web.frontend.user_avatar import UserAvatarPhotoView
 from sentry.web.frontend.setup_wizard import SetupWizardView
 from sentry.web.frontend.vsts_extension_configuration import \
@@ -107,6 +107,11 @@ urlpatterns += patterns(
         r'^api/(?P<project_id>[\w_-]+)/minidump/?$',
         api.MinidumpView.as_view(),
         name='sentry-api-minidump'
+    ),
+    url(
+        r'^api/(?P<project_id>[\w_-]+)/events/(?P<event_id>[\w-]+)/attachments/$',
+        api.EventAttachmentStoreView.as_view(),
+        name='sentry-api-event-attachment'
     ),
     url(
         r'^api/(?P<project_id>[\w_-]+)/unreal/(?P<sentry_key>\w+)/$',
@@ -290,6 +295,11 @@ urlpatterns += patterns(
         UnsubscribeIssueNotificationsView.as_view(),
         name='sentry-account-email-unsubscribe-issue'
     ),
+    url(
+        r'^account/notifications/unsubscribe/incident/(?P<incident_id>\d+)/$',
+        UnsubscribeIncidentNotificationsView.as_view(),
+        name='sentry-account-email-unsubscribe-incident'
+    ),
     url(r'^account/remove/$',
         RedirectView.as_view(pattern_name="sentry-remove-account", permanent=False),
         ),
@@ -297,19 +307,7 @@ urlpatterns += patterns(
     url(r'^account/', generic_react_page_view),
     url(r'^onboarding/', generic_react_page_view),
 
-    # Admin
-    url(r'^manage/status/environment/$',
-        admin.status_env, name='sentry-admin-status'),
-    url(r'^manage/status/packages/$', admin.status_packages,
-        name='sentry-admin-packages-status'),
-    url(r'^manage/status/mail/$', admin.status_mail,
-        name='sentry-admin-mail-status'),
-    url(r'^manage/status/warnings/$', admin.status_warnings,
-        name='sentry-admin-warnings-status'),
-
     # Admin - Users
-    url(r'^manage/users/new/$', admin.create_new_user,
-        name='sentry-admin-new-user'),
     url(r'^manage/users/(?P<user_id>\d+)/$',
         admin.edit_user, name='sentry-admin-edit-user'),
     url(
@@ -598,6 +596,11 @@ urlpatterns += patterns(
         r'^(?P<organization_slug>[\w_-]+)/(?P<project_id>[\w_-]+)/$',
         react_page_view,
         name='sentry-stream'
+    ),
+    url(
+        r'^organizations/(?P<organization_slug>[\w_-]+)/incidents/(?P<incident_id>\d+)/$',
+        react_page_view,
+        name='sentry-incident',
     ),
     url(
         r'^(?P<organization_slug>[\w_-]+)/(?P<project_slug>[\w_-]+)/issues/(?P<group_id>\d+)/tags/(?P<key>[^\/]+)/export/$',

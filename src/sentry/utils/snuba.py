@@ -4,6 +4,7 @@ from collections import (
     namedtuple,
     OrderedDict,
 )
+from copy import deepcopy
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from dateutil.parser import parse as parse_datetime
@@ -228,7 +229,14 @@ def options_override(overrides):
 
 _snuba_pool = connection_from_url(
     settings.SENTRY_SNUBA,
-    retries=5,
+    retries=urllib3.Retry(
+        total=5,
+        # Expand our retries to POST since all of
+        # our requests are POST and they don't mutate, so they
+        # are safe to retry. Without this, we aren't
+        # actually retrying at all.
+        method_whitelist={'GET', 'POST'},
+    ),
     timeout=30,
     maxsize=10,
 )
@@ -264,7 +272,7 @@ def zerofill(data, start, end, rollup, orderby):
         else:
             rv.append({'time': key})
 
-    if orderby.startswith('-'):
+    if '-time' in orderby:
         return list(reversed(rv))
 
     return rv
@@ -276,6 +284,11 @@ def get_snuba_column_name(name):
     the column is assumed to be a tag. If name is falsy or name is a quoted literal
     (e.g. "'name'"), leave unchanged.
     """
+    no_conversion = set(['project_id', 'start', 'end'])
+
+    if name in no_conversion:
+        return name
+
     if not name or QUOTED_LITERAL_RE.match(name):
         return name
 
@@ -366,7 +379,7 @@ def get_arrayjoin(column):
         return match.groups()[0]
 
 
-def transform_aliases_and_query(**kwargs):
+def transform_aliases_and_query(skip_conditions=False, **kwargs):
     """
     Convert aliases in selected_columns, groupby, aggregation, conditions,
     orderby and arrayjoin fields to their internal Snuba format and post the
@@ -382,33 +395,39 @@ def transform_aliases_and_query(**kwargs):
     translated_columns = {}
     derived_columns = set()
 
-    selected_columns = kwargs['selected_columns']
-    groupby = kwargs['groupby']
-    aggregations = kwargs['aggregations']
-    conditions = kwargs['conditions'] or []
+    selected_columns = kwargs.get('selected_columns')
+    groupby = kwargs.get('groupby')
+    aggregations = kwargs.get('aggregations')
+    conditions = kwargs.get('conditions')
     filter_keys = kwargs['filter_keys']
+    arrayjoin = kwargs.get('arrayjoin')
+    rollup = kwargs.get('rollup')
+    orderby = kwargs.get('orderby')
+    having = kwargs.get('having', [])
 
-    for (idx, col) in enumerate(selected_columns):
-        if isinstance(col, list):
-            # if list, means there are potentially nested functions and need to
-            # iterate and translate potential columns
-            parse_columns_in_functions(col)
-            selected_columns[idx] = col
-            translated_columns[col[2]] = col[2]
-            derived_columns.add(col[2])
-        else:
-            name = get_snuba_column_name(col)
-            selected_columns[idx] = name
+    if selected_columns:
+        for (idx, col) in enumerate(selected_columns):
+            if isinstance(col, list):
+                # if list, means there are potentially nested functions and need to
+                # iterate and translate potential columns
+                parse_columns_in_functions(col)
+                selected_columns[idx] = col
+                translated_columns[col[2]] = col[2]
+                derived_columns.add(col[2])
+            else:
+                name = get_snuba_column_name(col)
+                selected_columns[idx] = name
+                translated_columns[name] = col
+
+    if groupby:
+        for (idx, col) in enumerate(groupby):
+            if col not in derived_columns:
+                name = get_snuba_column_name(col)
+            else:
+                name = col
+
+            groupby[idx] = name
             translated_columns[name] = col
-
-    for (idx, col) in enumerate(groupby):
-        if col not in derived_columns:
-            name = get_snuba_column_name(col)
-        else:
-            name = col
-
-        groupby[idx] = name
-        translated_columns[name] = col
 
     for aggregation in aggregations or []:
         derived_columns.add(aggregation[2])
@@ -430,16 +449,36 @@ def transform_aliases_and_query(**kwargs):
                 cond[1][0] = get_snuba_column_name(cond[1][0])
         return cond
 
-    kwargs['conditions'] = [handle_condition(condition) for condition in conditions]
+    if conditions:
+        kwargs['conditions'] = []
+        for condition in conditions:
+            field = condition[0]
+            if not isinstance(field, (list, tuple)) and field in derived_columns:
+                having.append(condition)
+            elif skip_conditions:
+                kwargs['conditions'].append(condition)
+            else:
+                kwargs['conditions'].append(handle_condition(condition))
 
-    order_by_column = kwargs['orderby'].lstrip('-')
-    kwargs['orderby'] = u'{}{}'.format(
-        '-' if kwargs['orderby'].startswith('-') else '',
-        order_by_column if order_by_column in derived_columns else get_snuba_column_name(
-            order_by_column)
-    ) or None
+    if having:
+        kwargs['having'] = having
 
-    kwargs['arrayjoin'] = arrayjoin_map.get(kwargs['arrayjoin'], kwargs['arrayjoin'])
+    if orderby:
+        if orderby is None:
+            orderby = []
+        orderby = orderby if isinstance(orderby, (list, tuple)) else [orderby]
+        translated_orderby = []
+
+        for field_with_order in orderby:
+            field = field_with_order.lstrip('-')
+            translated_orderby.append(u'{}{}'.format(
+                '-' if field_with_order.startswith('-') else '',
+                field if field in derived_columns else get_snuba_column_name(field)
+            ))
+
+        kwargs['orderby'] = translated_orderby
+
+    kwargs['arrayjoin'] = arrayjoin_map.get(arrayjoin, arrayjoin)
 
     result = raw_query(**kwargs)
 
@@ -452,7 +491,7 @@ def transform_aliases_and_query(**kwargs):
 
     if len(translated_columns):
         result['data'] = [get_row(row) for row in result['data']]
-        if kwargs['rollup'] > 0:
+        if rollup and rollup > 0:
             result['data'] = zerofill(
                 result['data'],
                 kwargs['start'],
@@ -517,7 +556,7 @@ def raw_query(start, end, groupby=None, conditions=None, filter_keys=None,
     else:
         project_ids = []
 
-    for col, keys in six.iteritems(forward(filter_keys.copy())):
+    for col, keys in six.iteritems(forward(deepcopy(filter_keys))):
         if keys:
             if len(keys) == 1 and None in keys:
                 conditions.append((col, 'IS NULL', None))

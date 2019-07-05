@@ -1,27 +1,32 @@
-import React from 'react';
+import {Link} from 'react-router';
 import PropTypes from 'prop-types';
+import React from 'react';
+import moment from 'moment';
 import styled from 'react-emotion';
 
-import {t} from 'app/locale';
-import SentryTypes from 'app/sentryTypes';
-import PageHeading from 'app/components/pageHeading';
-import Link from 'app/components/links/link';
-import InlineSvg from 'app/components/inlineSvg';
 import {PageHeader} from 'app/styles/organization';
-import space from 'app/styles/space';
-import SubscribeButton from 'app/components/subscribeButton';
-import DropdownControl from 'app/components/dropdownControl';
-import MenuItem from 'app/components/menuItem';
+import {t} from 'app/locale';
 import Access from 'app/components/acl/access';
-import DropdownButton from 'app/components/dropdownButton';
+import Count from 'app/components/count';
+import DropdownControl from 'app/components/dropdownControl';
+import Duration from 'app/components/duration';
+import InlineSvg from 'app/components/inlineSvg';
+import LoadingError from 'app/components/loadingError';
+import MenuItem from 'app/components/menuItem';
+import PageHeading from 'app/components/pageHeading';
+import SentryTypes from 'app/sentryTypes';
+import SubscribeButton from 'app/components/subscribeButton';
+import space from 'app/styles/space';
+import getDynamicText from 'app/utils/getDynamicText';
 
-import Status from '../status';
 import {isOpen} from '../utils';
+import Status from '../status';
 
 export default class DetailsHeader extends React.Component {
   static propTypes = {
     incident: SentryTypes.Incident,
     params: PropTypes.object.isRequired,
+    hasIncidentDetailsError: PropTypes.bool.isRequired,
     onSubscriptionChange: PropTypes.func.isRequired,
     onStatusChange: PropTypes.func.isRequired,
   };
@@ -29,23 +34,19 @@ export default class DetailsHeader extends React.Component {
   renderStatus() {
     const {incident, onStatusChange} = this.props;
 
-    const isIncidentOpen = isOpen(incident);
+    const isIncidentOpen = incident && isOpen(incident);
 
     return (
       <Access
         access={['org:write']}
-        renderNoAccessMessage={() => <Status incident={incident} />}
+        renderNoAccessMessage={() => (incident ? <Status incident={incident} /> : null)}
       >
         <DropdownControl
-          button={
-            // eslint-disable-next-line no-shadow
-            ({getActorProps, isOpen}) => (
-              <DropdownButton {...getActorProps()} isOpen={isOpen}>
-                <Status incident={incident} />
-              </DropdownButton>
-            )
-          }
+          data-test-id="status-dropdown"
+          label={incident && <Status incident={incident} />}
           menuWidth="160px"
+          alignRight
+          buttonProps={{size: 'small', disabled: !incident}}
         >
           <StyledMenuItem onSelect={onStatusChange}>
             {isIncidentOpen ? t('Close this incident') : t('Reopen this incident')}
@@ -56,42 +57,89 @@ export default class DetailsHeader extends React.Component {
   }
 
   render() {
-    const {incident, params, onSubscriptionChange} = this.props;
+    const {hasIncidentDetailsError, incident, params, onSubscriptionChange} = this.props;
+    const isIncidentReady = !!incident && !hasIncidentDetailsError;
+    const eventLink = incident && {
+      pathname: `/organizations/${params.orgId}/events/`,
+
+      // Note we don't have project selector on here so there should be
+      // no query params to forward
+      query: {
+        group: incident.groups,
+      },
+    };
+    const dateStarted = incident && moment(incident.dateStarted).format('LL');
+    const duration =
+      incident &&
+      moment
+        .duration(
+          moment(incident.dateClosed || new Date()).diff(moment(incident.dateStarted))
+        )
+        .as('seconds');
 
     return (
       <Header>
         <HeaderItem>
           <PageHeading>
-            <Title>
+            <Breadcrumb>
               <IncidentsLink to={`/organizations/${params.orgId}/incidents/`}>
                 {t('Incidents')}
               </IncidentsLink>
-              <Chevron src="icon-chevron-right" size={space(2)} />
-              {params.incidentId}
-            </Title>
-            <div>{incident && incident.title}</div>
+              {dateStarted && (
+                <React.Fragment>
+                  <Chevron src="icon-chevron-right" size={space(2)} />
+                  <IncidentDate>{dateStarted}</IncidentDate>
+                </React.Fragment>
+              )}
+            </Breadcrumb>
+            <IncidentTitle data-test-id="incident-title" loading={!isIncidentReady}>
+              {isIncidentReady ? incident.title : 'Loading'}
+            </IncidentTitle>
           </PageHeading>
         </HeaderItem>
-        {incident && (
+        {hasIncidentDetailsError ? (
+          <StyledLoadingError />
+        ) : (
           <GroupedHeaderItems>
             <HeaderItem>
               <ItemTitle>{t('Status')}</ItemTitle>
               <ItemValue>{this.renderStatus()}</ItemValue>
             </HeaderItem>
             <HeaderItem>
-              <ItemTitle>{t('Event count')}</ItemTitle>
-              <ItemValue>{incident.eventCount}</ItemValue>
+              <ItemTitle>{t('Duration')}</ItemTitle>
+              {isIncidentReady && (
+                <ItemValue>
+                  <Duration seconds={getDynamicText({value: duration, fixed: 1200})} />
+                </ItemValue>
+              )}
             </HeaderItem>
             <HeaderItem>
               <ItemTitle>{t('Users affected')}</ItemTitle>
-              <ItemValue>{incident.usersAffected}</ItemValue>
+              {isIncidentReady && (
+                <ItemValue>
+                  <Count value={incident.uniqueUsers} />
+                </ItemValue>
+              )}
+            </HeaderItem>
+            <HeaderItem>
+              <ItemTitle>{t('Total events')}</ItemTitle>
+              {isIncidentReady && (
+                <ItemValue>
+                  <Count value={incident.totalEvents} />
+                  <OpenLink to={eventLink}>
+                    <InlineSvg src="icon-open" size="14" />
+                  </OpenLink>
+                </ItemValue>
+              )}
             </HeaderItem>
             <HeaderItem>
               <ItemTitle>{t('Notifications')}</ItemTitle>
               <ItemValue>
                 <SubscribeButton
-                  isSubscribed={incident.isSubscribed}
+                  disabled={!isIncidentReady}
+                  isSubscribed={incident && !!incident.isSubscribed}
                   onClick={onSubscriptionChange}
+                  size="small"
                 />
               </ItemValue>
             </HeaderItem>
@@ -106,6 +154,15 @@ const Header = styled(PageHeader)`
   background-color: ${p => p.theme.white};
   border-bottom: 1px solid ${p => p.theme.borderDark};
   margin-bottom: 0;
+  padding: ${space(3)} 0;
+`;
+
+const StyledLoadingError = styled(LoadingError)`
+  flex: 1;
+
+  &.alert.alert-block {
+    margin: 0 20px;
+  }
 `;
 
 const GroupedHeaderItems = styled('div')`
@@ -114,7 +171,8 @@ const GroupedHeaderItems = styled('div')`
 `;
 
 const HeaderItem = styled('div')`
-  padding: ${space(3)};
+  padding: 0 ${space(4)};
+  min-width: 0; /* Prevent text from horizontally stretching flexbox */
 `;
 
 const ItemTitle = styled('h6')`
@@ -129,12 +187,24 @@ const ItemValue = styled('div')`
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  font-size: ${p => p.theme.headerFontSize};
-  height: 34px;
+  font-size: ${p => p.theme.fontSizeExtraLarge};
+  height: 40px; /* This is the height of the Status dropdown */
 `;
 
-const Title = styled('div')`
-  margin-bottom: ${space(2)};
+const Breadcrumb = styled('div')`
+  display: flex;
+  align-items: center;
+  font-size: ${p => p.theme.fontSizeLarge};
+  margin-bottom: ${space(1)};
+`;
+
+const IncidentTitle = styled('div')`
+  ${p => p.loading && 'opacity: 0'};
+`;
+
+const IncidentDate = styled('div')`
+  font-size: 0.8em;
+  color: ${p => p.theme.gray2};
 `;
 
 const IncidentsLink = styled(Link)`
@@ -150,4 +220,11 @@ const StyledMenuItem = styled(MenuItem)`
   font-size: ${p => p.theme.fontSizeMedium};
   text-align: left;
   padding: ${space(1)};
+`;
+
+const OpenLink = styled(Link)`
+  display: flex;
+  font-size: ${p => p.theme.fontSizeLarge};
+  color: ${p => p.theme.gray2};
+  margin-left: ${space(1)};
 `;

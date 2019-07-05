@@ -36,7 +36,7 @@ export default class AlertMessage extends React.PureComponent {
   static propTypes = {
     alert: PropTypes.shape({
       id: PropTypes.string,
-      message: PropTypes.string.isRequired,
+      message: PropTypes.node.isRequired,
       type: PropTypes.oneOf(['success', 'error', 'warning', 'info']),
       url: PropTypes.string,
     }),
@@ -51,7 +51,7 @@ export default class AlertMessage extends React.PureComponent {
     const {alert, system} = this.props;
     let icon;
 
-    if (alert.type == 'success') {
+    if (alert.type === 'success') {
       icon = 'icon-circle-check';
     } else {
       icon = 'icon-circle-exclamation';

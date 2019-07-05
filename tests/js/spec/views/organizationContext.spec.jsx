@@ -30,6 +30,7 @@ describe('OrganizationContext', function() {
         api={new MockApiClient()}
         params={{orgId: 'org-slug'}}
         location={{query: {}}}
+        routes={[]}
         {...props}
       >
         <div />
@@ -55,6 +56,7 @@ describe('OrganizationContext', function() {
     TeamStore.loadInitialData.mockRestore();
     ProjectsStore.loadInitialData.mockRestore();
     ConfigStore.get.mockRestore();
+    GlobalSelectionStore.loadInitialData.mockRestore();
   });
 
   it('renders and fetches org', async function() {
@@ -87,6 +89,10 @@ describe('OrganizationContext', function() {
 
   it('fetches new org when router params change', function() {
     wrapper = createWrapper();
+    MockApiClient.addMockResponse({
+      url: '/organizations/new-slug/environments/',
+      body: TestStubs.Environments(),
+    });
     const mock = MockApiClient.addMockResponse({
       url: '/organizations/new-slug/',
       body: org,
@@ -140,8 +146,13 @@ describe('OrganizationContext', function() {
   });
 
   it('uses last organization from ConfigStore', function() {
+    MockApiClient.addMockResponse({
+      url: '/organizations/lastOrganization/environments/',
+      body: TestStubs.Environments(),
+    });
     getOrgMock = MockApiClient.addMockResponse({
       url: '/organizations/lastOrganization/',
+      body: org,
     });
     // mocking `.get('lastOrganization')`
     ConfigStore.get.mockImplementation(() => 'lastOrganization');
@@ -153,8 +164,13 @@ describe('OrganizationContext', function() {
   });
 
   it('uses last organization from `organizations` prop', async function() {
+    MockApiClient.addMockResponse({
+      url: '/organizations/foo/environments/',
+      body: TestStubs.Environments(),
+    });
     getOrgMock = MockApiClient.addMockResponse({
       url: '/organizations/foo/',
+      body: org,
     });
     ConfigStore.get.mockImplementation(() => '');
 
@@ -181,5 +197,42 @@ describe('OrganizationContext', function() {
     expect(wrapper.find('LoadingIndicator')).toHaveLength(0);
 
     expect(getOrgMock).toHaveBeenLastCalledWith('/organizations/foo/', expect.anything());
+  });
+
+  it('fetches org details only once if organizations loading store changes', async function() {
+    wrapper = createWrapper({
+      params: {orgId: 'org-slug'},
+      organizationsLoading: true,
+      organizations: [],
+    });
+    await tick();
+    wrapper.update();
+    expect(wrapper.find('LoadingIndicator')).toHaveLength(0);
+    expect(getOrgMock).toHaveBeenCalledTimes(1);
+
+    // Simulate OrganizationsStore being loaded *after* `OrganizationContext` finishes
+    // org details fetch
+    wrapper.setProps({
+      organizationsLoading: false,
+      organizations: [
+        TestStubs.Organization({slug: 'foo'}),
+        TestStubs.Organization({slug: 'bar'}),
+      ],
+    });
+
+    expect(getOrgMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call `GlobalSelectionStore.loadInitialData` on group details route', async function() {
+    wrapper = createWrapper({
+      routes: [{path: '/organizations/:orgId/issues/:groupId/'}],
+    });
+    await tick();
+    wrapper.update();
+
+    expect(wrapper.state('loading')).toBe(false);
+    expect(wrapper.state('error')).toBe(false);
+
+    expect(GlobalSelectionStore.loadInitialData).not.toHaveBeenCalled();
   });
 });

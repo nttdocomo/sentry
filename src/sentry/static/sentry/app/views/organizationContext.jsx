@@ -34,6 +34,7 @@ const OrganizationContext = createReactClass({
 
   propTypes: {
     api: PropTypes.object,
+    routes: PropTypes.arrayOf(PropTypes.object),
     includeSidebar: PropTypes.bool,
     useLastOrganization: PropTypes.bool,
     organizationsLoading: PropTypes.bool,
@@ -71,13 +72,16 @@ const OrganizationContext = createReactClass({
       this.props.params.orgId &&
       prevProps.params.orgId !== this.props.params.orgId;
 
+    // protect against the case where we finish fetching org details
+    // and then `OrganizationsStore` finishes loading:
+    // only fetch in the case where we don't have an orgId
     const organizationLoadingChanged =
       prevProps.organizationsLoading !== this.props.organizationsLoading &&
       this.props.organizationsLoading === false;
 
     if (
       hasOrgIdAndChanged ||
-      organizationLoadingChanged ||
+      (!this.props.params.orgId && organizationLoadingChanged) ||
       (this.props.location.state === 'refresh' && prevProps.location.state !== 'refresh')
     ) {
       this.remountComponent();
@@ -96,7 +100,7 @@ const OrganizationContext = createReactClass({
     // If a new project was created, we need to re-fetch the
     // org details endpoint, which will propagate re-rendering
     // for the entire component tree
-    this.remountComponent();
+    this.fetchData();
   },
 
   getOrganizationSlug() {
@@ -133,7 +137,17 @@ const OrganizationContext = createReactClass({
 
         TeamStore.loadInitialData(data.teams);
         ProjectsStore.loadInitialData(data.projects);
-        GlobalSelectionStore.loadInitialData(data, this.props.location.query);
+
+        // Make an exception for issue details in the case where it is accessed directly (e.g. from email)
+        // We do not want to load the user's last used env/project in this case, otherwise will
+        // lead to very confusing behavior.
+        if (
+          !this.props.routes.find(
+            ({path}) => path && path.includes('/organizations/:orgId/issues/:groupId/')
+          )
+        ) {
+          GlobalSelectionStore.loadInitialData(data, this.props.location.query);
+        }
         OrganizationEnvironmentsStore.loadInitialData(environments);
 
         this.setState({
@@ -146,6 +160,7 @@ const OrganizationContext = createReactClass({
       })
       .catch(err => {
         let errorType = null;
+
         switch (err.statusText) {
           case 'NOT FOUND':
             errorType = ERROR_TYPES.ORG_NOT_FOUND;
@@ -161,6 +176,10 @@ const OrganizationContext = createReactClass({
         // If user is superuser, open sudo window
         const user = ConfigStore.get('user');
         if (!user || !user.isSuperuser || err.status !== 403) {
+          // This `catch` can swallow up errors in development (and tests)
+          // So let's log them. This may create some noise, especially the test case where
+          // we specifically test this branch
+          console.error(err); // eslint-disable-line no-console
           return;
         }
         openSudo({
@@ -213,7 +232,9 @@ const OrganizationContext = createReactClass({
           {t('Loading data for your organization.')}
         </LoadingIndicator>
       );
-    } else if (this.state.error) {
+    }
+
+    if (this.state.error) {
       return (
         <React.Fragment>
           {this.renderSidebar()}

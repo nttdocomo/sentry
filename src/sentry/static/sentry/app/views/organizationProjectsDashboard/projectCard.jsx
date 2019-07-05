@@ -6,7 +6,7 @@ import Reflux from 'reflux';
 import createReactClass from 'create-react-class';
 import styled from 'react-emotion';
 
-import BookmarkStar from 'app/components/bookmarkStar';
+import BookmarkStar from 'app/components/projects/bookmarkStar';
 import {Client} from 'app/api';
 import {loadStatsForProject} from 'app/actionCreators/projects';
 import IdBadge from 'app/components/idBadge';
@@ -43,8 +43,6 @@ class ProjectCard extends React.Component {
     const {organization, project, hasProjectAccess, params} = this.props;
     const {id, firstEvent, stats, slug} = project;
 
-    const hasSentry10 = new Set(organization.features).has('sentry10');
-
     return (
       <ProjectCardWrapper data-test-id={slug} width={['100%', '50%', '33%', '25%']}>
         {stats ? (
@@ -52,16 +50,10 @@ class ProjectCard extends React.Component {
             <StyledProjectCardHeader>
               <StyledIdBadge
                 project={project}
-                avatarSize={24}
+                avatarSize={18}
                 displayName={
                   hasProjectAccess ? (
-                    <Link
-                      to={
-                        hasSentry10
-                          ? `/organizations/${params.orgId}/issues/?project=${id}`
-                          : `/${params.orgId}/${slug}/`
-                      }
-                    >
+                    <Link to={`/organizations/${params.orgId}/issues/?project=${id}`}>
                       <strong>{slug}</strong>
                     </Link>
                   ) : (

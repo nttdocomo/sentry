@@ -8,13 +8,28 @@ import OrganizationIncidentsList from 'app/views/organizationIncidents/list';
 describe('OrganizationIncidentsList', function() {
   const {routerContext} = initializeOrg();
   let mock;
+  let wrapper;
+
+  const createWrapper = async props => {
+    wrapper = mount(
+      <OrganizationIncidentsList
+        params={{orgId: 'org-slug'}}
+        location={{query: {}, search: ''}}
+      />,
+      routerContext
+    );
+    // Wait for sparklines library
+    await tick();
+    wrapper.update();
+    return wrapper;
+  };
 
   beforeEach(function() {
     mock = MockApiClient.addMockResponse({
       url: '/organizations/org-slug/incidents/',
       body: [
-        TestStubs.Incident({id: '1', identifier: '1', title: 'First incident'}),
-        TestStubs.Incident({id: '2', identifier: '1', title: 'Second incident'}),
+        TestStubs.Incident({id: '123', identifier: '1', title: 'First incident'}),
+        TestStubs.Incident({id: '342', identifier: '2', title: 'Second incident'}),
       ],
     });
   });
@@ -23,40 +38,29 @@ describe('OrganizationIncidentsList', function() {
     MockApiClient.clearMockResponses();
   });
 
-  it('displays list', function() {
-    const wrapper = mount(
-      <OrganizationIncidentsList params={{orgId: 'org-slug'}} location={{query: {}}} />,
-      TestStubs.routerContext()
-    );
+  it('displays list', async function() {
+    wrapper = await createWrapper();
 
-    const items = wrapper.find('PanelItem');
+    const items = wrapper.find('IncidentPanelItem');
 
     expect(items).toHaveLength(2);
     expect(items.at(0).text()).toContain('First incident');
     expect(items.at(1).text()).toContain('Second incident');
   });
 
-  it('displays empty state', function() {
+  it('displays empty state', async function() {
     MockApiClient.addMockResponse({
       url: '/organizations/org-slug/incidents/',
       body: [],
     });
-    const wrapper = mount(
-      <OrganizationIncidentsList params={{orgId: 'org-slug'}} location={{query: {}}} />,
-      routerContext
-    );
+
+    wrapper = await createWrapper();
     expect(wrapper.find('PanelItem')).toHaveLength(0);
-    expect(wrapper.text()).toContain("You don't have any incidents yet");
+    expect(wrapper.text()).toContain("You don't have any Incidents yet");
   });
 
-  it('toggles all/unresolved', function() {
-    const wrapper = mount(
-      <OrganizationIncidentsList
-        params={{orgId: 'org-slug'}}
-        location={{query: {}, search: ''}}
-      />,
-      routerContext
-    );
+  it('toggles all/open', async function() {
+    wrapper = await createWrapper();
 
     expect(
       wrapper
@@ -73,7 +77,7 @@ describe('OrganizationIncidentsList', function() {
       expect.objectContaining({query: {}})
     );
 
-    wrapper.setProps({location: {query: {status: ''}, search: '?status='}});
+    wrapper.setProps({location: {query: {status: 'open'}, search: '?status=open'}});
 
     expect(
       wrapper
@@ -87,7 +91,7 @@ describe('OrganizationIncidentsList', function() {
 
     expect(mock).toHaveBeenCalledWith(
       '/organizations/org-slug/incidents/',
-      expect.objectContaining({query: expect.objectContaining({status: ''})})
+      expect.objectContaining({query: expect.objectContaining({status: 'open'})})
     );
   });
 });

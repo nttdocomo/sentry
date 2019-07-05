@@ -1,25 +1,32 @@
-import React from 'react';
-import DocumentTitle from 'react-document-title';
-import styled from 'react-emotion';
 import {omit} from 'lodash';
+import DocumentTitle from 'react-document-title';
+import React from 'react';
+import moment from 'moment';
+import styled from 'react-emotion';
 
-import {t} from 'app/locale';
-import AsyncComponent from 'app/components/asyncComponent';
-import {Panel, PanelBody, PanelHeader, PanelItem} from 'app/components/panels';
-import Link from 'app/components/links/link';
-import Button from 'app/components/button';
-import EmptyStateWarning from 'app/components/emptyStateWarning';
-import Pagination from 'app/components/pagination';
 import {PageContent, PageHeader} from 'app/styles/organization';
-import PageHeading from 'app/components/pageHeading';
+import {Panel, PanelBody, PanelHeader, PanelItem} from 'app/components/panels';
+import {t, tct} from 'app/locale';
+import AlertLink from 'app/components/alertLink';
+import AsyncComponent from 'app/components/asyncComponent';
 import BetaTag from 'app/components/betaTag';
+import Button from 'app/components/button';
+import Count from 'app/components/count';
+import Duration from 'app/components/duration';
+import EmptyStateWarning from 'app/components/emptyStateWarning';
+import Link from 'app/components/links/link';
+import LoadingIndicator from 'app/components/loadingIndicator';
+import PageHeading from 'app/components/pageHeading';
+import Pagination from 'app/components/pagination';
+import getDynamicText from 'app/utils/getDynamicText';
 import space from 'app/styles/space';
 
 import Status from '../status';
+import SparkLine from './sparkLine';
 
-const DEFAULT_QUERY_STATUS = 'open';
+const DEFAULT_QUERY_STATUS = '';
 
-class OrganizationIncidentsBody extends AsyncComponent {
+class OrganizationIncidentsList extends AsyncComponent {
   getEndpoints() {
     const {params, location} = this.props;
     return [
@@ -35,32 +42,50 @@ class OrganizationIncidentsBody extends AsyncComponent {
 
   renderListItem(incident) {
     const {orgId} = this.props.params;
+    const started = moment(incident.dateStarted);
+    const duration = moment
+      .duration(moment(incident.dateClosed || new Date()).diff(started))
+      .as('seconds');
 
     return (
-      <PanelItem key={incident.id}>
+      <IncidentPanelItem key={incident.id}>
         <TableLayout>
-          <Link to={`/organizations/${orgId}/incidents/${incident.identifier}/`}>
-            {incident.title}
-          </Link>
+          <TitleAndSparkLine>
+            <Link to={`/organizations/${orgId}/incidents/${incident.identifier}/`}>
+              {incident.title}
+            </Link>
+            <SparkLine incident={incident} />
+          </TitleAndSparkLine>
           <Status incident={incident} />
-          <div>{incident.duration}</div>
-          <div>{incident.usersAffected}</div>
-          <div>{incident.eventCount}</div>
+          <div>
+            {started.format('LL')}
+            <LightDuration seconds={getDynamicText({value: duration, fixed: 1200})} />
+          </div>
+          <NumericColumn>
+            <Count value={incident.uniqueUsers} />
+          </NumericColumn>
+          <NumericColumn>
+            <Count value={incident.totalEvents} />
+          </NumericColumn>
         </TableLayout>
-      </PanelItem>
+      </IncidentPanelItem>
     );
   }
 
   renderEmpty() {
     return (
       <EmptyStateWarning>
-        <p>{t("You don't have any incidents yet")}</p>
+        <p>{t("You don't have any Incidents yet")}</p>
       </EmptyStateWarning>
     );
   }
 
+  renderLoading() {
+    return this.renderBody();
+  }
+
   renderBody() {
-    const {incidentList, incidentListPageLinks} = this.state;
+    const {loading, incidentList, incidentListPageLinks} = this.state;
 
     return (
       <React.Fragment>
@@ -69,14 +94,20 @@ class OrganizationIncidentsBody extends AsyncComponent {
             <TableLayout>
               <div>{t('Incident')}</div>
               <div>{t('Status')}</div>
-              <div>{t('Duration')}</div>
-              <div>{t('Users affected')}</div>
-              <div>{t('Total events')}</div>
+              <div>{t('Started')}</div>
+              <NumericColumn>{t('Users affected')}</NumericColumn>
+              <NumericColumn>{t('Total events')}</NumericColumn>
             </TableLayout>
           </PanelHeader>
+
           <PanelBody>
-            {incidentList.length === 0 && this.renderEmpty()}
-            {incidentList.map(incident => this.renderListItem(incident))}
+            {loading && <LoadingIndicator />}
+            {!loading && (
+              <React.Fragment>
+                {incidentList.length === 0 && this.renderEmpty()}
+                {incidentList.map(incident => this.renderListItem(incident))}
+              </React.Fragment>
+            )}
           </PanelBody>
         </Panel>
         <Pagination pageLinks={incidentListPageLinks} />
@@ -85,24 +116,34 @@ class OrganizationIncidentsBody extends AsyncComponent {
   }
 }
 
-class OrganizationIncidents extends React.Component {
+class OrganizationIncidentsListContainer extends React.Component {
   render() {
-    const {pathname, query} = this.props.location;
+    const {params, location} = this.props;
+    const {pathname, query} = location;
+    const {orgId} = params;
 
-    const openIncidentsQuery = omit(query, 'status');
-    const allIncidentsQuery = {...query, status: ''};
+    const openIncidentsQuery = {...query, status: 'open'};
+    const closedIncidentsQuery = {...query, status: 'closed'};
+    const allIncidentsQuery = omit(query, 'status');
 
     const status = query.status === undefined ? DEFAULT_QUERY_STATUS : query.status;
 
     return (
-      <DocumentTitle title={`Incidents - ${this.props.params.orgId} - Sentry`}>
+      <DocumentTitle title={`Incidents - ${orgId} - Sentry`}>
         <PageContent>
           <PageHeader>
-            <PageHeading withMargins>
+            <PageHeading>
               {t('Incidents')} <BetaTag />
             </PageHeading>
 
             <div className="btn-group">
+              <Button
+                to={{pathname, query: allIncidentsQuery}}
+                size="small"
+                className={'btn' + (status === '' ? ' active' : '')}
+              >
+                {t('All Incidents')}
+              </Button>
               <Button
                 to={{pathname, query: openIncidentsQuery}}
                 size="small"
@@ -111,15 +152,27 @@ class OrganizationIncidents extends React.Component {
                 {t('Open')}
               </Button>
               <Button
-                to={{pathname, query: allIncidentsQuery}}
+                to={{pathname, query: closedIncidentsQuery}}
                 size="small"
-                className={'btn' + (status === '' ? ' active' : '')}
+                className={'btn' + (status === 'closed' ? ' active' : '')}
               >
-                {t('All Incidents')}
+                {t('Closed')}
               </Button>
             </div>
           </PageHeader>
-          <OrganizationIncidentsBody {...this.props} />
+
+          <AlertLink
+            priority="warning"
+            to={`/organizations/${orgId}/issues/`}
+            icon="icon-circle-info"
+          >
+            {tct(
+              'To create a new Incident, select one or more issues from the Issues view. Then, click the [create:Create Incident] button.',
+              {create: <em />}
+            )}
+          </AlertLink>
+
+          <OrganizationIncidentsList {...this.props} />
         </PageContent>
       </DocumentTitle>
     );
@@ -128,9 +181,31 @@ class OrganizationIncidents extends React.Component {
 
 const TableLayout = styled('div')`
   display: grid;
-  grid-template-columns: 4fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 4fr 1fr 2fr 1fr 1fr;
   grid-column-gap: ${space(1.5)};
   width: 100%;
+  align-items: center;
 `;
 
-export default OrganizationIncidents;
+const LightDuration = styled(Duration)`
+  color: ${p => p.theme.gray1};
+  font-size: 0.9em;
+  margin-left: ${space(1)};
+`;
+
+const TitleAndSparkLine = styled('div')`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-right: ${space(2)};
+`;
+
+const IncidentPanelItem = styled(PanelItem)`
+  padding: ${space(1)} ${space(2)};
+`;
+
+const NumericColumn = styled('div')`
+  text-align: right;
+`;
+
+export default OrganizationIncidentsListContainer;

@@ -2,8 +2,8 @@ import {browserHistory} from 'react-router';
 import React from 'react';
 import styled from 'react-emotion';
 
-import {analytics, amplitude} from 'app/utils/analytics';
 import {t} from 'app/locale';
+import {trackAnalyticsEvent} from 'app/utils/analytics';
 import Button from 'app/components/button';
 import ProjectContext from 'app/views/projects/projectContext';
 import ProjectInstallPlatform from 'app/views/projectInstall/platform';
@@ -23,25 +23,21 @@ class Configure extends React.Component {
 
   componentDidMount() {
     const {organization, params} = this.props;
-    const data = {
+
+    trackAnalyticsEvent({
+      eventKey: 'onboarding.configure_viewed',
+      eventName: 'Viewed Onboarding Installation Instructions',
+      organization_id: organization.id,
       project: params.projectId,
       platform: params.platform,
-    };
+    });
 
-    amplitude(
-      'Viewed Onboarding Installation Instructions',
-      parseInt(organization.id, 10),
-      data
-    );
-
-    data.org_id = parseInt(organization.id, 10);
-    analytics('onboarding.configure_viewed', data);
     this.sentRealEvent();
   }
 
   get project() {
     return this.props.organization.projects.find(
-      p => p.slug == this.props.params.projectId
+      p => p.slug === this.props.params.projectId
     );
   }
 
@@ -55,26 +51,22 @@ class Configure extends React.Component {
   }
 
   redirectUrl() {
-    const {organization} = this.props;
-    const {orgId, projectId} = this.props.params;
+    const {orgId} = this.props.params;
 
-    const hasSentry10 = new Set(organization.features).has('sentry10');
-
-    const url = hasSentry10
-      ? `/organizations/${orgId}/issues/#welcome`
-      : `/${orgId}/${projectId}/#welcome`;
+    const url = `/organizations/${orgId}/issues/#welcome`;
     browserHistory.push(url);
   }
 
   submit = () => {
     const {organization} = this.props;
     const {projectId} = this.props.params;
-    analytics('onboarding.complete', {project: projectId});
-    amplitude(
-      'Completed Onboarding Installation Instructions',
-      parseInt(organization.id, 10),
-      {projectId}
-    );
+
+    trackAnalyticsEvent({
+      eventKey: 'onboarding.complete',
+      eventName: 'Completed Onboarding Installation Instructions',
+      organization_id: organization.id,
+      projectId,
+    });
     this.redirectUrl();
   };
 

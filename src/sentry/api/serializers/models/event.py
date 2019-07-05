@@ -17,6 +17,7 @@ from sentry.models import (
 )
 from sentry.search.utils import convert_user_tag_to_query
 from sentry.utils.safe import get_path
+from sentry.sdk_updates import get_suggested_updates, SdkSetupState
 
 
 CRASH_FILE_TYPES = set(['event.minidump'])
@@ -246,7 +247,7 @@ class EventSerializer(Serializer):
 
         d = {
             'id': six.text_type(obj.id),
-            'groupID': six.text_type(obj.group_id),
+            'groupID': six.text_type(obj.group_id) if obj.group_id else None,
             'eventID': six.text_type(obj.event_id),
             'projectID': six.text_type(obj.project_id),
             'size': obj.size,
@@ -292,10 +293,14 @@ class DetailedEventSerializer(EventSerializer):
     Adds release and user report info to the serialized event.
     """
 
+    def _get_sdk_updates(self, obj):
+        return list(get_suggested_updates(SdkSetupState.from_event_json(obj.data)))
+
     def serialize(self, obj, attrs, user):
         result = super(DetailedEventSerializer, self).serialize(obj, attrs, user)
         result['release'] = self._get_release_info(user, obj)
         result['userReport'] = self._get_user_report(user, obj)
+        result['sdkUpdates'] = self._get_sdk_updates(obj)
         return result
 
 
@@ -354,7 +359,7 @@ class SimpleEventSerializer(EventSerializer):
         return {
             'id': six.text_type(obj.id),
             'event.type': six.text_type(obj.type),
-            'groupID': six.text_type(obj.group_id),
+            'groupID': six.text_type(obj.group_id) if obj.group_id else None,
             'eventID': six.text_type(obj.event_id),
             'projectID': six.text_type(obj.project_id),
             # XXX for 'message' this doesn't do the proper resolution of logentry

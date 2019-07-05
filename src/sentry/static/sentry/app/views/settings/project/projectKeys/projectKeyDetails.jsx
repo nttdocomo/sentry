@@ -113,19 +113,25 @@ const KeyStats = createReactClass({
     const timeLabel = chart.getTimeLabel(point);
     const [accepted, dropped, filtered] = point.y;
 
-    let value = `${accepted.toLocaleString()} accepted`;
-    if (dropped) {
-      value += `<br>${dropped.toLocaleString()} rate limited`;
-    }
-    if (filtered) {
-      value += `<br>${filtered.toLocaleString()} filtered`;
-    }
-
     return (
-      '<div style="width:150px">' +
-      `<div class="time-label">${timeLabel}</div>` +
-      `<div class="value-label">${value}</div>` +
-      '</div>'
+      <div style={{width: '150px'}}>
+        <div className="time-label">{timeLabel}</div>
+        <div className="value-label">
+          {accepted.toLocaleString()} accepted
+          {dropped > 0 && (
+            <React.Fragment>
+              <br />
+              {dropped.toLocaleString()} rate limited
+            </React.Fragment>
+          )}
+          {filtered > 0 && (
+            <React.Fragment>
+              <br />
+              {filtered.toLocaleString()} filtered
+            </React.Fragment>
+          )}
+        </div>
+      </div>
     );
   },
 
@@ -150,6 +156,7 @@ const KeyStats = createReactClass({
               height={150}
               label="events"
               barClasses={['accepted', 'rate-limited']}
+              minHeights={[1, 0]}
               className="standard-barchart"
               style={{border: 'none'}}
               tooltip={this.renderTooltip}

@@ -3,9 +3,6 @@ from __future__ import absolute_import
 from sentry.grouping.strategies.base import create_strategy_configuration
 
 
-# The latest version of the default config that should be used
-DEFAULT_CONFIG = 'legacy:2019-03-12'
-
 # The classes of grouping algorithms
 CLASSES = []
 
@@ -47,7 +44,6 @@ register_strategy_config(
     changelog='''
         * Traditional grouping algorithm
         * Some known weaknesses with regards to grouping of native frames
-        * No support for grouping enhancements
     '''
 )
 

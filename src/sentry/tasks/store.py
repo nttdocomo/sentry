@@ -16,7 +16,10 @@ from time import time
 from django.conf import settings
 from django.utils import timezone
 
+from semaphore.processing import StoreNormalizer
+
 from sentry import features, reprocessing
+from sentry.constants import DEFAULT_STORE_NORMALIZER_ARGS
 from sentry.attachments import attachment_cache
 from sentry.cache import default_cache
 from sentry.tasks.base import instrumented_task
@@ -58,6 +61,12 @@ def should_process(data):
             plugin.get_event_preprocessors, data=data, _with_transaction=False
         )
         if processors:
+            return True
+
+        enhancers = safe_execute(
+            plugin.get_event_enhancers, data=data, _with_transaction=False
+        )
+        if enhancers:
             return True
 
     if should_process_for_stacktraces(data):
@@ -258,7 +267,19 @@ def _do_process_event(cache_key, start_time, event_id, process_task,
         data = dict(data.items())
 
     if has_changed:
+        # Run some of normalization again such that we don't:
+        # - persist e.g. incredibly large stacktraces from minidumps
+        # - store event timestamps that are older than our retention window
+        #   (also happening with minidumps)
+        normalizer = StoreNormalizer(
+            remove_other=False,
+            is_renormalize=True,
+            **DEFAULT_STORE_NORMALIZER_ARGS
+        )
+        data = normalizer.normalize_event(dict(data))
+
         issues = data.get('processing_issues')
+
         try:
             if issues and create_failed_event(
                 cache_key, project_id, list(issues.values()),

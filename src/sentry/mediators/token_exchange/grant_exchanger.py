@@ -25,17 +25,11 @@ class GrantExchanger(Mediator):
 
     def call(self):
         self._validate()
+        self._create_token()
 
         # Once it's exchanged it's no longer valid and should not be
         # exchangable, so we delete it.
         self._delete_grant()
-
-        self.token = ApiToken.objects.create(
-            user=self.user,
-            application=self.application,
-            scope_list=self.sentry_app.scope_list,
-            expires_at=token_expiration()
-        )
 
         return self.token
 
@@ -73,6 +67,16 @@ class GrantExchanger(Mediator):
 
     def _delete_grant(self):
         self.grant.delete()
+
+    def _create_token(self):
+        self.token = ApiToken.objects.create(
+            user=self.user,
+            application=self.application,
+            scope_list=self.sentry_app.scope_list,
+            expires_at=token_expiration()
+        )
+        self.install.api_token = self.token
+        self.install.save()
 
     @memoize
     def grant(self):

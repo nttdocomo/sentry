@@ -5,7 +5,7 @@ import createReactClass from 'create-react-class';
 
 import {Panel, PanelBody} from 'app/components/panels';
 import withApi from 'app/utils/withApi';
-import CompactIssue from 'app/components/compactIssue';
+import CompactIssue from 'app/components/issues/compactIssue';
 import EmptyMessage from 'app/views/settings/components/emptyMessage';
 import LoadingError from 'app/components/loadingError';
 import LoadingIndicator from 'app/components/loadingIndicator';
@@ -59,8 +59,8 @@ const IssueList = createReactClass({
     }
 
     if (
-      location.pathname != nextLocation.pathname ||
-      location.search != nextLocation.search
+      location.pathname !== nextLocation.pathname ||
+      location.search !== nextLocation.search
     ) {
       this.remountComponent();
     }

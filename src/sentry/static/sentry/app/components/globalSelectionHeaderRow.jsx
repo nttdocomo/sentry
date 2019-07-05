@@ -11,21 +11,31 @@ class GlobalSelectionHeaderRow extends React.Component {
     multi: PropTypes.bool,
     onCheckClick: PropTypes.func.isRequired,
     children: PropTypes.node.isRequired,
+
+    /**
+     * This is a render prop which may be used to augment the checkbox rendered
+     * to the right of the row. It will receive the default `checkbox` as a
+     * prop anlong with the `checked` boolean.
+     */
+    renderCheckbox: PropTypes.func,
   };
 
   static defaultProps = {
+    renderCheckbox: ({checkbox}) => checkbox,
     multi: true,
   };
 
   render() {
-    const {checked, onCheckClick, multi, children, ...props} = this.props;
+    const {checked, onCheckClick, multi, renderCheckbox, children, ...props} = this.props;
+
+    const checkbox = <CheckboxFancy disabled={!multi} checked={checked} />;
 
     return (
-      <Container {...props}>
+      <Container isChecked={checked} {...props}>
         <Content multi={multi}>{children}</Content>
-        <CheckboxWrapper onClick={multi ? onCheckClick : null} checked={checked}>
-          <Checkbox checked={checked} />
-        </CheckboxWrapper>
+        <CheckboxHitbox onClick={multi ? onCheckClick : null}>
+          {renderCheckbox({checkbox, checked})}
+        </CheckboxHitbox>
       </Container>
     );
   }
@@ -41,9 +51,13 @@ const Container = styled('div')`
   height: ${p => p.theme.headerSelectorRowHeight}px;
   flex-shrink: 0;
 
-  /* thanks bootstrap? */
-  input[type='checkbox'] {
-    margin: 0;
+  /* stylelint-disable-next-line no-duplicate-selectors */
+  ${CheckboxFancy} {
+    opacity: ${p => (p.isChecked ? 1 : 0.33)};
+  }
+
+  &:hover ${CheckboxFancy} {
+    opacity: 1;
   }
 `;
 
@@ -62,23 +76,13 @@ const Content = styled('div')`
   }
 `;
 
-const Checkbox = styled(CheckboxFancy)`
-  transition: 0.2s transform;
-`;
-
-const CheckboxWrapper = styled('div')`
+const CheckboxHitbox = styled('div')`
   margin: 0 -${space(1)} 0 0; /* pushes the click box to be flush with the edge of the menu */
   padding: 0 ${space(1.5)} 0 ${space(1.25)};
   height: 100%;
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  transition: 0.2s all;
-
-  &:hover ${Checkbox} {
-    transform: scale(1.1);
-    border-color: ${p => (p.checked ? p.theme.purple : p.theme.gray2)};
-  }
 `;
 
 export default GlobalSelectionHeaderRow;

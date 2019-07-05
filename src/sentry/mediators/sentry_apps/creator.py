@@ -3,11 +3,18 @@ from __future__ import absolute_import
 import six
 
 from collections import Iterable
+from django.db import IntegrityError, transaction
 
 from sentry import analytics
-from sentry.utils.audit import create_audit_entry
 from sentry.mediators import Mediator, Param
-from sentry.models import (AuditLogEntryEvent, ApiApplication, SentryApp, SentryAppComponent, User,)
+from sentry.models import (
+    AuditLogEntryEvent,
+    ApiApplication,
+    IntegrationFeature,
+    SentryApp,
+    SentryAppComponent,
+    User,
+)
 
 
 class Creator(Mediator):
@@ -29,6 +36,7 @@ class Creator(Mediator):
         self.api_app = self._create_api_application()
         self.sentry_app = self._create_sentry_app()
         self._create_ui_components()
+        self._create_integration_feature()
         return self.sentry_app
 
     def _create_proxy_user(self):
@@ -70,7 +78,22 @@ class Creator(Mediator):
                 schema=element,
             )
 
+    def _create_integration_feature(self):
+        # sentry apps must have at least one feature
+        # defaults to 'integrations-api'
+        try:
+            with transaction.atomic():
+                IntegrationFeature.objects.create(
+                    sentry_app=self.sentry_app,
+                )
+        except IntegrityError as e:
+            self.log(
+                sentry_app=self.sentry_app.slug,
+                error_message=e.message,
+            )
+
     def audit(self):
+        from sentry.utils.audit import create_audit_entry
         if self.request:
             create_audit_entry(
                 request=self.request,
