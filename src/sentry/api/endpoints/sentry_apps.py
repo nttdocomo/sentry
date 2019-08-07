@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 from rest_framework.response import Response
 
+from sentry import features
 from sentry.auth.superuser import is_active_superuser
 from sentry.api.bases import SentryAppsBaseEndpoint
 from sentry.api.paginator import OffsetPaginator
@@ -61,11 +62,20 @@ class SentryAppsEndpoint(SentryAppsBaseEndpoint):
             'redirectUrl': request.json_body.get('redirectUrl'),
             'isAlertable': request.json_body.get('isAlertable'),
             'isInternal': request.json_body.get('isInternal'),
+            'verifyInstall': request.json_body.get('verifyInstall'),
             'scopes': request.json_body.get('scopes', []),
             'events': request.json_body.get('events', []),
             'schema': request.json_body.get('schema', {}),
             'overview': request.json_body.get('overview'),
         }
+
+        if self._has_hook_events(request) and not features.has('organizations:integrations-event-hooks',
+                                                               organization,
+                                                               actor=request.user):
+
+            return Response({"non_field_errors": [
+                "Your organization does not have access to the 'error' resource subscription.",
+            ]}, status=403)
 
         serializer = SentryAppSerializer(data=data)
 
@@ -73,6 +83,7 @@ class SentryAppsEndpoint(SentryAppsBaseEndpoint):
             data['redirect_url'] = data['redirectUrl']
             data['webhook_url'] = data['webhookUrl']
             data['is_alertable'] = data['isAlertable']
+            data['verify_install'] = data['verifyInstall']
 
             creator = InternalCreator if data.get('isInternal') else Creator
             sentry_app = creator.run(request=request, **data)
@@ -88,3 +99,9 @@ class SentryAppsEndpoint(SentryAppsBaseEndpoint):
             ),
             None,
         )
+
+    def _has_hook_events(self, request):
+        if not request.json_body.get('events'):
+            return False
+
+        return 'error' in request.json_body['events']

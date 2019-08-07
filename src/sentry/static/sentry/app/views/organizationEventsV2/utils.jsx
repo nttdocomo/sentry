@@ -1,4 +1,4 @@
-import {pick} from 'lodash';
+import {pick, get} from 'lodash';
 
 import {DEFAULT_PER_PAGE} from 'app/constants';
 import {URL_PARAM} from 'app/constants/globalSelectionHeader';
@@ -25,7 +25,9 @@ export function getQuery(view, location) {
   const fields = [];
   const groupby = view.data.groupby ? [...view.data.groupby] : [];
 
-  view.data.fields.forEach(field => {
+  const viewFields = get(view, 'data.fields', []);
+
+  viewFields.forEach(field => {
     if (SPECIAL_FIELDS.hasOwnProperty(field)) {
       const specialField = SPECIAL_FIELDS[field];
 
@@ -48,22 +50,45 @@ export function getQuery(view, location) {
     'utc',
     'statsPeriod',
     'cursor',
-    'query',
+    'sort',
   ]);
 
   data.field = [...new Set(fields)];
   data.groupby = groupby;
-  data.orderby = view.data.orderby;
-  data.per_page = DEFAULT_PER_PAGE;
-
-  if (view.data.query) {
-    if (data.query) {
-      data.query = `${data.query} ${view.data.query}`;
-    } else {
-      data.query = view.data.query;
-    }
+  if (!data.sort) {
+    data.sort = view.data.sort;
   }
+  data.per_page = DEFAULT_PER_PAGE;
+  data.query = getQueryString(view, location);
+
   return data;
+}
+
+/**
+ * Generate a querystring based on the view defaults, current
+ * location and any additional parameters
+ *
+ * @param {Object} view defaults containing `.data.query`
+ * @param {Location} browser location
+ * @param {Object} additional parameters to merge into the query string.
+ */
+export function getQueryString(view, location, additional) {
+  const queryParts = [];
+  if (view.data.query) {
+    queryParts.push(view.data.query);
+  }
+  if (location.query && location.query.query) {
+    queryParts.push(location.query.query);
+  }
+  if (additional) {
+    Object.entries(additional).forEach(([key, value]) => {
+      if (value) {
+        queryParts.push(`${key}:${value}`);
+      }
+    });
+  }
+
+  return queryParts.join(' ');
 }
 
 /**

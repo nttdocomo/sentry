@@ -5,7 +5,6 @@ import six
 from datetime import timedelta
 from django.utils import timezone
 from django.core.urlresolvers import reverse
-from sentry import options
 from sentry.testutils import APITestCase, SnubaTestCase
 
 
@@ -47,7 +46,6 @@ class ProjectEventDetailsTest(APITestCase, SnubaTestCase):
         )
 
     def test_snuba(self):
-        options.set('snuba.events-queries.enabled', True)
         url = reverse(
             'sentry-api-0-project-event-details',
             kwargs={
@@ -56,9 +54,7 @@ class ProjectEventDetailsTest(APITestCase, SnubaTestCase):
                 'organization_slug': self.cur_event.project.organization.slug,
             }
         )
-        response = self.client.get(url, format='json', data={
-            'enable_snuba': '1',
-        })
+        response = self.client.get(url, format='json')
 
         assert response.status_code == 200, response.content
         assert response.data['id'] == six.text_type(self.cur_event.event_id)
@@ -75,9 +71,7 @@ class ProjectEventDetailsTest(APITestCase, SnubaTestCase):
                 'organization_slug': self.cur_event.project.organization.slug,
             }
         )
-        response = self.client.get(url, format='json', data={
-            'enable_snuba': '1',
-        })
+        response = self.client.get(url, format='json')
 
         assert response.status_code == 200, response.content
         assert response.data['id'] == six.text_type(self.cur_event.event_id)
@@ -86,7 +80,6 @@ class ProjectEventDetailsTest(APITestCase, SnubaTestCase):
         assert response.data['groupID'] == six.text_type(self.cur_event.group.id)
 
     def test_snuba_no_prev(self):
-        options.set('snuba.events-queries.enabled', True)
         url = reverse(
             'sentry-api-0-project-event-details',
             kwargs={
@@ -95,9 +88,7 @@ class ProjectEventDetailsTest(APITestCase, SnubaTestCase):
                 'organization_slug': self.prev_event.project.organization.slug,
             }
         )
-        response = self.client.get(url, format='json', data={
-            'enable_snuba': '1'
-        })
+        response = self.client.get(url, format='json')
 
         assert response.status_code == 200, response.content
         assert response.data['id'] == six.text_type(self.prev_event.event_id)
@@ -106,7 +97,6 @@ class ProjectEventDetailsTest(APITestCase, SnubaTestCase):
         assert response.data['groupID'] == six.text_type(self.prev_event.group.id)
 
     def test_snuba_with_environment(self):
-        options.set('snuba.events-queries.enabled', True)
         url = reverse(
             'sentry-api-0-project-event-details',
             kwargs={
@@ -116,7 +106,6 @@ class ProjectEventDetailsTest(APITestCase, SnubaTestCase):
             }
         )
         response = self.client.get(url, format='json', data={
-            'enable_snuba': '1',
             'environment': ['production', 'staging']
         })
 

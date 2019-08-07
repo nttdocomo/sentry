@@ -1,10 +1,3 @@
-"""
-sentry.runner
-~~~~~~~~~~~~~
-
-:copyright: (c) 2015 by the Sentry Team, see AUTHORS for more details.
-:license: BSD, see LICENSE for more details.
-"""
 from __future__ import absolute_import, print_function
 
 import os
@@ -56,7 +49,7 @@ list(
         lambda cmd: cli.add_command(import_string(cmd)), (
             'sentry.runner.commands.backup.export', 'sentry.runner.commands.backup.import_',
             'sentry.runner.commands.cleanup.cleanup', 'sentry.runner.commands.config.config',
-            'sentry.runner.commands.consumer.consumer', 'sentry.runner.commands.createuser.createuser',
+            'sentry.runner.commands.createuser.createuser',
             'sentry.runner.commands.devserver.devserver', 'sentry.runner.commands.django.django',
             'sentry.runner.commands.exec.exec_', 'sentry.runner.commands.files.files',
             'sentry.runner.commands.help.help', 'sentry.runner.commands.init.init',

@@ -4,9 +4,17 @@ import responses
 
 from django.db import connection
 from mock import patch
+from requests.exceptions import RequestException
 
 from sentry.mediators.sentry_app_installations import Creator, Destroyer
-from sentry.models import AuditLogEntry, AuditLogEntryEvent, ApiGrant, SentryAppInstallation, ServiceHook
+from sentry.models import (
+    AuditLogEntry,
+    AuditLogEntryEvent,
+    ApiGrant,
+    ApiToken,
+    SentryAppInstallation,
+    ServiceHook,
+)
 from sentry.testutils import TestCase
 
 
@@ -69,6 +77,25 @@ class TestDestroyer(TestCase):
         assert not ServiceHook.objects.filter(pk=hook.id).exists()
 
     @responses.activate
+    def test_deletes_api_tokens(self):
+        internal_app = self.create_internal_integration(
+            organization=self.org,
+            slug='internal',
+        )
+        install = SentryAppInstallation.objects.get(sentry_app_id=internal_app.id)
+        api_token = install.api_token
+
+        destroyer = Destroyer(
+            install=install,
+            user=self.user,
+        )
+
+        responses.add(responses.POST, 'https://example.com/webhook')
+        destroyer.call()
+
+        assert not ApiToken.objects.filter(pk=api_token.id).exists()
+
+    @responses.activate
     @patch('sentry.mediators.sentry_app_installations.InstallationNotifier.run')
     def test_sends_notification(self, run):
         with self.tasks():
@@ -124,6 +151,34 @@ class TestDestroyer(TestCase):
             [self.install.id])
 
         assert c.fetchone()[0] == 1
+
+    @responses.activate
+    def test_deletes_on_request_exception(self):
+        install = self.install
+
+        responses.add(
+            responses.POST,
+            'https://example.com/webhook',
+            body=RequestException('Request exception'))
+
+        self.destroyer.call()
+
+        assert not SentryAppInstallation.objects.filter(pk=install.id).exists()
+
+    @responses.activate
+    def test_fail_on_other_error(self):
+        install = self.install
+        try:
+            responses.add(
+                responses.POST,
+                'https://example.com/webhook',
+                body=Exception('Other error'))
+
+            self.destroyer.call()
+        except Exception:
+            assert SentryAppInstallation.objects.filter(pk=install.id).exists()
+        else:
+            assert False, 'Should fail on other error'
 
     @responses.activate
     @patch('sentry.analytics.record')

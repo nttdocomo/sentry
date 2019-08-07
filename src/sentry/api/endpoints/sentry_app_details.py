@@ -26,6 +26,14 @@ class SentryAppDetailsEndpoint(SentryAppBaseEndpoint):
 
             return Response(status=404)
 
+        if self._has_hook_events(request) and not features.has('organizations:integrations-event-hooks',
+                                                               sentry_app.owner,
+                                                               actor=request.user):
+
+            return Response({"non_field_errors": [
+                "Your organization does not have access to the 'error' resource subscription.",
+            ]}, status=403)
+
         serializer = SentryAppSerializer(
             sentry_app,
             data=request.data,
@@ -44,6 +52,7 @@ class SentryAppDetailsEndpoint(SentryAppBaseEndpoint):
                 webhook_url=result.get('webhookUrl'),
                 redirect_url=result.get('redirectUrl'),
                 is_alertable=result.get('isAlertable'),
+                verify_install=result.get('verifyInstall'),
                 scopes=result.get('scopes'),
                 events=result.get('events'),
                 schema=result.get('schema'),
@@ -73,3 +82,9 @@ class SentryAppDetailsEndpoint(SentryAppBaseEndpoint):
             },
             status=403
         )
+
+    def _has_hook_events(self, request):
+        if not request.json_body.get('events'):
+            return False
+
+        return 'error' in request.json_body['events']

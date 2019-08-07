@@ -27,7 +27,7 @@ from sentry.incidents.models import (
     IncidentSeen,
     IncidentActivity,
 )
-from sentry.mediators import sentry_apps, sentry_app_installations, service_hooks
+from sentry.mediators import sentry_apps, sentry_app_installations, sentry_app_installation_tokens, service_hooks
 from sentry.models import (
     Activity, Environment, Event, EventError, EventMapping, Group, Organization, OrganizationMember,
     OrganizationMemberTeam, Project, ProjectBookmark, Team, User, UserEmail, Release, Commit, ReleaseCommit,
@@ -519,7 +519,8 @@ class Factories(object):
             assert not errors, errors
 
         event = manager.save(project_id)
-        event.group.save()
+        if event.group:
+            event.group.save()
         return event
 
     @staticmethod
@@ -668,7 +669,6 @@ class Factories(object):
 
         return EventAttachment.objects.create(
             project_id=event.project_id,
-            group_id=event.group_id,
             event_id=event.event_id,
             file=file,
             **kwargs
@@ -739,6 +739,13 @@ class Factories(object):
         )
 
     @staticmethod
+    def create_internal_integration_token(install, **kwargs):
+        return sentry_app_installation_tokens.Creator.run(
+            sentry_app_installation=install,
+            **kwargs
+        )
+
+    @staticmethod
     def _sentry_app_kwargs(**kwargs):
         _kwargs = {
             'user': kwargs.get('user', Factories.create_user()),
@@ -746,6 +753,7 @@ class Factories(object):
             'organization': kwargs.get('organization', Factories.create_organization()),
             'author': kwargs.get('author', 'A Company'),
             'scopes': kwargs.get('scopes', ()),
+            'verify_install': kwargs.get('verify_install', True),
             'webhook_url': kwargs.get('webhook_url', 'https://example.com/webhook'),
             'events': [],
             'schema': {},

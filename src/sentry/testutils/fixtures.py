@@ -156,6 +156,9 @@ class Fixtures(object):
             group = self.group
         return Factories.create_event(event_id=event_id, group=group, *args, **kwargs)
 
+    def create_issueless_event(self, event_id=None, *args, **kwargs):
+        return Factories.create_event(event_id=event_id, group=None, *args, **kwargs)
+
     def store_event(self, *args, **kwargs):
         return Factories.store_event(*args, **kwargs)
 
@@ -198,6 +201,9 @@ class Fixtures(object):
 
     def create_internal_integration(self, *args, **kwargs):
         return Factories.create_internal_integration(*args, **kwargs)
+
+    def create_internal_integration_token(self, *args, **kwargs):
+        return Factories.create_internal_integration_token(*args, **kwargs)
 
     def create_sentry_app_installation(self, *args, **kwargs):
         return Factories.create_sentry_app_installation(*args, **kwargs)

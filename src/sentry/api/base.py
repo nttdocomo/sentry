@@ -12,6 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from enum import Enum
 from pytz import utc
 from rest_framework.authentication import SessionAuthentication
+from rest_framework.exceptions import ParseError
 from rest_framework.parsers import JSONParser
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
@@ -128,14 +129,21 @@ class Endpoint(APIView):
             return
 
     def initialize_request(self, request, *args, **kwargs):
+        # XXX: Since DRF 3.x, when the request is passed into
+        # `initialize_request` it's set as an internal variable on the returned
+        # request. Then when we call `rv.auth` it attempts to authenticate,
+        # fails and sets `user` and `auth` to None on the internal request. We
+        # keep track of these here and reassign them as needed.
+        orig_auth = getattr(request, 'auth', None)
+        orig_user = getattr(request, 'user', None)
         rv = super(Endpoint, self).initialize_request(request, *args, **kwargs)
         # If our request is being made via our internal API client, we need to
         # stitch back on auth and user information
         if getattr(request, '__from_api_client__', False):
             if rv.auth is None:
-                rv.auth = getattr(request, 'auth', None)
+                rv.auth = orig_auth
             if rv.user is None:
-                rv.user = getattr(request, 'user', None)
+                rv.user = orig_user
         return rv
 
     @csrf_exempt
@@ -232,11 +240,13 @@ class Endpoint(APIView):
         assert (paginator and not paginator_kwargs) or (paginator_cls and paginator_kwargs)
 
         per_page = int(request.GET.get('per_page', default_per_page))
-        input_cursor = request.GET.get('cursor')
-        if input_cursor:
-            input_cursor = Cursor.from_string(input_cursor)
-        else:
-            input_cursor = None
+
+        input_cursor = None
+        if request.GET.get('cursor'):
+            try:
+                input_cursor = Cursor.from_string(request.GET.get('cursor'))
+            except ValueError:
+                raise ParseError(detail='Invalid cursor parameter.')
 
         assert per_page <= max(max_per_page, default_per_page)
 

@@ -45,7 +45,16 @@ def add_integration_platform_metric_tag(func):
 
 class SentryAppsPermission(SentryPermission):
     scope_map = {
-        'GET': (),  # Public endpoint.
+        # GET is ideally a public endpoint but for now we are allowing for
+        # anyone who has member permissions or above.
+        'GET': ('event:read',
+                'event:write',
+                'event:admin',
+                'project:releases',
+                'project:read',
+                'org:read',
+                'member:read',
+                'team:read',),
         'POST': ('org:read', 'org:integrations', 'org:write', 'org:admin'),
     }
 
@@ -113,14 +122,29 @@ class SentryAppPermission(SentryPermission):
     unpublished_scope_map = {
         'GET': ('org:read', 'org:integrations', 'org:write', 'org:admin'),
         'PUT': ('org:read', 'org:integrations', 'org:write', 'org:admin'),
+        'POST': ('org:write', 'org:admin'),  # used for publishing an app
         'DELETE': ('org:write', 'org:admin'),
     }
 
     published_scope_map = {
-        'GET': (),  # Public endpoint.
+        # GET is ideally a public endpoint but for now we are allowing for
+        # anyone who has member permissions or above.
+        'GET': ('event:read',
+                'event:write',
+                'event:admin',
+                'project:releases',
+                'project:read',
+                'org:read',
+                'member:read',
+                'team:read',),
         'PUT': ('org:write', 'org:admin'),
+        'POST': ('org:write', 'org:admin'),
         'DELETE': ('org:admin'),
     }
+
+    @property
+    def scope_map(self):
+        return self.published_scope_map
 
     def has_object_permission(self, request, view, sentry_app):
         if not hasattr(request, 'user') or not request.user:
@@ -135,6 +159,12 @@ class SentryAppPermission(SentryPermission):
         if not sentry_app.is_published:
             if sentry_app.owner not in request.user.get_orgs():
                 raise Http404
+
+        # TODO(meredith): make a better way to allow for public
+        # endpoints. we can't use ensure_scoped_permission now
+        # that the public endpoint isn't denoted by '()'
+        if sentry_app.is_published and request.method == 'GET':
+            return True
 
         return ensure_scoped_permission(
             request,
@@ -225,6 +255,12 @@ class SentryAppInstallationPermission(SentryPermission):
         'POST': ('org:integrations', 'event:write', 'event:admin'),
     }
 
+    def has_permission(self, request, *args, **kwargs):
+        # To let the app mark the installation as installed, we don't care about permissions
+        if request.user.is_sentry_app and request.method == 'PUT':
+            return True
+        return super(SentryAppInstallationPermission, self).has_permission(request, *args, **kwargs)
+
     def has_object_permission(self, request, view, installation):
         if not hasattr(request, 'user') or not request.user:
             return False
@@ -233,6 +269,10 @@ class SentryAppInstallationPermission(SentryPermission):
 
         if is_active_superuser(request):
             return True
+
+        # if user is an app, make sure it's for that same app
+        if request.user.is_sentry_app:
+            return request.user == installation.sentry_app.proxy_user
 
         if installation.organization not in request.user.get_orgs():
             raise Http404
@@ -281,3 +321,24 @@ class SentryAppAuthorizationsPermission(SentryPermission):
 class SentryAppAuthorizationsBaseEndpoint(SentryAppInstallationBaseEndpoint):
     authentication_classes = (ClientIdSecretAuthentication, )
     permission_classes = (SentryAppAuthorizationsPermission, )
+
+
+class SentryInternalAppTokenPermission(SentryPermission):
+    scope_map = {
+        'POST': ('org:read', 'org:integrations', 'org:write', 'org:admin'),
+        'DELETE': ('org:write', 'org:admin'),
+    }
+
+    def has_object_permission(self, request, view, sentry_app):
+        if not hasattr(request, 'user') or not request.user:
+            return False
+
+        self.determine_access(request, sentry_app.owner)
+
+        if is_active_superuser(request):
+            return True
+
+        return ensure_scoped_permission(
+            request,
+            self.scope_map.get(request.method),
+        )

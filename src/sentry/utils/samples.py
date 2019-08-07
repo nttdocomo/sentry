@@ -1,10 +1,3 @@
-"""
-sentry.utils.samples
-~~~~~~~~~~~~~~~~~~~~
-
-:copyright: (c) 2013 by the Sentry Team, see AUTHORS for more details.
-:license: BSD, see LICENSE for more details.
-"""
 from __future__ import absolute_import
 
 import os.path
@@ -139,7 +132,7 @@ def load_data(platform, default=None, sample_name=None):
         return
 
     data = CanonicalKeyDict(data)
-    if platform in ('csp', 'hkpk', 'expectct', 'expectstaple'):
+    if platform in ('transaction', 'csp', 'hkpk', 'expectct', 'expectstaple'):
         return data
 
     data['platform'] = platform

@@ -1,6 +1,8 @@
 from __future__ import absolute_import
 
+from collections import defaultdict
 from datetime import timedelta
+from uuid import uuid4
 
 import six
 from django.db import transaction
@@ -9,28 +11,30 @@ from django.utils import timezone
 from sentry import analytics
 from sentry.api.event_search import get_snuba_query_args
 from sentry.incidents.models import (
+    AlertRule,
+    AlertRuleStatus,
     Incident,
     IncidentActivity,
     IncidentActivityType,
     IncidentGroup,
     IncidentProject,
+    IncidentSnapshot,
     IncidentSeen,
     IncidentStatus,
     IncidentSubscription,
     IncidentType,
+    SnubaDatasets,
     TimeSeriesSnapshot,
 )
 from sentry.models import (
     Commit,
     Release,
 )
-from sentry.incidents.tasks import (
-    calculate_incident_suspects,
-    send_subscriber_notifications,
-)
+from sentry.incidents import tasks
 from sentry.utils.committers import get_event_file_committers
 from sentry.utils.snuba import (
-    raw_query,
+    bulk_raw_query,
+    SnubaQueryParams,
     SnubaTSResult,
 )
 
@@ -38,6 +42,10 @@ MAX_INITIAL_INCIDENT_PERIOD = timedelta(days=7)
 
 
 class StatusAlreadyChangedError(Exception):
+    pass
+
+
+class AlreadyDeletedError(Exception):
     pass
 
 
@@ -101,7 +109,7 @@ def create_incident(
             incident_type=type.value,
         )
 
-    calculate_incident_suspects.apply_async(kwargs={'incident_id': incident.id})
+    tasks.calculate_incident_suspects.apply_async(kwargs={'incident_id': incident.id})
     return incident
 
 
@@ -109,7 +117,7 @@ def update_incident_status(incident, status, user=None, comment=None):
     """
     Updates the status of an Incident and write an IncidentActivity row to log
     the change. When the status is CLOSED we also set the date closed to the
-    current time and (todo) take a snapshot of the current incident state.
+    current time and take a snapshot of the current incident state.
     """
     if incident.status == status.value:
         # If the status isn't actually changing just no-op.
@@ -133,15 +141,19 @@ def update_incident_status(incident, status, user=None, comment=None):
         }
         if status == IncidentStatus.CLOSED:
             kwargs['date_closed'] = timezone.now()
-            # TODO: Take a snapshot of the current state once we implement
-            # snapshots
         elif status == IncidentStatus.OPEN:
             # If we're moving back out of closed status then unset the closed
             # date
             kwargs['date_closed'] = None
-            # TODO: Delete snapshot? Not sure if needed
+            # Remove the snapshot since it's only used after the incident is
+            # closed.
+            IncidentSnapshot.objects.filter(incident=incident).delete()
 
         incident.update(**kwargs)
+
+        if status == IncidentStatus.CLOSED:
+            create_incident_snapshot(incident)
+
         analytics.record(
             'incident.status_change',
             incident_id=incident.id,
@@ -216,7 +228,7 @@ def create_incident_activity(
                 IncidentSubscription(incident=incident, user_id=mentioned_user_id)
                 for mentioned_user_id in user_ids_to_subscribe
             ])
-    send_subscriber_notifications.apply_async(
+    tasks.send_subscriber_notifications.apply_async(
         kwargs={'activity_id': activity.id},
         countdown=10,
     )
@@ -249,6 +261,26 @@ def delete_comment(activity):
     return activity.delete()
 
 
+def create_incident_snapshot(incident):
+    """
+    Creates a snapshot of an incident. This includes the count of unique users
+    and total events, plus a time series snapshot of the entire incident.
+    """
+    assert incident.status == IncidentStatus.CLOSED.value
+    event_stats_snapshot = create_event_stat_snapshot(
+        incident,
+        incident.date_started,
+        incident.date_closed,
+    )
+    aggregates = get_incident_aggregates(incident)
+    return IncidentSnapshot.objects.create(
+        incident=incident,
+        event_stats_snapshot=event_stats_snapshot,
+        unique_users=aggregates['unique_users'],
+        total_events=aggregates['count'],
+    )
+
+
 def create_event_stat_snapshot(incident, start, end):
     """
     Creates an event stats snapshot for an incident in a given period of time.
@@ -263,22 +295,36 @@ def create_event_stat_snapshot(incident, start, end):
 
 
 def build_incident_query_params(incident, start=None, end=None):
-    params = {
-        'start': incident.date_started if start is None else start,
-        'end': incident.current_end_date if end is None else end,
-    }
-    group_ids = list(IncidentGroup.objects.filter(
-        incident=incident,
-    ).values_list('group_id', flat=True))
-    if group_ids:
-        params['issue.id'] = group_ids
-    project_ids = list(IncidentProject.objects.filter(
-        incident=incident,
-    ).values_list('project_id', flat=True))
-    if project_ids:
-        params['project_id'] = project_ids
+    return bulk_build_incident_query_params([incident], start=start, end=end)[0]
 
-    return get_snuba_query_args(incident.query, params)
+
+def bulk_build_incident_query_params(incidents, start=None, end=None):
+    incident_groups = defaultdict(list)
+    for incident_id, group_id in IncidentGroup.objects.filter(
+        incident__in=incidents,
+    ).values_list('incident_id', 'group_id'):
+        incident_groups[incident_id].append(group_id)
+    incident_projects = defaultdict(list)
+    for incident_id, project_id in IncidentProject.objects.filter(
+        incident__in=incidents,
+    ).values_list('incident_id', 'project_id'):
+        incident_projects[incident_id].append(project_id)
+
+    query_args_list = []
+    for incident in incidents:
+        params = {
+            'start': incident.date_started if start is None else start,
+            'end': incident.current_end_date if end is None else end,
+        }
+        group_ids = incident_groups[incident.id]
+        if group_ids:
+            params['issue.id'] = group_ids
+        project_ids = incident_projects[incident.id]
+        if project_ids:
+            params['project_id'] = project_ids
+        query_args_list.append(get_snuba_query_args(incident.query, params))
+
+    return query_args_list
 
 
 def get_incident_event_stats(incident, start=None, end=None, data_points=50):
@@ -286,24 +332,33 @@ def get_incident_event_stats(incident, start=None, end=None, data_points=50):
     Gets event stats for an incident. If start/end are provided, uses that time
     period, otherwise uses the incident start/current_end.
     """
-    kwargs = build_incident_query_params(incident, start=start, end=end)
-    rollup = max(int(incident.duration.total_seconds() / data_points), 1)
-    return SnubaTSResult(
-        raw_query(
+    query_params = bulk_build_incident_query_params([incident], start=start, end=end)
+    return bulk_get_incident_event_stats([incident], query_params, data_points=data_points)[0]
+
+
+def bulk_get_incident_event_stats(incidents, query_params_list, data_points=50):
+    snuba_params_list = [
+        SnubaQueryParams(
             aggregations=[
                 ('count()', '', 'count'),
             ],
             orderby='time',
             groupby=['time'],
-            rollup=rollup,
-            referrer='incidents.get_incident_event_stats',
+            rollup=max(int(incident.duration.total_seconds() / data_points), 1),
             limit=10000,
-            **kwargs
-        ),
-        kwargs['start'],
-        kwargs['end'],
-        rollup,
-    )
+            **query_param
+        ) for incident, query_param in zip(incidents, query_params_list)
+    ]
+    results = bulk_raw_query(snuba_params_list, referrer='incidents.get_incident_event_stats')
+    return [
+        SnubaTSResult(
+            result,
+            snuba_params.start,
+            snuba_params.end,
+            snuba_params.rollup,
+        )
+        for snuba_params, result in zip(snuba_params_list, results)
+    ]
 
 
 def get_incident_aggregates(incident):
@@ -312,16 +367,59 @@ def get_incident_aggregates(incident):
     - count: Total count of events
     - unique_users: Total number of unique users
     """
-    kwargs = build_incident_query_params(incident)
-    return raw_query(
-        aggregations=[
-            ('count()', '', 'count'),
-            ('uniq', 'tags[sentry:user]', 'unique_users'),
-        ],
-        referrer='incidents.get_incident_aggregates',
-        limit=10000,
-        **kwargs
-    )['data'][0]
+    query_params = build_incident_query_params(incident)
+    return bulk_get_incident_aggregates([query_params])[0]
+
+
+def bulk_get_incident_aggregates(query_params_list):
+    snuba_params_list = [
+        SnubaQueryParams(
+            aggregations=[
+                ('count()', '', 'count'),
+                ('uniq', 'tags[sentry:user]', 'unique_users'),
+            ],
+            limit=10000,
+            **query_param
+        ) for query_param in query_params_list
+    ]
+    results = bulk_raw_query(snuba_params_list, referrer='incidents.get_incident_aggregates')
+    return [result['data'][0] for result in results]
+
+
+def bulk_get_incident_stats(incidents):
+    """
+    Returns bulk stats for a list of incidents. This includes unique user count,
+    total event count and event stats.
+    """
+    closed = [i for i in incidents if i.status == IncidentStatus.CLOSED.value]
+    incident_stats = {}
+    snapshots = IncidentSnapshot.objects.filter(incident__in=closed)
+    for snapshot in snapshots:
+        event_stats = snapshot.event_stats_snapshot
+        incident_stats[snapshot.incident_id] = {
+            'event_stats': SnubaTSResult(
+                event_stats.snuba_values,
+                event_stats.start,
+                event_stats.end,
+                event_stats.period,
+            ),
+            'total_events': snapshot.total_events,
+            'unique_users': snapshot.unique_users,
+        }
+
+    to_fetch = [i for i in incidents if i.id not in incident_stats]
+    if to_fetch:
+        query_params_list = bulk_build_incident_query_params(to_fetch)
+        all_event_stats = bulk_get_incident_event_stats(to_fetch, query_params_list)
+        all_aggregates = bulk_get_incident_aggregates(query_params_list)
+        for incident, event_stats, aggregates in zip(to_fetch, all_event_stats, all_aggregates):
+            incident_stats[incident.id] = {
+                'event_stats': event_stats,
+                'total_events': aggregates['count'],
+                'unique_users': aggregates['unique_users'],
+            }
+
+    return [incident_stats[incident.id] for incident in incidents]
 
 
 def subscribe_to_incident(incident, user):
@@ -368,3 +466,211 @@ def get_incident_suspect_commits(incident):
                     continue
                 seen.add(commit.id)
                 yield commit.id
+
+
+class AlertRuleNameAlreadyUsedError(Exception):
+    pass
+
+
+DEFAULT_ALERT_RULE_RESOLUTION = 1
+
+
+def create_alert_rule(
+    project,
+    name,
+    threshold_type,
+    query,
+    aggregations,
+    time_window,
+    alert_threshold,
+    resolve_threshold,
+    threshold_period,
+):
+    """
+    Creates an alert rule for a project.
+
+    :param project:
+    :param name: Name for the alert rule. This will be used as part of the
+    incident name, and must be unique per project.
+    :param threshold_type: An AlertRuleThresholdType
+    :param query: An event search query to subscribe to and monitor for alerts
+    :param aggregations: A list of AlertRuleAggregations that we want to fetch
+    for this alert rule
+    :param time_window: Time period to aggregate over, in minutes.
+    :param alert_threshold: Value that the subscription needs to reach to
+    trigger the alert
+    :param resolve_threshold: Value that the subscription needs to reach to
+    resolve the alert
+    :param threshold_period: How many update periods the value of the
+    subscription needs to exceed the threshold before triggering
+    :return: The created `AlertRule`
+    """
+    subscription_id = None
+    dataset = SnubaDatasets.EVENTS
+    resolution = DEFAULT_ALERT_RULE_RESOLUTION
+    validate_alert_rule_query(query)
+    if AlertRule.objects.filter(project=project, name=name).exists():
+        raise AlertRuleNameAlreadyUsedError()
+    try:
+        subscription_id = create_snuba_subscription(
+            dataset,
+            query,
+            aggregations,
+            time_window,
+            resolution,
+        )
+        alert_rule = AlertRule.objects.create(
+            project=project,
+            name=name,
+            subscription_id=subscription_id,
+            threshold_type=threshold_type.value,
+            dataset=SnubaDatasets.EVENTS.value,
+            query=query,
+            aggregations=[agg.value for agg in aggregations],
+            time_window=time_window,
+            resolution=resolution,
+            alert_threshold=alert_threshold,
+            resolve_threshold=resolve_threshold,
+            threshold_period=threshold_period,
+        )
+    except Exception:
+        # If we error for some reason and have a valid subscription_id then
+        # attempt to delete from snuba to avoid orphaned subscriptions.
+        if subscription_id:
+            delete_snuba_subscription(subscription_id)
+        raise
+    return alert_rule
+
+
+def update_alert_rule(
+    alert_rule,
+    name=None,
+    threshold_type=None,
+    query=None,
+    aggregations=None,
+    time_window=None,
+    alert_threshold=None,
+    resolve_threshold=None,
+    threshold_period=None,
+):
+    """
+    Updates an alert rule.
+
+    :param alert_rule: The alert rule to update
+    :param name: Name for the alert rule. This will be used as part of the
+    incident name, and must be unique per project.
+    :param threshold_type: An AlertRuleThresholdType
+    :param query: An event search query to subscribe to and monitor for alerts
+    :param aggregations: A list of AlertRuleAggregations that we want to fetch
+    for this alert rule
+    :param time_window: Time period to aggregate over, in minutes.
+    :param alert_threshold: Value that the subscription needs to reach to
+    trigger the alert
+    :param resolve_threshold: Value that the subscription needs to reach to
+    resolve the alert
+    :param threshold_period: How many update periods the value of the
+    subscription needs to exceed the threshold before triggering
+    :return: The updated `AlertRule`
+    """
+    if name and alert_rule.name != name and AlertRule.objects.filter(
+        project=alert_rule.project,
+        name=name,
+    ).exists():
+        raise AlertRuleNameAlreadyUsedError()
+
+    old_subscription_id = None
+    subscription_id = None
+    updated_fields = {}
+    if name:
+        updated_fields['name'] = name
+    if threshold_type:
+        updated_fields['threshold_type'] = threshold_type.value
+    if query is not None:
+        validate_alert_rule_query(query)
+        updated_fields['query'] = query
+    if aggregations:
+        updated_fields['aggregations'] = [a.value for a in aggregations]
+    if time_window:
+        updated_fields['time_window'] = time_window
+    if alert_threshold:
+        updated_fields['alert_threshold'] = alert_threshold
+    if resolve_threshold:
+        updated_fields['resolve_threshold'] = resolve_threshold
+    if threshold_period:
+        updated_fields['threshold_period'] = threshold_period
+
+    if query or aggregations or time_window:
+        old_subscription_id = alert_rule.subscription_id
+        # If updating any details of the query, create a new subscription
+        subscription_id = create_snuba_subscription(
+            alert_rule.dataset,
+            query,
+            aggregations,
+            time_window,
+            DEFAULT_ALERT_RULE_RESOLUTION,
+        )
+        updated_fields['subscription_id'] = subscription_id
+
+    try:
+        alert_rule.update(**updated_fields)
+    except Exception:
+        # If we error for some reason and have a valid subscription_id then
+        # attempt to delete from snuba to avoid orphaned subscriptions.
+        if subscription_id:
+            delete_snuba_subscription(subscription_id)
+        raise
+    finally:
+        if old_subscription_id:
+            # Once we're set up correctly, remove the previous subscription id.
+            delete_snuba_subscription(old_subscription_id)
+
+    return alert_rule
+
+
+def delete_alert_rule(alert_rule):
+    """
+    Marks an alert rule as deleted and fires off a task to actually delete it.
+    :param alert_rule:
+    """
+    if alert_rule.status in (
+        AlertRuleStatus.PENDING_DELETION.value,
+        AlertRuleStatus.DELETION_IN_PROGRESS.value,
+    ):
+        raise AlreadyDeletedError()
+
+    alert_rule.update(
+        # Randomize the name here so that we don't get unique constraint issues
+        # while waiting for the deletion to process
+        name=uuid4().get_hex(),
+        status=AlertRuleStatus.PENDING_DELETION.value,
+    )
+    tasks.delete_alert_rule.apply_async(kwargs={'alert_rule_id': alert_rule.id})
+    delete_snuba_subscription(alert_rule.subscription_id)
+
+
+def validate_alert_rule_query(query):
+    # TODO: We should add more validation here to reject queries that include
+    # fields that are invalid in alert rules. For now this will just make sure
+    # the query parses correctly.
+    get_snuba_query_args(query)
+
+
+def create_snuba_subscription(dataset, query, aggregations, time_window, resolution):
+    """
+    Creates a subscription to a snuba query.
+
+    :param alert_rule: The alert rule to create the subscription for
+    :return: A uuid representing the subscription id.
+    """
+    # TODO: Implement
+    return uuid4()
+
+
+def delete_snuba_subscription(subscription_id):
+    """
+    Deletes a subscription to a snuba query.
+    :param subscription_id: The uuid of the subscription to delete
+    :return:
+    """
+    # TODO: Implement
+    pass

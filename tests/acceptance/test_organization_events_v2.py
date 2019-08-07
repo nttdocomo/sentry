@@ -115,7 +115,7 @@ class OrganizationEventsTest(AcceptanceTestCase, SnubaTestCase):
             'received': min_ago,
             'fingerprint': ['group-1']
         })
-        self.store_event(
+        event = self.store_event(
             data=event_data,
             project_id=self.project.id,
             assert_no_errors=False
@@ -127,11 +127,15 @@ class OrganizationEventsTest(AcceptanceTestCase, SnubaTestCase):
             self.wait_until_loaded()
 
             # Click the event link to open the modal
-            self.browser.element('[data-test-id="event-title"]').click()
+            self.browser.element('[aria-label="{}"]'.format(event.title)).click()
             self.wait_until_loaded()
 
             header = self.browser.element('[data-test-id="modal-dialog"] h2')
             assert event_data['message'] in header.text
+
+            issue_link = self.browser.element('[data-test-id="linked-issue"]')
+            issue_event_url_fragment = '/issues/%s/events/%s/' % (event.group_id, event.event_id)
+            assert issue_event_url_fragment in issue_link.get_attribute('href')
 
             self.browser.snapshot('events-v2 - single error modal')
 
@@ -165,7 +169,7 @@ class OrganizationEventsTest(AcceptanceTestCase, SnubaTestCase):
             self.wait_until_loaded()
 
             # Click the event link to open the modal
-            self.browser.element('[data-test-id="event-title"]').click()
+            self.browser.element('[aria-label="{}"]'.format(event.title)).click()
             self.wait_until_loaded()
 
             self.browser.snapshot('events-v2 - grouped error modal')

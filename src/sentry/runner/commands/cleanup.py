@@ -1,10 +1,3 @@
-"""
-sentry.runner.commands.cleanup
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-:copyright: (c) 2015 by the Sentry Team, see AUTHORS for more details.
-:license: BSD, see LICENSE for more details.
-"""
 from __future__ import absolute_import, print_function
 
 import os
@@ -208,11 +201,13 @@ def cleanup(days, project, concurrency, silent, model, router, timed):
             date_added__lte=timezone.now() - timedelta(hours=48)
         ).delete()
 
-    if is_filtered(models.OrganizationMember) and not silent:
-        click.echo('>> Skipping OrganizationMember')
-    else:
+    if not silent:
+        click.echo('Removing expired values for OrganizationMember')
+
+    if is_filtered(models.OrganizationMember):
         if not silent:
-            click.echo('Removing expired values for OrganizationMember')
+            click.echo('>> Skipping OrganizationMember')
+    else:
         expired_threshold = timezone.now() - timedelta(days=days)
         models.OrganizationMember.delete_expired(expired_threshold)
 

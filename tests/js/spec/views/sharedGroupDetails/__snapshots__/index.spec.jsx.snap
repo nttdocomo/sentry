@@ -91,6 +91,7 @@ exports[`SharedGroupDetails renders 1`] = `
                           "id": "1",
                           "message": "ApiException",
                           "tags": Array [],
+                          "title": "ApiException",
                         },
                         "level": "warning",
                         "logger": null,
@@ -168,15 +169,26 @@ exports[`SharedGroupDetails renders 1`] = `
                         <h3>
                           ZeroDivisionError
                         </h3>
-                        <div
-                          className="event-message"
+                        <Styled(EventMessage)
+                          message="fetchData(app/components/group/suggestedOwners)"
                         >
-                          <span
-                            className="message"
+                          <EventMessage
+                            className="css-1u2jzzx edommoc2"
+                            message="fetchData(app/components/group/suggestedOwners)"
                           >
-                            fetchData(app/components/group/suggestedOwners)
-                          </span>
-                        </div>
+                            <div
+                              className="css-1u2jzzx edommoc2"
+                            >
+                              <Message>
+                                <span
+                                  className="css-18no1g8-Message edommoc0"
+                                >
+                                  fetchData(app/components/group/suggestedOwners)
+                                </span>
+                              </Message>
+                            </div>
+                          </EventMessage>
+                        </Styled(EventMessage)>
                       </div>
                     </div>
                   </SharedGroupHeader>
@@ -204,6 +216,7 @@ exports[`SharedGroupDetails renders 1`] = `
                             "id": "1",
                             "message": "ApiException",
                             "tags": Array [],
+                            "title": "ApiException",
                           }
                         }
                         group={
@@ -238,6 +251,7 @@ exports[`SharedGroupDetails renders 1`] = `
                               "id": "1",
                               "message": "ApiException",
                               "tags": Array [],
+                              "title": "ApiException",
                             },
                             "level": "warning",
                             "logger": null,
@@ -336,6 +350,7 @@ exports[`SharedGroupDetails renders 1`] = `
                               "id": "1",
                               "message": "ApiException",
                               "tags": Array [],
+                              "title": "ApiException",
                             }
                           }
                           group={
@@ -370,6 +385,7 @@ exports[`SharedGroupDetails renders 1`] = `
                                 "id": "1",
                                 "message": "ApiException",
                                 "tags": Array [],
+                                "title": "ApiException",
                               },
                               "level": "warning",
                               "logger": null,
@@ -497,6 +513,7 @@ exports[`SharedGroupDetails renders 1`] = `
                                 "id": "1",
                                 "message": "ApiException",
                                 "tags": Array [],
+                                "title": "ApiException",
                               }
                             }
                             group={
@@ -531,6 +548,7 @@ exports[`SharedGroupDetails renders 1`] = `
                                   "id": "1",
                                   "message": "ApiException",
                                   "tags": Array [],
+                                  "title": "ApiException",
                                 },
                                 "level": "warning",
                                 "logger": null,
@@ -661,6 +679,7 @@ exports[`SharedGroupDetails renders 1`] = `
                                     "id": "1",
                                     "message": "ApiException",
                                     "tags": Array [],
+                                    "title": "ApiException",
                                   }
                                 }
                                 group={
@@ -695,6 +714,7 @@ exports[`SharedGroupDetails renders 1`] = `
                                       "id": "1",
                                       "message": "ApiException",
                                       "tags": Array [],
+                                      "title": "ApiException",
                                     },
                                     "level": "warning",
                                     "logger": null,
@@ -812,6 +832,7 @@ exports[`SharedGroupDetails renders 1`] = `
                                     "id": "1",
                                     "message": "ApiException",
                                     "tags": Array [],
+                                    "title": "ApiException",
                                   }
                                 }
                                 isShare={true}
@@ -837,6 +858,7 @@ exports[`SharedGroupDetails renders 1`] = `
                                       "id": "1",
                                       "message": "ApiException",
                                       "tags": Array [],
+                                      "title": "ApiException",
                                     }
                                   }
                                   hideGuide={false}

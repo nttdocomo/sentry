@@ -10,10 +10,7 @@ from sentry.api.serializers import (
     serialize,
 )
 from sentry.api.serializers.snuba import SnubaTSResultSerializer
-from sentry.incidents.logic import (
-    get_incident_aggregates,
-    get_incident_event_stats,
-)
+from sentry.incidents.logic import bulk_get_incident_stats
 from sentry.incidents.models import (
     Incident,
     IncidentGroup,
@@ -21,6 +18,7 @@ from sentry.incidents.models import (
     IncidentSeen,
     IncidentSubscription,
 )
+from sentry.utils.db import attach_foreignkey
 
 
 @register(Incident)
@@ -32,19 +30,18 @@ class IncidentSerializer(Serializer):
             incident_projects[incident_project.incident_id].append(incident_project.project.slug)
 
         results = {}
-
-        for incident in item_list:
+        for incident, stats in zip(item_list, bulk_get_incident_stats(item_list)):
             results[incident] = {
                 'projects': incident_projects.get(incident.id, []),
-                'event_stats': get_incident_event_stats(incident),
-                'aggregates': get_incident_aggregates(incident),
+                'event_stats': stats['event_stats'],
+                'total_events': stats['total_events'],
+                'unique_users': stats['unique_users'],
             }
 
         return results
 
     def serialize(self, obj, attrs, user):
         serializer = SnubaTSResultSerializer(obj.organization, None, user)
-        aggregates = attrs['aggregates']
         return {
             'id': six.text_type(obj.id),
             'identifier': six.text_type(obj.identifier),
@@ -59,8 +56,8 @@ class IncidentSerializer(Serializer):
             'dateAdded': obj.date_added,
             'dateClosed': obj.date_closed,
             'eventStats': serializer.serialize(attrs['event_stats']),
-            'totalEvents': aggregates['count'],
-            'uniqueUsers': aggregates['unique_users'],
+            'totalEvents': attrs['total_events'],
+            'uniqueUsers': attrs['unique_users'],
         }
 
 
@@ -71,6 +68,7 @@ class DetailedIncidentSerializer(IncidentSerializer):
             user=user,
             **kwargs
         )
+        attach_foreignkey(item_list, Incident.alert_rule)
         subscribed_incidents = set()
         if user.is_authenticated():
             subscribed_incidents = set(IncidentSubscription.objects.filter(
@@ -115,5 +113,6 @@ class DetailedIncidentSerializer(IncidentSerializer):
         context['seenBy'] = seen_list['seen_by']
         context['hasSeen'] = seen_list['has_seen']
         context['groups'] = attrs['groups']
+        context['alertRule'] = serialize(obj.alert_rule, user)
 
         return context

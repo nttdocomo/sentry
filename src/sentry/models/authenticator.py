@@ -1,10 +1,3 @@
-"""
-sentry.models.authenticator
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-:copyright: (c) 2016 by the Sentry Team, see AUTHORS for more details.
-:license: BSD, see LICENSE for more details.
-"""
 from __future__ import absolute_import
 
 import os
@@ -379,6 +372,8 @@ class OtpMixin(object):
             cache.set(cache_key, '1', timeout=120)
 
     def validate_otp(self, otp):
+        if not otp:
+            return False
         otp = otp.strip().replace('-', '').replace(' ', '')
         used_counter = self.make_otp().verify(
             otp, return_counter=True, check_counter_func=self.check_otp_counter

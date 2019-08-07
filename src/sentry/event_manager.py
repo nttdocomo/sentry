@@ -1,9 +1,3 @@
-"""
-sentry.event_manager
-~~~~~~~~~~~~~~~~~~~~
-:copyright: (c) 2010-2014 by the Sentry Team, see AUTHORS for more details.
-:license: BSD, see LICENSE for more details.
-"""
 from __future__ import absolute_import, print_function
 
 import time
@@ -45,14 +39,13 @@ from sentry.models import (
     Activity, Environment, Event, EventDict, EventError, EventMapping, EventUser, Group,
     GroupEnvironment, GroupHash, GroupLink, GroupRelease, GroupResolution, GroupStatus,
     Project, Release, ReleaseEnvironment, ReleaseProject,
-    ReleaseProjectEnvironment, UserReport, Organization, EventAttachment,
+    ReleaseProjectEnvironment, UserReport, Organization,
 )
 from sentry.plugins import plugins
 from sentry.signals import event_discarded, event_saved, first_event_received
 from sentry.tasks.integrations import kick_off_status_syncs
 from sentry.utils import metrics
 from sentry.utils.canonical import CanonicalKeyDict
-from sentry.utils.contexts_normalization import normalize_user_agent
 from sentry.utils.data_filters import (
     is_valid_ip,
     is_valid_release,
@@ -272,14 +265,14 @@ class EventManager(object):
         content_encoding=None,
         is_renormalize=False,
         remove_other=None,
-        relay_config=None
+        project_config=None
     ):
         self._data = _decode_event(data, content_encoding=content_encoding)
         self.version = version
         self._project = project
-        # if not explicitly specified try to get the grouping from relay_config
-        if grouping_config is None and relay_config is not None:
-            config = relay_config.config
+        # if not explicitly specified try to get the grouping from project_config
+        if grouping_config is None and project_config is not None:
+            config = project_config.config
             grouping_config = config.get('grouping_config')
         # if we still don't have a grouping also try the project
         if grouping_config is None and project is not None:
@@ -292,7 +285,7 @@ class EventManager(object):
         self._is_renormalize = is_renormalize
         self._remove_other = remove_other
         self._normalized = False
-        self.relay_config = relay_config
+        self.project_config = project_config
 
     def process_csp_report(self):
         """Only called from the CSP report endpoint."""
@@ -368,14 +361,13 @@ class EventManager(object):
             protocol_version=six.text_type(self.version) if self.version is not None else None,
             is_renormalize=self._is_renormalize,
             remove_other=self._remove_other,
+            normalize_user_agent=True,
             **DEFAULT_STORE_NORMALIZER_ARGS
         )
 
         self._data = CanonicalKeyDict(
             rust_normalizer.normalize_event(dict(self._data))
         )
-
-        normalize_user_agent(self._data)
 
     def should_filter(self):
         '''
@@ -390,27 +382,27 @@ class EventManager(object):
                 if interface.to_python(self._data[name]).should_filter(self._project):
                     return (True, FilterStatKeys.INVALID_CSP)
 
-        if self._client_ip and not is_valid_ip(self.relay_config, self._client_ip):
+        if self._client_ip and not is_valid_ip(self.project_config, self._client_ip):
             return (True, FilterStatKeys.IP_ADDRESS)
 
         release = self._data.get('release')
-        if release and not is_valid_release(self.relay_config, release):
+        if release and not is_valid_release(self.project_config, release):
             return (True, FilterStatKeys.RELEASE_VERSION)
 
         error_message = get_path(self._data, 'logentry', 'formatted') \
             or get_path(self._data, 'logentry', 'message') \
             or ''
-        if error_message and not is_valid_error_message(self.relay_config, error_message):
+        if error_message and not is_valid_error_message(self.project_config, error_message):
             return (True, FilterStatKeys.ERROR_MESSAGE)
 
         for exc in get_path(self._data, 'exception', 'values', filter=True, default=[]):
             message = u': '.join(
                 filter(None, map(exc.get, ['type', 'value']))
             )
-            if message and not is_valid_error_message(self.relay_config, message):
+            if message and not is_valid_error_message(self.project_config, message):
                 return (True, FilterStatKeys.ERROR_MESSAGE)
 
-        return should_filter_event(self.relay_config, self._data)
+        return should_filter_event(self.project_config, self._data)
 
     def get_data(self):
         return self._data
@@ -566,6 +558,13 @@ class EventManager(object):
         if transaction_name:
             transaction_name = force_text(transaction_name)
 
+        # Right now the event type is the signal to skip the group. This
+        # is going to change a lot.
+        if event.get_event_type() == 'transaction':
+            issueless_event = True
+        else:
+            issueless_event = False
+
         # Some of the data that are toplevel attributes are duplicated
         # into tags (logger, level, environment, transaction).  These are
         # different from legacy attributes which are normalized into tags
@@ -659,53 +658,64 @@ class EventManager(object):
         event.message = self.get_search_message(event_metadata, culprit)
         received_timestamp = event.data.get('received') or float(event.datetime.strftime('%s'))
 
-        # The group gets the same metadata as the event when it's flushed but
-        # additionally the `last_received` key is set.  This key is used by
-        # _save_aggregate.
-        group_metadata = dict(materialized_metadata)
-        group_metadata['last_received'] = received_timestamp
-        kwargs = {
-            'platform': platform,
-            'message': event.message,
-            'culprit': culprit,
-            'logger': logger_name,
-            'level': LOG_LEVELS_MAP.get(level),
-            'last_seen': date,
-            'first_seen': date,
-            'active_at': date,
-            'data': group_metadata,
-        }
+        if not issueless_event:
+            # The group gets the same metadata as the event when it's flushed but
+            # additionally the `last_received` key is set.  This key is used by
+            # _save_aggregate.
+            group_metadata = dict(materialized_metadata)
+            group_metadata['last_received'] = received_timestamp
+            kwargs = {
+                'platform': platform,
+                'message': event.message,
+                'culprit': culprit,
+                'logger': logger_name,
+                'level': LOG_LEVELS_MAP.get(level),
+                'last_seen': date,
+                'first_seen': date,
+                'active_at': date,
+                'data': group_metadata,
+            }
 
-        if release:
-            kwargs['first_release'] = release
+            if release:
+                kwargs['first_release'] = release
 
-        try:
-            group, is_new, is_regression, is_sample = self._save_aggregate(
-                event=event, hashes=hashes, release=release, **kwargs
-            )
-        except HashDiscarded:
-            event_discarded.send_robust(
-                project=project,
-                sender=EventManager,
-            )
+            try:
+                group, is_new, is_regression, is_sample = self._save_aggregate(
+                    event=event, hashes=hashes, release=release, **kwargs
+                )
+            except HashDiscarded:
+                event_discarded.send_robust(
+                    project=project,
+                    sender=EventManager,
+                )
 
-            metrics.incr(
-                'events.discarded',
-                skip_internal=True,
-                tags={
-                    'organization_id': project.organization_id,
-                    'platform': platform,
-                },
-            )
-            raise
+                metrics.incr(
+                    'events.discarded',
+                    skip_internal=True,
+                    tags={
+                        'organization_id': project.organization_id,
+                        'platform': platform,
+                    },
+                )
+                raise
+            else:
+                event_saved.send_robust(
+                    project=project,
+                    event_size=event.size,
+                    sender=EventManager,
+                )
+            event.group = group
         else:
+            group = None
+            is_new = False
+            is_regression = False
+            is_sample = False
             event_saved.send_robust(
                 project=project,
                 event_size=event.size,
                 sender=EventManager,
             )
 
-        event.group = group
         # store a reference to the group id to guarantee validation of isolation
         event.data.bind_ref(event)
 
@@ -736,13 +746,16 @@ class EventManager(object):
             name=environment,
         )
 
-        group_environment, is_new_group_environment = GroupEnvironment.get_or_create(
-            group_id=group.id,
-            environment_id=environment.id,
-            defaults={
-                'first_release': release if release else None,
-            },
-        )
+        if group:
+            group_environment, is_new_group_environment = GroupEnvironment.get_or_create(
+                group_id=group.id,
+                environment_id=environment.id,
+                defaults={
+                    'first_release': release if release else None,
+                },
+            )
+        else:
+            is_new_group_environment = False
 
         if release:
             ReleaseEnvironment.get_or_create(
@@ -759,17 +772,20 @@ class EventManager(object):
                 datetime=date,
             )
 
-            grouprelease = GroupRelease.get_or_create(
-                group=group,
-                release=release,
-                environment=environment,
-                datetime=date,
-            )
+            if group:
+                grouprelease = GroupRelease.get_or_create(
+                    group=group,
+                    release=release,
+                    environment=environment,
+                    datetime=date,
+                )
 
         counters = [
-            (tsdb.models.group, group.id),
             (tsdb.models.project, project.id),
         ]
+
+        if group:
+            counters.append((tsdb.models.group, group.id))
 
         if release:
             counters.append((tsdb.models.release, release.id))
@@ -787,39 +803,36 @@ class EventManager(object):
             #         group.id: 1,
             #     },
             # })
-            (tsdb.models.frequent_environments_by_group, {
-                group.id: {
-                    environment.id: 1,
-                },
-            })
         ]
 
-        if release:
+        if group:
             frequencies.append(
-                (tsdb.models.frequent_releases_by_group, {
+                (tsdb.models.frequent_environments_by_group, {
                     group.id: {
-                        grouprelease.id: 1,
+                        environment.id: 1,
                     },
                 })
             )
 
-        tsdb.record_frequency_multi(frequencies, timestamp=event.datetime)
+            if release:
+                frequencies.append(
+                    (tsdb.models.frequent_releases_by_group, {
+                        group.id: {
+                            grouprelease.id: 1,
+                        },
+                    })
+                )
+        if frequencies:
+            tsdb.record_frequency_multi(frequencies, timestamp=event.datetime)
 
-        UserReport.objects.filter(
-            project=project,
-            event_id=event_id,
-        ).update(
-            group=group,
-            environment=environment,
-        )
-
-        # Update any event attachment that arrived before the event group was defined.
-        EventAttachment.objects.filter(
-            project_id=project.id,
-            event_id=event_id,
-        ).update(
-            group_id=group.id,
-        )
+        if group:
+            UserReport.objects.filter(
+                project=project,
+                event_id=event_id,
+            ).update(
+                group=group,
+                environment=environment,
+            )
 
         # save the event unless its been sampled
         if not is_sample:
@@ -850,14 +863,20 @@ class EventManager(object):
             )
 
         if event_user:
+            counters = [
+                (tsdb.models.users_affected_by_project, project.id, (event_user.tag_value, )),
+            ]
+
+            if group:
+                counters.append((tsdb.models.users_affected_by_group,
+                                 group.id, (event_user.tag_value, )))
+
             tsdb.record_multi(
-                (
-                    (tsdb.models.users_affected_by_group, group.id, (event_user.tag_value, )),
-                    (tsdb.models.users_affected_by_project, project.id, (event_user.tag_value, )),
-                ),
+                counters,
                 timestamp=event.datetime,
                 environment_id=environment.id,
             )
+
         if release:
             if is_new:
                 buffer.incr(
@@ -875,12 +894,13 @@ class EventManager(object):
                     }
                 )
 
-        safe_execute(
-            Group.objects.add_tags,
-            group,
-            environment,
-            event.get_tags(),
-            _with_transaction=False)
+        if group:
+            safe_execute(
+                Group.objects.add_tags,
+                group,
+                environment,
+                event.get_tags(),
+                _with_transaction=False)
 
         if not raw:
             if not project.first_event:

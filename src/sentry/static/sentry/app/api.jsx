@@ -163,9 +163,16 @@ export class Client {
   }
 
   request(path, options = {}) {
+    const method = options.method || (options.data ? 'POST' : 'GET');
+    let data = options.data;
+
+    if (!isUndefined(data) && method !== 'GET') {
+      data = JSON.stringify(data);
+    }
+
     let query;
     try {
-      query = $.param(options.query || '', true);
+      query = $.param(options.query || [], true);
     } catch (err) {
       Sentry.withScope(scope => {
         scope.setExtra('path', path);
@@ -174,14 +181,9 @@ export class Client {
       });
       throw err;
     }
-    const method = options.method || (options.data ? 'POST' : 'GET');
-    let data = options.data;
+
     const id = uniqueId();
     metric.mark(`api-request-start-${id}`);
-
-    if (!isUndefined(data) && method !== 'GET') {
-      data = JSON.stringify(data);
-    }
 
     let fullUrl;
     if (path.indexOf(this.baseUrl) === -1) {
@@ -196,6 +198,14 @@ export class Client {
         fullUrl += '?' + query;
       }
     }
+
+    const requestSpan = Sentry.startSpan({
+      data: {
+        request_data: data,
+      },
+      op: 'http',
+      description: `${method} ${fullUrl}`,
+    });
 
     const errorObject = new Error();
 
@@ -259,7 +269,10 @@ export class Client {
             ...args
           );
         },
-        complete: this.wrapCallback(id, options.complete, true),
+        complete: (...args) => {
+          Sentry.finishSpan(requestSpan);
+          return this.wrapCallback(id, options.complete, true)(...args);
+        },
       })
     );
 

@@ -26,6 +26,11 @@ SPECIAL_FIELDS = {
     'user_count': {
         'aggregations': [['uniq', 'user', 'user_count']],
     },
+    'latest_event': {
+        'fields': [
+            ['argMax', ['id', 'timestamp'], 'latest_event'],
+        ],
+    },
 }
 
 
@@ -40,6 +45,9 @@ class OrganizationEventsEndpointBase(OrganizationEndpoint):
 
         group_ids = request.GET.getlist('group')
         if group_ids:
+            # TODO(mark) This parameter should be removed in the long term.
+            # Instead of using this parameter clients should use `issue.id`
+            # in their query string.
             try:
                 group_ids = set(map(int, filter(None, group_ids)))
             except ValueError:
@@ -90,8 +98,14 @@ class OrganizationEventsEndpointBase(OrganizationEndpoint):
         if groupby:
             snuba_args['groupby'] = groupby
 
+        sort = request.GET.getlist('sort')
+        if sort and snuba.valid_orderby(sort, SPECIAL_FIELDS):
+            snuba_args['orderby'] = sort
+
+        # Deprecated. `sort` should be used as it is supported by
+        # more endpoints.
         orderby = request.GET.getlist('orderby')
-        if orderby:
+        if orderby and snuba.valid_orderby(orderby, SPECIAL_FIELDS) and 'orderby' not in snuba_args:
             snuba_args['orderby'] = orderby
 
         # TODO(lb): remove once boolean search is fully functional
@@ -110,6 +124,9 @@ class OrganizationEventsEndpointBase(OrganizationEndpoint):
 
         group_ids = request.GET.getlist('group')
         if group_ids:
+            # TODO(mark) This parameter should be removed in the long term.
+            # Instead of using this parameter clients should use `issue.id`
+            # in their query string.
             try:
                 group_ids = set(map(int, filter(None, group_ids)))
             except ValueError:

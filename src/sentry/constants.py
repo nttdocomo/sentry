@@ -1,12 +1,6 @@
 """
-sentry.constants
-~~~~~~~~~~~~~~~~
-
 These settings act as the default (base) settings for the Sentry-provided
 web-server
-
-:copyright: (c) 2010-2014 by the Sentry Team, see AUTHORS for more details.
-:license: BSD, see LICENSE for more details.
 """
 from __future__ import absolute_import, print_function
 
@@ -399,6 +393,27 @@ class SentryAppStatus(object):
             return 'internal'
 
 
+class SentryAppInstallationStatus(object):
+    PENDING = 0
+    INSTALLED = 1
+    PENDING_STR = 'pending'
+    INSTALLED_STR = 'installed'
+
+    @classmethod
+    def as_choices(cls):
+        return (
+            (cls.PENDING, cls.PENDING_STR),
+            (cls.INSTALLED, cls.INSTALLED_STR),
+        )
+
+    @classmethod
+    def as_str(cls, status):
+        if status == cls.PENDING:
+            return cls.PENDING_STR
+        elif status == cls.INSTALLED:
+            return cls.INSTALLED_STR
+
+
 StatsPeriod = namedtuple('StatsPeriod', ('segments', 'interval'))
 
 LEGACY_RATE_LIMIT_OPTIONS = frozenset(('sentry:project-rate-limit', 'sentry:account-rate-limit'))
@@ -419,3 +434,5 @@ DEFAULT_STORE_NORMALIZER_ARGS = dict(
     max_secs_in_past=MAX_SECS_IN_PAST,
     enable_trimming=True,
 )
+
+INTERNAL_INTEGRATION_TOKEN_COUNT_MAX = 20

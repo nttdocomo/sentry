@@ -1,11 +1,5 @@
 """
-sentry.conf.server
-~~~~~~~~~~~~~~~~~~
-
 These settings act as the default (base) settings for the Sentry-provided web-server
-
-:copyright: (c) 2010-2014 by the Sentry Team, see AUTHORS for more details.
-:license: BSD, see LICENSE for more details.
 """
 from __future__ import absolute_import
 
@@ -262,7 +256,7 @@ INSTALLED_APPS = (
     'django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes',
     'django.contrib.messages', 'django.contrib.sessions', 'django.contrib.sites',
     'crispy_forms', 'debug_toolbar',
-    'rest_framework', 'sentry', 'sentry.analytics', 'sentry.incidents',
+    'rest_framework', 'sentry', 'sentry.analytics', 'sentry.incidents', 'sentry.discover',
     'sentry.analytics.events', 'sentry.nodestore', 'sentry.search', 'sentry.lang.java',
     'sentry.lang.javascript', 'sentry.lang.native', 'sentry.plugins.sentry_interface_types',
     'sentry.plugins.sentry_mail', 'sentry.plugins.sentry_urls', 'sentry.plugins.sentry_useragents',
@@ -857,11 +851,11 @@ SENTRY_FEATURES = {
     # Enable the relay functionality, for use with sentry semaphore. See
     # https://github.com/getsentry/semaphore.
     'organizations:relay': False,
-    # DEPCREATED: pending removal.
+    # Enable require 2FA across organization
     'organizations:require-2fa': False,
     # Sentry 10 - multi project interfaces.
     'organizations:sentry10': True,
-    # Enable basic SSO functionality, providing configurable single signon
+    # Enable basic SSO functionality, providing configurable single sign on
     # using services like GitHub / Google. This is *not* the same as the signup
     # and login with Github / Azure DevOps that sentry.io provides.
     'organizations:sso-basic': True,
@@ -923,6 +917,10 @@ SENTRY_LOGIN_URL = None
 SENTRY_PROJECT = 1
 SENTRY_PROJECT_KEY = None
 
+# Default organization to represent the Internal Sentry project.
+# Used as a default when in SINGLE_ORGANIZATION mode.
+SENTRY_ORGANIZATION = None
+
 # Project ID for recording frontend (javascript) exceptions
 SENTRY_FRONTEND_PROJECT = None
 # DSN for the frontend to use explicitly, which takes priority
@@ -978,6 +976,7 @@ SENTRY_INTERFACES = {
     'contexts': 'sentry.interfaces.contexts.Contexts',
     'threads': 'sentry.interfaces.threads.Threads',
     'debug_meta': 'sentry.interfaces.debug_meta.DebugMeta',
+    'spans': 'sentry.interfaces.spans.Spans',
 }
 PREFER_CANONICAL_LEGACY_KEYS = False
 
@@ -1243,7 +1242,7 @@ SENTRY_ROLES = (
     }, {
         'id': 'admin',
         'name': 'Admin',
-        'desc': 'Admin privileges on any teams of which they\'re a member. They can create new teams and projects, as well as remove teams and projects which they already hold membership on (or all teams, if open membership is on).',
+        'desc': 'Admin privileges on any teams of which they\'re a member. They can create new teams and projects, as well as remove teams and projects which they already hold membership on (or all teams, if open membership is on). Additionally, they can manage memberships of teams that they are members of.',
         'scopes': set(
             [
                 'event:read',
@@ -1416,8 +1415,9 @@ SENTRY_DEVSERVICES = {
             'PYTHONUNBUFFERED': '1',
             'SNUBA_SETTINGS': 'docker',
             'DEBUG': '1',
-            'CLICKHOUSE_TABLE': 'dev',
-            'CLICKHOUSE_SERVER': '{containers[clickhouse][name]}:9000',
+            'CLICKHOUSE_HOST': '{containers[clickhouse][name]}',
+            'CLICKHOUSE_PORT': '9000',
+            'CLICKHOUSE_HTTP_PORT': '8123',
             'DEFAULT_BROKERS': '{containers[kafka][name]}:9093',
             'REDIS_HOST': '{containers[redis][name]}',
             'REDIS_PORT': '6379',
@@ -1718,25 +1718,10 @@ KAFKA_CLUSTERS = {
     }
 }
 
-KAFKA_PREPROCESS = 'events-preprocess'
-KAFKA_PROCESS = 'events-process'
-KAFKA_SAVE = 'events-save'
 KAFKA_EVENTS = 'events'
 KAFKA_OUTCOMES = 'outcomes'
 
 KAFKA_TOPICS = {
-    KAFKA_PREPROCESS: {
-        'cluster': 'default',
-        'topic': KAFKA_PREPROCESS,
-    },
-    KAFKA_PROCESS: {
-        'cluster': 'default',
-        'topic': KAFKA_PROCESS,
-    },
-    KAFKA_SAVE: {
-        'cluster': 'default',
-        'topic': KAFKA_SAVE,
-    },
     KAFKA_EVENTS: {
         'cluster': 'default',
         'topic': KAFKA_EVENTS,

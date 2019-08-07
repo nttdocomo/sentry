@@ -35,7 +35,12 @@ export default class OrganizationEventsV2 extends React.Component {
             key={view.id}
             to={{
               pathname: `/organizations/${organization.slug}/events/`,
-              query: {...this.props.location.query, view: view.id, cursor: undefined},
+              query: {
+                ...this.props.location.query,
+                view: view.id,
+                cursor: undefined,
+                sort: undefined,
+              },
             }}
             isActive={() => view.id === currentView.id}
           >
@@ -48,9 +53,8 @@ export default class OrganizationEventsV2 extends React.Component {
 
   render() {
     const {organization, location, router} = this.props;
-    const {eventSlug, groupSlug} = location.query;
+    const {eventSlug} = location.query;
     const currentView = getCurrentView(location.query.view);
-    const showModal = groupSlug || eventSlug;
 
     return (
       <DocumentTitle title={`Events - ${organization.slug} - Sentry`}>
@@ -71,12 +75,11 @@ export default class OrganizationEventsV2 extends React.Component {
                 router={router}
               />
             </NoProjectMessage>
-            {showModal && (
+            {eventSlug && (
               <EventDetails
                 organization={organization}
                 params={this.props.params}
                 eventSlug={eventSlug}
-                groupSlug={groupSlug}
                 view={currentView}
                 location={location}
               />

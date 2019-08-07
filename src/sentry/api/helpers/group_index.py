@@ -11,6 +11,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from rest_framework import serializers
+from rest_framework.exceptions import ParseError
 from rest_framework.response import Response
 
 from sentry import eventstream, features
@@ -65,9 +66,11 @@ def build_query_params_from_request(request, organization, projects, environment
             raise ValidationError('invalid limit')
 
     # TODO: proper pagination support
-    cursor = request.GET.get('cursor')
-    if cursor:
-        query_kwargs['cursor'] = Cursor.from_string(cursor)
+    if request.GET.get('cursor'):
+        try:
+            query_kwargs['cursor'] = Cursor.from_string(request.GET.get('cursor'))
+        except ValueError:
+            raise ParseError(detail='Invalid cursor parameter.')
 
     query = request.GET.get('query', 'is:unresolved').strip()
     if query:
@@ -261,7 +264,8 @@ class GroupValidator(serializers.Serializer):
     assignedTo = ActorField()
 
     # TODO(dcramer): remove in 9.0
-    snoozeDuration = serializers.IntegerField()
+    # for the moment, the CLI sends this for any issue update, so allow nulls
+    snoozeDuration = serializers.IntegerField(allow_null=True)
 
     def validate_assignedTo(self, value):
         if value and value.type is User and not self.context['project'].member_set.filter(

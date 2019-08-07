@@ -4,14 +4,14 @@ import styled from 'react-emotion';
 import {omit, isEqual} from 'lodash';
 import SentryTypes from 'app/sentryTypes';
 import space from 'app/styles/space';
-import SearchBar from 'app/views/organizationEvents/searchBar';
+import SearchBar from 'app/views/events/searchBar';
 import AsyncComponent from 'app/components/asyncComponent';
 import Pagination from 'app/components/pagination';
 import {Panel} from 'app/components/panels';
-import EventsChart from 'app/views/organizationEvents/eventsChart';
+import EventsChart from 'app/views/events/eventsChart';
 import getDynamicText from 'app/utils/getDynamicText';
 
-import {getParams} from 'app/views/organizationEvents/utils/getParams';
+import {getParams} from 'app/views/events/utils/getParams';
 
 import Table from './table';
 import Tags from './tags';
@@ -23,7 +23,7 @@ const CHART_AXIS_OPTIONS = [
   {label: 'Users', value: 'user_count'},
 ];
 
-export default class Events extends AsyncComponent {
+export default class Events extends React.Component {
   static propTypes = {
     router: PropTypes.object.isRequired,
     location: PropTypes.object.isRequired,
@@ -31,7 +31,64 @@ export default class Events extends AsyncComponent {
     view: SentryTypes.EventView.isRequired,
   };
 
-  shouldReload = true;
+  handleSearch = query => {
+    const {router, location} = this.props;
+    router.push({
+      pathname: location.pathname,
+      query: getParams({
+        ...(location.query || {}),
+        query,
+      }),
+    });
+  };
+
+  render() {
+    const {organization, view, location, router} = this.props;
+    const query = location.query.query || '';
+
+    return (
+      <React.Fragment>
+        <Panel>
+          {getDynamicText({
+            value: (
+              <EventsChart
+                router={router}
+                query={getQuery(view, location).query}
+                organization={organization}
+                showLegend
+                yAxisOptions={CHART_AXIS_OPTIONS}
+              />
+            ),
+            fixed: 'events chart',
+          })}
+        </Panel>
+        <StyledSearchBar
+          organization={organization}
+          query={query}
+          onSearch={this.handleSearch}
+        />
+        <Container>
+          <EventsTable
+            key={view.id}
+            location={location}
+            organization={organization}
+            view={view}
+          />
+          <Tags view={view} organization={organization} location={location} />
+        </Container>
+      </React.Fragment>
+    );
+  }
+}
+
+class EventsTable extends AsyncComponent {
+  static propTypes = {
+    location: PropTypes.object.isRequired,
+    organization: SentryTypes.Organization.isRequired,
+    view: SentryTypes.EventView.isRequired,
+  };
+
+  shouldReload = false;
 
   componentDidUpdate(prevProps, prevContext) {
     // Do not update if we are just opening/closing the modal
@@ -58,61 +115,25 @@ export default class Events extends AsyncComponent {
     ];
   }
 
-  handleSearch = query => {
-    const {router, location} = this.props;
-    router.push({
-      pathname: location.pathname,
-      query: getParams({
-        ...(location.query || {}),
-        query,
-      }),
-    });
-  };
-
   renderLoading() {
     return this.renderBody();
   }
 
   renderBody() {
-    const {organization, view, location, router} = this.props;
+    const {organization, view, location} = this.props;
     const {data, dataPageLinks, loading} = this.state;
-    const query = location.query.query || '';
 
     return (
-      <React.Fragment>
-        <Panel>
-          {getDynamicText({
-            value: (
-              <EventsChart
-                router={router}
-                query={query}
-                organization={organization}
-                showLegend
-                yAxisOptions={CHART_AXIS_OPTIONS}
-              />
-            ),
-            fixed: 'events chart',
-          })}
-        </Panel>
-        <StyledSearchBar
+      <div>
+        <Table
+          view={view}
           organization={organization}
-          query={query}
-          onSearch={this.handleSearch}
+          data={data}
+          isLoading={loading}
+          location={location}
         />
-        <Container>
-          <div>
-            <Table
-              view={view}
-              organization={organization}
-              data={data}
-              isLoading={loading}
-              location={location}
-            />
-            <Pagination pageLinks={dataPageLinks} />
-          </div>
-          <Tags view={view} organization={organization} location={location} />
-        </Container>
-      </React.Fragment>
+        <Pagination pageLinks={dataPageLinks} />
+      </div>
     );
   }
 }

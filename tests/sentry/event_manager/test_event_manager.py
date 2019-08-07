@@ -20,12 +20,12 @@ from sentry.models import (
     Activity, Environment, Event, ExternalIssue, Group, GroupEnvironment,
     GroupHash, GroupLink, GroupRelease, GroupResolution, GroupStatus,
     GroupTombstone, EventMapping, Integration, Release,
-    ReleaseProjectEnvironment, OrganizationIntegration, UserReport, EventAttachment, File
+    ReleaseProjectEnvironment, OrganizationIntegration, UserReport
 )
 from sentry.signals import event_discarded, event_saved
 from sentry.testutils import assert_mock_called_once_with_partial, TestCase
 from sentry.utils.data_filters import FilterStatKeys
-from sentry.web.relay_config import get_full_relay_config
+from sentry.relay.config import get_project_config
 
 
 def make_event(**kwargs):
@@ -1000,28 +1000,6 @@ class EventManagerTest(TestCase):
 
         assert UserReport.objects.get(event_id=event_id).environment == environment
 
-    def test_event_attachment_gets_group_id(self):
-        project = self.create_project()
-        event_id = 'a' * 32
-        uploaded_file_name = 'attachment.zip'
-        EventAttachment.objects.create(
-            project_id=project.id,
-            event_id=event_id,
-            name=uploaded_file_name,
-            file=File.objects.create(
-                name=uploaded_file_name,
-            ),
-        )
-
-        event = self.store_event(
-            data=make_event(
-                event_id=event_id
-            ),
-            project_id=project.id
-        )
-
-        assert EventAttachment.objects.get(event_id=event_id).group_id == event.group_id
-
     def test_default_event_type(self):
         manager = EventManager(make_event(message='foo bar'))
         manager.normalize()
@@ -1103,6 +1081,28 @@ class EventManagerTest(TestCase):
             'uri': 'example.com',
             'message': "Blocked 'script' from 'example.com'",
         }
+
+    def test_transaction_event_type(self):
+        manager = EventManager(
+            make_event(
+                **{
+                    'transaction': 'wait',
+                    'contexts': {
+                        'trace': {
+                            'parent_span_id': 'bce14471e0e9654d',
+                            'trace_id': 'a0fa8803753e40fd8124b21eeb2986b5',
+                            'span_id': 'bf5be759039ede9a'
+                        }
+                    },
+                    'spans': [],
+                    'start_timestamp': '2019-06-14T14:01:40Z',
+                    'type': 'transaction',
+                }
+            )
+        )
+        manager.normalize()
+        data = manager.get_data()
+        assert data['type'] == 'transaction'
 
     def test_sdk(self):
         manager = EventManager(
@@ -1326,15 +1326,15 @@ class EventManagerTest(TestCase):
             },
         }
 
-        relay_config = get_full_relay_config(self.project.id)
-        manager = EventManager(data, project=self.project, relay_config=relay_config)
+        project_config = get_project_config(self.project.id, for_store=True)
+        manager = EventManager(data, project=self.project, project_config=project_config)
 
         mock_is_valid_error_message.side_effect = [item.result for item in items]
 
         assert manager.should_filter() == (True, FilterStatKeys.ERROR_MESSAGE)
 
         assert mock_is_valid_error_message.call_args_list == [
-            mock.call(relay_config, item.formatted) for item in items]
+            mock.call(project_config, item.formatted) for item in items]
 
     def test_legacy_attributes_moved(self):
         event = make_event(
@@ -1358,6 +1358,79 @@ class EventManagerTest(TestCase):
         assert event.data.get('server_name') is None
         tags = dict(event.tags)
         assert tags['server_name'] == 'foo.com'
+
+    def test_save_issueless_event(self):
+        manager = EventManager(
+            make_event(
+                transaction='wait',
+                contexts={
+                    'trace': {
+                        'parent_span_id': 'bce14471e0e9654d',
+                        'trace_id': 'a0fa8803753e40fd8124b21eeb2986b5',
+                        'span_id': 'bf5be759039ede9a'
+                    }
+                },
+                spans=[],
+                start_timestamp='2019-06-14T14:01:40Z',
+                type='transaction',
+                platform='python',
+            )
+        )
+
+        event = manager.save(self.project.id)
+
+        assert event.group is None
+        assert tsdb.get_sums(
+            tsdb.models.project,
+            [self.project.id],
+            event.datetime,
+            event.datetime,
+        )[self.project.id] == 1
+
+    def test_fingerprint_ignored(self):
+        manager1 = EventManager(
+            make_event(
+                event_id='a' * 32,
+                fingerprint='fingerprint1'
+            )
+        )
+        event1 = manager1.save(self.project.id)
+
+        manager2 = EventManager(
+            make_event(
+                event_id='b' * 32,
+                fingerprint='fingerprint1',
+                transaction='wait',
+                contexts={
+                    'trace': {
+                        'parent_span_id': 'bce14471e0e9654d',
+                        'trace_id': 'a0fa8803753e40fd8124b21eeb2986b5',
+                        'span_id': 'bf5be759039ede9a'
+                    }
+                },
+                spans=[],
+                start_timestamp='2019-06-14T14:01:40Z',
+                type='transaction',
+                platform='python',
+            )
+        )
+        event2 = manager2.save(self.project.id)
+
+        assert event1.group is not None
+        assert event2.group is None
+        assert tsdb.get_sums(
+            tsdb.models.project,
+            [self.project.id],
+            event1.datetime,
+            event1.datetime,
+        )[self.project.id] == 2
+
+        assert tsdb.get_sums(
+            tsdb.models.group,
+            [event1.group.id],
+            event1.datetime,
+            event1.datetime,
+        )[event1.group.id] == 1
 
 
 class ReleaseIssueTest(TestCase):

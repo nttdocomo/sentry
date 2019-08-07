@@ -1,10 +1,3 @@
-"""
-sentry.utils.types
-~~~~~~~~~~~~~~~~~~
-
-:copyright: (c) 2010-2016 by the Sentry Team, see AUTHORS for more details.
-:license: BSD, see LICENSE for more details.
-"""
 from __future__ import absolute_import, print_function
 
 import six
@@ -164,6 +157,7 @@ Sequence = SequenceType()
 _type_mapping = {
     bool: Bool,
     int: Int,
+    long: Int,  # noqa: B311
     float: Float,
     six.binary_type: String,
     six.text_type: String,

@@ -7,6 +7,8 @@ import six
 from exam import fixture
 from django.test import RequestFactory
 from time import time
+from datetime import timedelta
+from django.utils import timezone
 
 from sentry.integrations.exceptions import IntegrationError
 from sentry.integrations.vsts.integration import VstsIntegration
@@ -309,6 +311,22 @@ class VstsIssueSyncTest(VstsIssueBase):
         assert should_resolve is False
 
     @responses.activate
+    def test_should_resolve_done_status_failure(self):
+        responses.reset()
+        responses.add(
+            responses.GET,
+            'https://fabrikam-fiber-inc.visualstudio.com/c0bf429a-c03c-4a99-9336-d45be74db5a6/_apis/wit/workitemtypes/Bug/states',
+            status=403,
+            json={'error': 'The requested operation is not allowed. Your account is pending deletion.'}
+        )
+        should_resolve = self.integration.should_resolve({
+            'project': self.project_id_with_states,
+            'old_state': 'Active',
+            'new_state': 'Resolved',
+        })
+        assert should_resolve is False
+
+    @responses.activate
     def test_should_unresolve_active_to_resolved(self):
         should_unresolve = self.integration.should_unresolve({
             'project': self.project_id_with_states,
@@ -349,8 +367,15 @@ class VstsIssueFormTest(VstsIssueBase):
                 ]
             },
         )
-        self.group = self.create_group()
-        self.create_event(group=self.group)
+        min_ago = (timezone.now() - timedelta(minutes=1)).isoformat()[:19]
+        event = self.store_event(
+            data={
+                'fingerprint': ['group1'],
+                'timestamp': min_ago,
+            },
+            project_id=self.project.id,
+        )
+        self.group = event.group
 
     def tearDown(self):
         responses.reset()

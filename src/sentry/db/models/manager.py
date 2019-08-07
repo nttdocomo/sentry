@@ -1,11 +1,3 @@
-"""
-sentry.db.models.manager
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-:copyright: (c) 2010-2014 by the Sentry Team, see AUTHORS for more details.
-:license: BSD, see LICENSE for more details.
-"""
-
 from __future__ import absolute_import, print_function
 
 import logging
@@ -331,7 +323,7 @@ class SnubaEventManager:
         event_id = normalize_event_id(id_or_event_id)
         if not event_id:
             logger.warning('Attempt to fetch SnubaEvent by primary key', exc_info=True, extra={
-                'stack': True
+                'event_id': event_id
             })
 
             event = Event.objects.from_event_id(id_or_event_id, project_id)
@@ -345,7 +337,7 @@ class SnubaEventManager:
 
 
 class EventManager(BaseManager):
-
+    # TODO: Remove method in favour of eventstore.bind_nodes
     def bind_nodes(self, object_list, *node_names):
         """
         For a list of Event objects, and a property name where we might find an

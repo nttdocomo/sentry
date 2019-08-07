@@ -11,7 +11,7 @@ from mock import Mock
 from six import BytesIO
 
 from sentry.coreapi import APIRateLimited
-from sentry.models import ProjectKey, EventAttachment, Event
+from sentry.models import ProjectKey, EventAttachment
 from sentry.signals import event_accepted, event_dropped, event_filtered
 from sentry.testutils import (assert_mock_called_once_with_partial, TestCase)
 from sentry.utils import json
@@ -211,7 +211,10 @@ class StoreViewTest(TestCase):
         self.assertEquals(resp['Access-Control-Allow-Origin'], 'http://foo.com')
 
     def test_options_response_origin_preferred_over_referrer(self):
-        resp = self.client.options(self.path, HTTP_REFERER='http://foo.com', HTTP_ORIGIN='http://bar.com')
+        resp = self.client.options(
+            self.path,
+            HTTP_REFERER='http://foo.com',
+            HTTP_ORIGIN='http://bar.com')
         assert resp.status_code == 200, (resp.status_code, resp.content)
         self.assertIn('Access-Control-Allow-Origin', resp)
         self.assertEquals(resp['Access-Control-Allow-Origin'], 'http://bar.com')
@@ -791,23 +794,6 @@ class EventAttachmentStoreViewTest(TestCase):
         assert response.status_code == 201
         assert self.has_attachment()
 
-    def test_event_attachments_event_exists_without_group_id(self):
-        out = BytesIO()
-        out.write('hi')
-        event_id = 'z' * 32
-        Event.objects.create(project_id=self.project.id, event_id=event_id)
-        with self.feature('organizations:event-attachments'):
-            self.path = self.path.replace(self.event.event_id, event_id)
-            response = self._postEventAttachmentWithHeader({
-                'attachment1':
-                    SimpleUploadedFile('mapping.txt', out.getvalue(), content_type='text/plain'),
-            }, format='multipart')
-
-        assert response.status_code == 201
-        assert EventAttachment.objects.get(
-            project_id=self.project.id,
-            event_id=self.event.id).group_id is None
-
 
 class RobotsTxtTest(TestCase):
     @fixture
@@ -829,3 +815,45 @@ class APIViewTest(TestCase):
     def test_retry_after_int(self):
         resp = self._postWithHeader({})
         assert resp['Retry-After'] == '43'
+
+
+class ClientConfigViewTest(TestCase):
+    @fixture
+    def path(self):
+        return reverse('sentry-api-client-config')
+
+    def test_unauthenticated(self):
+        resp = self.client.get(self.path)
+        assert resp.status_code == 200
+        assert resp['Content-Type'] == 'application/json'
+
+        data = json.loads(resp.content)
+        assert not data['isAuthenticated']
+        assert data['user'] is None
+
+    def test_authenticated(self):
+        user = self.create_user('foo@example.com')
+        self.login_as(user)
+
+        resp = self.client.get(self.path)
+        assert resp.status_code == 200
+        assert resp['Content-Type'] == 'application/json'
+
+        data = json.loads(resp.content)
+        assert data['isAuthenticated']
+        assert data['user']
+        assert data['user']['email'] == user.email
+
+    def test_superuser(self):
+        user = self.create_user('foo@example.com', is_superuser=True)
+        self.login_as(user, superuser=True)
+
+        resp = self.client.get(self.path)
+        assert resp.status_code == 200
+        assert resp['Content-Type'] == 'application/json'
+
+        data = json.loads(resp.content)
+        assert data['isAuthenticated']
+        assert data['user']
+        assert data['user']['email'] == user.email
+        assert data['user']['isSuperuser']

@@ -2,13 +2,14 @@ from __future__ import absolute_import, print_function
 
 import mock
 import six
+from base64 import b64encode
 
 from datetime import timedelta
 from django.utils import timezone
 
 from sentry import tagstore
 from sentry.models import (
-    Activity, Environment, Group, GroupHash, GroupAssignee, GroupBookmark,
+    Activity, ApiKey, Environment, Group, GroupHash, GroupAssignee, GroupBookmark,
     GroupResolution, GroupSeen, GroupSnooze, GroupSubscription, GroupStatus,
     GroupTombstone, Release
 )
@@ -16,7 +17,7 @@ from sentry.testutils import APITestCase
 
 
 class GroupDetailsTest(APITestCase):
-    def test_simple(self):
+    def test_with_numerical_id(self):
         self.login_as(user=self.user)
 
         group = self.create_group()
@@ -26,7 +27,30 @@ class GroupDetailsTest(APITestCase):
 
         assert response.status_code == 200, response.content
         assert response.data['id'] == six.text_type(group.id)
-        assert response.data['firstRelease'] is None
+
+        url = u'/api/0/organizations/{}/issues/{}/'.format(group.organization.slug, group.id)
+        response = self.client.get(url, format='json')
+
+        assert response.status_code == 200, response.content
+        assert response.data['id'] == six.text_type(group.id)
+
+    def test_with_qualified_short_id(self):
+        self.login_as(user=self.user)
+
+        group = self.create_group()
+        assert group.qualified_short_id
+
+        url = u'/api/0/organizations/{}/issues/{}/'.format(
+            group.organization.slug, group.qualified_short_id)
+        response = self.client.get(url, format='json')
+
+        assert response.status_code == 200, response.content
+        assert response.data['id'] == six.text_type(group.id)
+
+        url = u'/api/0/issues/{}/'.format(group.qualified_short_id)
+        response = self.client.get(url, format='json')
+
+        assert response.status_code == 404, response.content
 
     def test_with_first_release(self):
         self.login_as(user=self.user)
@@ -117,6 +141,18 @@ class GroupDetailsTest(APITestCase):
 
         assert response.data['annotations'] == \
             [u'<a href="https://example.com/issues/2">Issue#2</a>']
+
+    def test_permalink_superuser(self):
+        superuser = self.create_user(is_superuser=True)
+        self.login_as(user=superuser, superuser=True)
+
+        group = self.create_group(title='Oh no')
+        url = u'/api/0/issues/{}/'.format(group.id)
+        response = self.client.get(url, format='json')
+
+        result = response.data['permalink']
+        assert 'http://' in result
+        assert '{}/issues/{}'.format(group.organization.slug, group.id) in result
 
 
 class GroupUpdateTest(APITestCase):
@@ -322,6 +358,27 @@ class GroupUpdateTest(APITestCase):
         assert response.status_code == 200, response.content
 
         assert not GroupAssignee.objects.filter(group=group, user=self.user).exists()
+
+    def test_assign_id_via_api_key(self):
+        # XXX: This test is written to verify that using api keys works when
+        # hitting an endpoint that uses `client.{get,put,post}` to redirect to
+        # another endpoint. This catches a regression that happened when
+        # migrating to DRF 3.x.
+        api_key = ApiKey.objects.create(
+            organization=self.organization,
+            scope_list=['event:write'],
+        )
+        group = self.create_group()
+        url = u'/api/0/issues/{}/'.format(group.id)
+
+        response = self.client.put(
+            url,
+            data={'assignedTo': self.user.id},
+            format='json',
+            HTTP_AUTHORIZATION='Basic ' + b64encode(u'{}:'.format(api_key.key)),
+        )
+        assert response.status_code == 200, response.content
+        assert GroupAssignee.objects.filter(group=group, user=self.user).exists()
 
     def test_assign_team(self):
         self.login_as(user=self.user)
