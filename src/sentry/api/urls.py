@@ -87,14 +87,14 @@ from .endpoints.organization_event_details import (
     OrganizationEventDetailsOldestEndpoint
 )
 from .endpoints.organization_eventid import EventIdLookupEndpoint
-from .endpoints.organization_events import OrganizationEventsEndpoint
+from .endpoints.organization_events import (
+    OrganizationEventsEndpoint,
+    OrganizationEventsV2Endpoint
+)
 from .endpoints.organization_events_distribution import OrganizationEventsDistributionEndpoint
 from .endpoints.organization_events_meta import OrganizationEventsMetaEndpoint
 from .endpoints.organization_events_stats import OrganizationEventsStatsEndpoint
 from .endpoints.organization_group_index import OrganizationGroupIndexEndpoint
-from .endpoints.organization_health import (
-    OrganizationHealthGraphEndpoint, OrganizationHealthTopEndpoint
-)
 from .endpoints.organization_incident_activity_index import (
     OrganizationIncidentActivityIndexEndpoint
 )
@@ -636,18 +636,6 @@ urlpatterns = patterns(
             name='sentry-api-0-organization-dashboard-widget-details',
         ),
 
-        # Health
-        url(
-            r'^(?P<organization_slug>[^\/]+)/health/top/$',
-            OrganizationHealthTopEndpoint.as_view(),
-            name='sentry-api-0-organization-health-top',
-        ),
-        url(
-            r'^(?P<organization_slug>[^\/]+)/health/graph/$',
-            OrganizationHealthGraphEndpoint.as_view(),
-            name='sentry-api-0-organization-health-graph',
-        ),
-
         url(
             r'^(?P<organization_slug>[^\/]+)/shortids/(?P<short_id>[^\/]+)/$',
             ShortIdLookupEndpoint.as_view(),
@@ -727,6 +715,12 @@ urlpatterns = patterns(
             r'^(?P<organization_slug>[^\/]+)/events/$',
             OrganizationEventsEndpoint.as_view(),
             name='sentry-api-0-organization-events'
+        ),
+        # This is temporary while we alpha test eventsv2
+        url(
+            r'^(?P<organization_slug>[^\/]+)/eventsv2/$',
+            OrganizationEventsV2Endpoint.as_view(),
+            name='sentry-api-0-organization-eventsv2'
         ),
         url(
             r'^(?P<organization_slug>[^\/]+)/events/(?P<project_slug>[^\/]+):(?P<event_id>(?:\d+|[A-Fa-f0-9]{32}))/$',
@@ -1432,7 +1426,7 @@ urlpatterns = patterns(
         name='sentry-api-0-sentry-internal-app-tokens'
     ),
     url(
-        r'^sentry-apps/(?P<sentry_app_slug>[^\/]+)/api-tokens/(?P<api_token>[^\/]+)$',
+        r'^sentry-apps/(?P<sentry_app_slug>[^\/]+)/api-tokens/(?P<api_token>[^\/]+)/$',
         SentryInternalAppTokenDetailsEndpoint.as_view(),
         name='sentry-api-0-sentry-internal-app-token-details'
     ),
